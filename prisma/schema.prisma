@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum JobStatus {
+  PENDING
+  GENERATING_QUERIES
+  EXECUTING_QUERIES
+  ANALYZING
+  GENERATING_REPORT
+  DELIVERING
+  COMPLETED
+  FAILED
+}
+
+enum Tier {
+  BASIC
+  STANDARD
+  ADVANCED
+}
+
+enum Platform {
+  CHATGPT
+  CLAUDE
+  GEMINI
+  PERPLEXITY
+  DEEPSEEK
+  YANDEXGPT
+  GIGACHAT
+  ALISA
+}
+
+model AuditJob {
+  id           String    @id @default(cuid())
+  status       JobStatus @default(PENDING)
+  tier         Tier      @default(STANDARD)
+  clientEmail  String
+  websiteUrl   String
+  companyName  String
+  niche        String
+  competitors  String[]
+  reportToken       String    @unique @default(cuid())
+  pdfUrl            String?
+  errorMessage      String?
+  chatMessagesUsed  Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  completedAt  DateTime?
+
+  queryResults QueryResult[]
+  report       Report?
+}
+
+model QueryResult {
+  id         String   @id @default(cuid())
+  jobId      String
+  platform   Platform
+  query      String
+  response   String   @db.Text
+  brandMentioned Boolean @default(false)
+  competitors    String[]
+  sources        String[]
+  sentiment      String   @default("absent")
+  createdAt  DateTime @default(now())
+
+  job AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, platform])
+}
+
+model Report {
+  id               String   @id @default(cuid())
+  jobId            String   @unique
+  visibilityScores Json
+  competitorMatrix Json
+  weakPoints       Json
+  actionPlan       Json
+  overallScore     Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  job AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}

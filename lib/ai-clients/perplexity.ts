@@ -1,0 +1,30 @@
+import type { AIClient } from "./types"
+import { AUDIT_SYSTEM_PROMPT } from "./types"
+
+export const perplexityClient: AIClient = {
+  name: "Perplexity",
+  async query(prompt, systemPrompt = AUDIT_SYSTEM_PROMPT) {
+    const response = await fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.PERPLEXITY_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "sonar-pro",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: prompt },
+        ],
+        max_tokens: 1000,
+      }),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Perplexity API error: ${response.status}`)
+    }
+
+    const data = await response.json()
+    return data.choices?.[0]?.message?.content ?? ""
+  },
+}
