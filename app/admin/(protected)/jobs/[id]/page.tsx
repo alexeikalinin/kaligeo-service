@@ -4,6 +4,33 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 
+function RestartButton({ jobId }: { jobId: string }) {
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+
+  async function restart() {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/jobs/${jobId}/restart`, { method: "POST" })
+      if (res.ok) setDone(true)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (done) return <span className="text-emerald-400 text-sm">✓ Перезапущен</span>
+
+  return (
+    <button
+      onClick={restart}
+      disabled={loading}
+      className="px-5 py-3 bg-red-900/40 border border-red-800 text-red-300 rounded-xl text-sm hover:bg-red-900/60 transition-colors disabled:opacity-50"
+    >
+      {loading ? "Запускаем..." : "↺ Перезапустить"}
+    </button>
+  )
+}
+
 type JobStatus =
   | "PENDING"
   | "GENERATING_QUERIES"
@@ -132,7 +159,8 @@ export default function JobDetailPage() {
 
       {data.status === "FAILED" && (
         <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 mb-4">
-          <p className="text-red-300 text-sm">{data.errorMessage ?? "Произошла ошибка"}</p>
+          <p className="text-red-300 text-sm mb-3">{data.errorMessage ?? "Произошла ошибка"}</p>
+          <RestartButton jobId={id} />
         </div>
       )}
 

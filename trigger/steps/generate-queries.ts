@@ -1,7 +1,9 @@
 import OpenAI from "openai"
 import { getQueryCountForTier, type Tier } from "../../lib/gates"
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+function getClient() {
+  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+}
 
 export async function generateQueries(
   companyName: string,
@@ -33,7 +35,7 @@ export async function generateQueries(
 Верни JSON-объект с единственным полем "queries" — массив строк:
 {"queries": ["запрос 1", "запрос 2", ...]}`
 
-  const response = await client.chat.completions.create({
+  const response = await getClient().chat.completions.create({
     model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },

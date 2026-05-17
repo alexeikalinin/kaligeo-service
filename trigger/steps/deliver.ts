@@ -13,6 +13,75 @@ export interface DeliveryOptions {
   pdfUrl?: string
 }
 
+export interface FollowUpDeliveryOptions {
+  to: string
+  companyName: string
+  overallScore: number
+  baselineScore: number
+  reportUrl: string
+  pdfUrl?: string
+}
+
+export async function sendFollowUpEmail(opts: FollowUpDeliveryOptions): Promise<void> {
+  const { to, companyName, overallScore, baselineScore, reportUrl, pdfUrl } = opts
+  const delta = overallScore - baselineScore
+  const deltaStr = delta > 0 ? `+${delta}` : `${delta}`
+  const deltaColor = delta > 0 ? "#16a34a" : delta < 0 ? "#dc2626" : "#666"
+  const scoreEmoji = overallScore >= 60 ? "🟢" : overallScore >= 30 ? "🟡" : "🔴"
+
+  await getResend().emails.send({
+    from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    to,
+    subject: `Ежемесячный AI-аудит готов — ${companyName} | Score: ${overallScore}/100 (${deltaStr})`,
+    html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family: -apple-system, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #1a1a1a;">
+  <div style="text-align: center; padding: 32px 0;">
+    <h1 style="font-size: 28px; font-weight: 700; margin: 0;">KaliGEO</h1>
+    <p style="color: #666; margin: 8px 0 0;">Ежемесячный мониторинг AI-видимости</p>
+  </div>
+
+  <div style="background: #f9fafb; border-radius: 12px; padding: 32px; margin: 24px 0; text-align: center;">
+    <p style="margin: 0 0 16px; color: #666; font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em;">Динамика AI Score</p>
+    <div style="display: flex; justify-content: center; align-items: center; gap: 24px;">
+      <div>
+        <p style="margin: 0 0 4px; color: #999; font-size: 12px;">БЫЛО</p>
+        <div style="font-size: 48px; font-weight: 700; color: #999; line-height: 1;">${baselineScore}</div>
+      </div>
+      <div style="font-size: 28px; font-weight: 700; color: ${deltaColor};">${deltaStr}</div>
+      <div>
+        <p style="margin: 0 0 4px; color: #666; font-size: 12px;">СТАЛО</p>
+        <div style="font-size: 48px; font-weight: 700; color: #0f172a; line-height: 1;">${overallScore} ${scoreEmoji}</div>
+      </div>
+    </div>
+    <p style="margin: 16px 0 0; color: #666; font-size: 14px;">для компании <strong>${companyName}</strong></p>
+  </div>
+
+  <p>${delta > 0 ? "Отличные новости! Ваша AI-видимость выросла." : delta < 0 ? "AI-видимость снизилась — в отчёте найдёте причины и план действий." : "Видимость осталась на прежнем уровне. В отчёте — рекомендации по росту."}</p>
+  <p>В отчёте вы найдёте полный сравнительный анализ: что улучшилось, что осталось, какие конкуренты изменили позиции.</p>
+
+  <div style="text-align: center; margin: 32px 0;">
+    <a href="${reportUrl}" style="display: inline-block; background: #0f172a; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">
+      Открыть отчёт с динамикой →
+    </a>
+  </div>
+
+  ${pdfUrl ? `<p style="text-align: center; margin: 8px 0;">
+    <a href="${pdfUrl}" style="color: #666; font-size: 14px;">Скачать PDF-версию</a>
+  </p>` : ""}
+
+  <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+  <p style="color: #666; font-size: 12px; text-align: center;">
+    KaliGEO · AI Search Visibility Audit<br>
+    Если у вас есть вопросы, ответьте на это письмо
+  </p>
+</body>
+</html>`,
+  })
+}
+
 export async function sendReportEmail(opts: DeliveryOptions): Promise<void> {
   const { to, companyName, overallScore, reportUrl, pdfUrl } = opts
 

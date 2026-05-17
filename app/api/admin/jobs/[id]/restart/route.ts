@@ -3,16 +3,9 @@ import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
 import { tasks } from "@trigger.dev/sdk/v3"
 import { auditPipeline } from "@/trigger/audit-pipeline"
-import { z } from "zod"
-import { notifyAuditStarted } from "@/lib/notify"
-
-const ConfirmSchema = z.object({
-  tier: z.enum(["BASIC", "STANDARD", "ADVANCED"]).optional(),
-  adminNotes: z.string().optional(),
-})
 
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const cookieStore = await cookies()
@@ -21,33 +14,19 @@ export async function POST(
   if (!isAuthed) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const body = await req.json().catch(() => ({}))
-  const { tier, adminNotes } = ConfirmSchema.parse(body)
 
   const job = await prisma.auditJob.findUnique({ where: { id } })
   if (!job) return NextResponse.json({ error: "Job not found" }, { status: 404 })
-
-  if (job.paidAt) {
-    return NextResponse.json({ error: "Уже подтверждено" }, { status: 400 })
+  if (job.status !== "FAILED") {
+    return NextResponse.json({ error: "Можно перезапустить только упавший аудит" }, { status: 400 })
   }
 
   await prisma.auditJob.update({
     where: { id },
-    data: {
-      paidAt: new Date(),
-      status: "PENDING",
-      ...(tier ? { tier } : {}),
-      ...(adminNotes ? { adminNotes } : {}),
-    },
+    data: { status: "PENDING", errorMessage: null },
   })
 
   await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: id })
 
-  notifyAuditStarted({
-    companyName: job.companyName,
-    tier: tier ?? job.tier,
-    jobId: id,
-  }).catch(console.error)
-
-  return NextResponse.json({ success: true, message: "Оплата подтверждена, аудит запущен" })
+  return NextResponse.json({ success: true })
 }

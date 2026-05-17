@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma"
 import { executeQueriesOnPlatform } from "./steps/execute-queries"
 import { generateQueries } from "./steps/generate-queries"
 import { renderAndUploadPdf } from "./steps/render-pdf"
-import { sendReportEmail } from "./steps/deliver"
+import { sendReportEmail, sendFollowUpEmail } from "./steps/deliver"
 import { calculateVisibilityScores, calculateOverallScore } from "../lib/analysis/calculate-scores"
 import { buildCompetitorMatrix } from "../lib/analysis/competitor-matrix"
 import { detectWeakPoints } from "../lib/analysis/weak-points-checker"
@@ -14,6 +14,7 @@ import { runContentAgent } from "../lib/agents/content-agent"
 import { getTierConfig, type Tier } from "../lib/gates"
 import { assertCanStartAudit } from "../lib/agents/risk-agent"
 import { getActivePlatforms } from "../lib/ai-clients"
+import { notifyAuditCompleted, notifyAuditFailed } from "../lib/notify"
 
 export interface AuditPayload {
   jobId: string
@@ -28,6 +29,28 @@ export const auditPipeline = task({
     const { jobId } = payload
 
     const job = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
+
+    try {
+      return await runPipeline(job)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      await prisma.auditJob.update({
+        where: { id: jobId },
+        data: { status: "FAILED", errorMessage },
+      })
+      notifyAuditFailed({
+        companyName: job.companyName,
+        tier: job.tier,
+        jobId,
+        errorMessage,
+      }).catch(console.error)
+      throw err
+    }
+  },
+})
+
+async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUniqueOrThrow>>) {
+    const jobId = job.id
     const config = getTierConfig(job.tier as Tier)
     const isAdvanced = job.tier === "ADVANCED"
 
@@ -41,7 +64,8 @@ export const auditPipeline = task({
 
     // Пересекаем тарифные платформы с теми у которых есть ключи
     const activePlatforms = getActivePlatforms()
-    const tierPlatforms = config.platforms.filter((p) => activePlatforms.includes(p))
+    const basePlatforms = job.selectedPlatforms.length > 0 ? job.selectedPlatforms : config.platforms
+    const tierPlatforms = basePlatforms.filter((p) => activePlatforms.includes(p))
     const suspendedByKey = config.platforms.filter((p) => !activePlatforms.includes(p))
     if (suspendedByKey.length > 0) {
       console.warn(`[platforms] Приостановлены (нет ключей): ${suspendedByKey.join(", ")}`)
@@ -142,13 +166,27 @@ export const auditPipeline = task({
     // ── Step 7: Email delivery ────────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "DELIVERING" } })
 
-    await sendReportEmail({
-      to: job.clientEmail,
-      companyName: job.companyName,
-      overallScore,
-      reportUrl: `${process.env.NEXT_PUBLIC_APP_URL}/report/${jobId}?token=${job.reportToken}`,
-      pdfUrl: pdfUrl ?? "",
-    })
+    const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL}/report/${jobId}?token=${job.reportToken}`
+
+    if (job.baselineJobId) {
+      const baselineReport = await prisma.report.findUnique({ where: { jobId: job.baselineJobId } })
+      await sendFollowUpEmail({
+        to: job.clientEmail,
+        companyName: job.companyName,
+        overallScore,
+        baselineScore: baselineReport?.overallScore ?? 0,
+        reportUrl,
+        pdfUrl,
+      })
+    } else {
+      await sendReportEmail({
+        to: job.clientEmail,
+        companyName: job.companyName,
+        overallScore,
+        reportUrl,
+        pdfUrl: pdfUrl ?? "",
+      })
+    }
 
     // ── Done ──────────────────────────────────────────────────────────────
     await prisma.auditJob.update({
@@ -156,6 +194,15 @@ export const auditPipeline = task({
       data: { status: "COMPLETED", completedAt: new Date() },
     })
 
+    notifyAuditCompleted({
+      companyName: job.companyName,
+      clientEmail: job.clientEmail,
+      tier: job.tier,
+      overallScore,
+      reportUrl,
+      jobId,
+      isFollowUp: !!job.baselineJobId,
+    }).catch(console.error)
+
     return { jobId, overallScore, pdfUrl }
-  },
-})
+}

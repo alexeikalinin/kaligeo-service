@@ -49,7 +49,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
   },
   ADVANCED: {
     queryCount: 50,
-    platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK", "GIGACHAT", "ALISA"],
+    platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK", "GIGACHAT", "ALISA", "GROK"],
     hasPdf: true,
     hasActionPlan: true,
     hasCompetitorMatrix: true,

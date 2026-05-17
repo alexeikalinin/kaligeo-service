@@ -24,6 +24,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/submit" className="hover:text-zinc-100 transition-colors">
             Новый аудит
           </Link>
+          <Link href="/admin/clients" className="hover:text-zinc-100 transition-colors">
+            Клиенты
+          </Link>
           <Link href="/admin/usage" className="hover:text-zinc-100 transition-colors">
             Лимиты
           </Link>

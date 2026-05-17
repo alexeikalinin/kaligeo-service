@@ -6,6 +6,7 @@ import { deepseekClient }   from "./deepseek"
 import { yandexgptClient }  from "./yandexgpt"
 import { gigachatClient }   from "./gigachat"
 import { alisaClient }      from "./alisa"
+import { grokClient }       from "./grok"
 import type { AIClient }    from "./types"
 
 export const AI_CLIENTS: Record<string, AIClient> = {
@@ -17,6 +18,7 @@ export const AI_CLIENTS: Record<string, AIClient> = {
   YANDEXGPT:  yandexgptClient,
   GIGACHAT:   gigachatClient,
   ALISA:      alisaClient,
+  GROK:       grokClient,
 }
 
 /** Только платформы с настроенными ключами */

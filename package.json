@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint"
   },
@@ -18,7 +18,7 @@
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@react-pdf/renderer": "^4.5.1",
-    "@trigger.dev/sdk": "4.4.5",
+    "@trigger.dev/sdk": "^4.4.6",
     "@upstash/redis": "^1.37.0",
     "@vercel/blob": "^2.3.3",
     "ai": "^6.0.172",

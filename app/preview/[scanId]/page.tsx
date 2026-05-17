@@ -104,12 +104,15 @@ export default async function PreviewPage({ params }: PageProps) {
                 {" "}/ 100
               </span>
             </p>
-            <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+            <p className="text-sm mb-2" style={{ color: "var(--ink-3)" }}>
               {scan.previewScore < 30
                 ? "Низкая видимость — AI почти не упоминает ваш бренд"
                 : scan.previewScore < 60
                 ? "Средняя видимость — есть значительный потенциал роста"
                 : "Хорошая видимость — но конкуренты могут опережать вас"}
+            </p>
+            <p className="text-xs px-2 py-1 rounded inline-block" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+              Средний конкурент в вашей нише — 61/100
             </p>
           </div>
         </div>
@@ -129,7 +132,7 @@ export default async function PreviewPage({ params }: PageProps) {
                 ChatGPT · Claude · Gemini · Perplexity · DeepSeek · YandexGPT · GigaChat
               </p>
               <Link
-                href={`/chat?url=${encodeURIComponent(scan.websiteUrl)}`}
+                href={`/chat?url=${encodeURIComponent(scan.websiteUrl)}&source=preview`}
                 className="px-4 py-2 rounded font-medium text-sm"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
@@ -189,7 +192,7 @@ export default async function PreviewPage({ params }: PageProps) {
             Полный аудит: 7 платформ, анализ конкурентов, план действий
           </p>
           <Link
-            href={`/chat?url=${encodeURIComponent(scan.websiteUrl)}`}
+            href={`/chat?url=${encodeURIComponent(scan.websiteUrl)}&source=preview`}
             className="inline-block px-6 py-2.5 rounded font-semibold text-sm transition-opacity hover:opacity-80"
             style={{ background: "var(--ink)", color: "var(--bone)" }}
           >

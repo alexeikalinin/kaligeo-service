@@ -5,6 +5,7 @@ import { z } from "zod"
 
 const ScanSchema = z.object({
   websiteUrl: z.string().url(),
+  source: z.string().max(64).optional(),
 })
 
 // Estimate an AI-visibility preview score (deliberately low to show room for improvement)
@@ -34,7 +35,7 @@ function estimatePreviewScore(
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { websiteUrl } = ScanSchema.parse(body)
+    const { websiteUrl, source } = ScanSchema.parse(body)
 
     // Check for recent scan of same URL (cache for 24h)
     const existing = await prisma.freemiumScan.findFirst({
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
         services: analysis.services,
         keywords: analysis.keywords,
         previewScore,
+        ...(source ? { source } : {}),
       },
     })
 

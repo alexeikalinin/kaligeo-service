@@ -27,6 +27,9 @@ export default function SubmitPage() {
   const [websiteUrl, setWebsiteUrl] = useState("")
   const [previousAudits, setPreviousAudits] = useState<PreviousAudit[]>([])
   const [baselineJobId, setBaselineJobId] = useState("")
+  const [tier, setTier] = useState("STANDARD")
+  const [scheduleFollowUp, setScheduleFollowUp] = useState(false)
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const debouncedUrl = useDebounce(websiteUrl, 600)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -65,9 +68,16 @@ export default function SubmitPage() {
         .filter(Boolean),
       clientEmail: (form.elements.namedItem("clientEmail") as HTMLInputElement).value,
       tier: (form.elements.namedItem("tier") as HTMLSelectElement).value,
+      ...(selectedPlatforms.length > 0 ? { selectedPlatforms } : {}),
     }
 
     if (baselineJobId) data.baselineJobId = baselineJobId
+
+    if (scheduleFollowUp) {
+      const followUpDate = new Date()
+      followUpDate.setDate(followUpDate.getDate() + 30)
+      data.followUpScheduledAt = followUpDate.toISOString()
+    }
 
     const res = await fetch("/api/audit/submit", {
       method: "POST",
@@ -135,11 +145,94 @@ export default function SubmitPage() {
         </div>
         <div>
           <label className={label}>Тариф</label>
-          <select name="tier" className={field}>
+          <select
+            name="tier"
+            className={field}
+            value={tier}
+            onChange={(e) => {
+              setTier(e.target.value)
+              setScheduleFollowUp(e.target.value === "ADVANCED")
+              setSelectedPlatforms([])
+            }}
+          >
             <option value="BASIC">Basic (15 запросов)</option>
             <option value="STANDARD">Standard (50 запросов)</option>
             <option value="ADVANCED">Advanced (150 запросов)</option>
           </select>
+        </div>
+
+        {(() => {
+          const limits: Record<string, number> = { BASIC: 3, STANDARD: 6, ADVANCED: 9 }
+          const limit = limits[tier]
+          const all = [
+            { key: "CHATGPT", label: "ChatGPT" },
+            { key: "GEMINI", label: "Gemini" },
+            { key: "YANDEXGPT", label: "YandexGPT" },
+            { key: "CLAUDE", label: "Claude" },
+            { key: "PERPLEXITY", label: "Perplexity" },
+            { key: "DEEPSEEK", label: "DeepSeek" },
+            { key: "GIGACHAT", label: "GigaChat" },
+            { key: "ALISA", label: "Алиса" },
+            { key: "GROK", label: "Grok" },
+          ]
+          const toggle = (key: string) => {
+            setSelectedPlatforms((prev) =>
+              prev.includes(key) ? prev.filter((k) => k !== key) : prev.length < limit ? [...prev, key] : prev
+            )
+          }
+          return (
+            <div>
+              <label className={label}>
+                Платформы{" "}
+                <span className="text-zinc-500 font-normal">
+                  — выбрано {selectedPlatforms.length} из {limit} (пусто = дефолты тарифа)
+                </span>
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {all.map(({ key, label: name }) => {
+                  const checked = selectedPlatforms.includes(key)
+                  const disabled = !checked && selectedPlatforms.length >= limit
+                  return (
+                    <label
+                      key={key}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg border cursor-pointer text-sm transition-colors ${
+                        checked
+                          ? "border-lime-400 bg-lime-400/10 text-lime-300"
+                          : disabled
+                          ? "border-zinc-700 text-zinc-600 cursor-not-allowed"
+                          : "border-zinc-600 text-zinc-300 hover:border-zinc-400"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={disabled}
+                        onChange={() => toggle(key)}
+                        className="accent-lime-400"
+                      />
+                      {name}
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )
+        })()}
+
+        <div className="flex items-start gap-3 rounded-xl border border-zinc-600 px-4 py-3">
+          <input
+            id="scheduleFollowUp"
+            type="checkbox"
+            checked={scheduleFollowUp}
+            onChange={(e) => setScheduleFollowUp(e.target.checked)}
+            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-900 accent-lime-400 cursor-pointer"
+          />
+          <label htmlFor="scheduleFollowUp" className="text-sm text-zinc-300 cursor-pointer leading-snug">
+            Запланировать повторный аудит через 30 дней
+            <span className="block text-xs text-zinc-500 mt-0.5">
+              Клиент автоматически получит сравнительный отчёт с динамикой
+            </span>
+          </label>
         </div>
 
         {previousAudits.length > 0 && (
