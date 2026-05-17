@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { tg, inlineKeyboard } from "@/lib/telegram"
 import { notifyNewAuditRequest } from "@/lib/notify"
 
-const ADMIN_CHAT_ID = process.env.ADMIN_TELEGRAM_CHAT_ID ?? ""
+const ADMIN_CHAT_ID = process.env.ADMIN_TELEGRAM_CHAT_ID ?? "UNSET"
 
 const TIERS = {
   BASIC:    { label: "Basic",    desc: "15 запросов · 3 платформы · $50",  price: "$50" },
@@ -172,7 +172,7 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
         "📊 Средний конкурент в нише — 61/100",
         "",
         "Полный аудит покажет:",
-        "· Детальные результаты по 9 платформам",
+        "· Результаты по 3–9 платформам (зависит от тарифа)",
         "· Где именно конкуренты вас обходят",
         "· Конкретный план на 90 дней",
         "",
