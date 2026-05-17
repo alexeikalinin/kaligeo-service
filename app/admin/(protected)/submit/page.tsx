@@ -1,12 +1,53 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
+
+interface PreviousAudit {
+  id: string
+  companyName: string
+  tier: string
+  completedAt: string
+  overallScore: number | null
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debounced, setDebounced] = useState(value)
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay)
+    return () => clearTimeout(t)
+  }, [value, delay])
+  return debounced
+}
 
 export default function SubmitPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+  const [websiteUrl, setWebsiteUrl] = useState("")
+  const [previousAudits, setPreviousAudits] = useState<PreviousAudit[]>([])
+  const [baselineJobId, setBaselineJobId] = useState("")
+  const debouncedUrl = useDebounce(websiteUrl, 600)
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => {
+    if (!debouncedUrl) {
+      setPreviousAudits([])
+      return
+    }
+    abortRef.current?.abort()
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
+
+    fetch(`/api/admin/audit/history?websiteUrl=${encodeURIComponent(debouncedUrl)}`, {
+      signal: ctrl.signal,
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setPreviousAudits(data)
+      })
+      .catch(() => {})
+  }, [debouncedUrl])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -14,7 +55,7 @@ export default function SubmitPage() {
     setError("")
 
     const form = e.currentTarget
-    const data = {
+    const data: Record<string, unknown> = {
       companyName: (form.elements.namedItem("companyName") as HTMLInputElement).value,
       websiteUrl: (form.elements.namedItem("websiteUrl") as HTMLInputElement).value,
       niche: (form.elements.namedItem("niche") as HTMLTextAreaElement).value,
@@ -25,6 +66,8 @@ export default function SubmitPage() {
       clientEmail: (form.elements.namedItem("clientEmail") as HTMLInputElement).value,
       tier: (form.elements.namedItem("tier") as HTMLSelectElement).value,
     }
+
+    if (baselineJobId) data.baselineJobId = baselineJobId
 
     const res = await fetch("/api/audit/submit", {
       method: "POST",
@@ -55,7 +98,18 @@ export default function SubmitPage() {
         </div>
         <div>
           <label className={label}>URL сайта *</label>
-          <input name="websiteUrl" type="url" required placeholder="https://vkusvill.ru" className={field} />
+          <input
+            name="websiteUrl"
+            type="url"
+            required
+            placeholder="https://vkusvill.ru"
+            className={field}
+            value={websiteUrl}
+            onChange={(e) => {
+              setWebsiteUrl(e.target.value)
+              setBaselineJobId("")
+            }}
+          />
         </div>
         <div>
           <label className={label}>Ниша и описание бизнеса *</label>
@@ -87,6 +141,38 @@ export default function SubmitPage() {
             <option value="ADVANCED">Advanced (150 запросов)</option>
           </select>
         </div>
+
+        {previousAudits.length > 0 && (
+          <div>
+            <label className={label}>
+              Базовый аудит для сравнения{" "}
+              <span className="text-zinc-500 font-normal">(опционально)</span>
+            </label>
+            <select
+              value={baselineJobId}
+              onChange={(e) => setBaselineJobId(e.target.value)}
+              className={field}
+            >
+              <option value="">— не выбрано (новый клиент) —</option>
+              {previousAudits.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {new Date(a.completedAt).toLocaleDateString("ru-RU")}
+                  {" · "}
+                  {a.companyName}
+                  {" · "}
+                  {a.tier}
+                  {a.overallScore !== null ? ` · score ${a.overallScore}` : ""}
+                </option>
+              ))}
+            </select>
+            {baselineJobId && (
+              <p className="mt-2 text-xs text-zinc-400">
+                В новом отчёте появится таб «Прогресс» с динамикой относительно выбранного аудита.
+              </p>
+            )}
+          </div>
+        )}
+
         {error && <p className="text-red-400 text-base">{error}</p>}
         <button
           type="submit"

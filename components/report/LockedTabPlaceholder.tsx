@@ -11,6 +11,10 @@ const LOCKED_COPY: Record<string, { title: string; description: string }> = {
     title: "Все запросы с ответами AI",
     description: "Полные тексты 50 реальных запросов и ответов каждой платформы — с источниками которые AI цитирует.",
   },
+  progress: {
+    title: "Сравнительный анализ прогресса",
+    description: "Динамика видимости бренда с момента предыдущего аудита — рост score, исправленные проблемы, изменения по платформам и конкурентам.",
+  },
 }
 
 const TIER_PRICE: Record<string, string> = {

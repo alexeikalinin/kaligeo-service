@@ -10,6 +10,7 @@ const SubmitSchema = z.object({
   niche: z.string().min(1).max(200),
   competitors: z.array(z.string()).max(10).default([]),
   tier: z.enum(["BASIC", "STANDARD", "ADVANCED"]).default("STANDARD"),
+  baselineJobId: z.string().optional(),
 })
 
 // Rate limit: 3 аудита с одного IP в час
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
         competitors: data.competitors,
         tier: data.tier,
         status: "PENDING_PAYMENT",
+        ...(data.baselineJobId ? { baselineJobId: data.baselineJobId } : {}),
       },
     })
 

@@ -12,6 +12,7 @@ export interface TierConfig {
   hasContentAgent: boolean
   hasReportRegeneration: boolean
   hasWebsiteFix: boolean // Google Stitch — 1 страница
+  hasComparison: boolean // сравнительный анализ с предыдущим аудитом
   priorityHours: number // SLA в часах
 }
 
@@ -28,6 +29,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasContentAgent: false,
     hasReportRegeneration: false,
     hasWebsiteFix: false,
+    hasComparison: false,
     priorityHours: 48,
   },
   STANDARD: {
@@ -42,6 +44,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasContentAgent: false,
     hasReportRegeneration: false,
     hasWebsiteFix: false,
+    hasComparison: true,
     priorityHours: 48,
   },
   ADVANCED: {
@@ -56,6 +59,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasContentAgent: true,
     hasReportRegeneration: true,
     hasWebsiteFix: true,
+    hasComparison: true,
     priorityHours: 24,
   },
 }

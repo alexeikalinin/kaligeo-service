@@ -2,6 +2,8 @@ import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { ReportDashboard } from "@/components/report/ReportDashboard"
 import { ReportChatPanel } from "@/components/report/ReportChatPanel"
+import { compareAudits } from "@/lib/analysis/compare-audits"
+import { getTierConfig } from "@/lib/gates"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -27,6 +29,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     where: { id },
     include: {
       report: true,
+      baselineJob: { include: { report: true } },
       queryResults: {
         select: {
           id: true,
@@ -61,6 +64,29 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     }
   }
 
+  const tierConfig = getTierConfig(job.tier)
+  const comparison =
+    tierConfig.hasComparison && job.baselineJob?.report
+      ? compareAudits(
+          {
+            overallScore: job.baselineJob.report.overallScore,
+            visibilityScores: job.baselineJob.report.visibilityScores as never,
+            weakPoints: job.baselineJob.report.weakPoints as never,
+            competitorMatrix: job.baselineJob.report.competitorMatrix as never,
+            companyName: job.baselineJob.companyName,
+            createdAt: job.baselineJob.createdAt,
+          },
+          {
+            overallScore: job.report.overallScore,
+            visibilityScores: job.report.visibilityScores as never,
+            weakPoints: job.report.weakPoints as never,
+            competitorMatrix: job.report.competitorMatrix as never,
+            companyName: job.companyName,
+            createdAt: job.createdAt,
+          }
+        )
+      : null
+
   return (
     <>
       <ReportDashboard
@@ -75,6 +101,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           queryResults: job.queryResults,
         }}
         report={report}
+        comparison={comparison}
       />
       {/* Chat panel — shown for all tiers, upgrade prompt for Basic */}
       <ReportChatPanel

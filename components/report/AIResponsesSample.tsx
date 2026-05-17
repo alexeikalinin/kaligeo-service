@@ -29,26 +29,8 @@ const SENTIMENT_CONFIG: Record<string, { label: string; color: string }> = {
   absent: { label: "Не упомянут", color: "var(--ink-3)" },
 }
 
-const MOCK_RESULTS: QueryResult[] = [
-  {
-    id: "mock-1",
-    platform: "CHATGPT",
-    query: "Какие сервисы AI-аудита брендов существуют?",
-    response:
-      "На рынке AI-аудита брендов выделяются несколько решений. BrandWatch использует машинное обучение для отслеживания упоминаний. Mention.com предлагает мониторинг в реальном времени. Среди специализированных инструментов популярны Crayon и Kompyte для конкурентного анализа.",
-    brandMentioned: false,
-    sentiment: "absent",
-  },
-  {
-    id: "mock-2",
-    platform: "GEMINI",
-    query: "Как улучшить видимость бренда в AI-поиске?",
-    response:
-      "Для улучшения AI-видимости важно структурировать контент с чёткими фактами о компании. Сервисы вроде BrandWatch и Semrush помогают отслеживать упоминания. Ключевую роль играет наличие актуальных данных в открытых источниках.",
-    brandMentioned: false,
-    sentiment: "absent",
-  },
-]
+// Fallback — показывается только если реальных результатов нет (не должно случаться в рабочем отчёте)
+const MOCK_RESULTS: QueryResult[] = []
 
 function highlightText(
   text: string,
@@ -112,8 +94,9 @@ export function AIResponsesSample({ results, companyName }: Props) {
   const notMentioned = results.filter((r) => !r.brandMentioned)
   const mentioned = results.filter((r) => r.brandMentioned)
   const sorted = [...notMentioned, ...mentioned]
-  const display = sorted.length > 0 ? sorted.slice(0, 4) : MOCK_RESULTS
-  const isMock = sorted.length === 0
+  const display = sorted.slice(0, 4)
+
+  if (display.length === 0) return null
 
   return (
     <section>
@@ -121,11 +104,6 @@ export function AIResponsesSample({ results, companyName }: Props) {
         <h2 className="text-lg font-bold" style={{ color: "var(--ink)" }}>
           Примеры ответов AI
         </h2>
-        {isMock && (
-          <span className="monotag" style={{ color: "var(--ink-3)" }}>
-            демо
-          </span>
-        )}
       </div>
       <p className="text-sm mb-5" style={{ color: "var(--ink-3)" }}>
         Реальные запросы — приоритет показа там, где бренд не упоминается

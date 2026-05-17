@@ -11,23 +11,27 @@ export async function generateQueries(
 ): Promise<string[]> {
   const count = getQueryCountForTier(tier as Tier)
 
-  const prompt = `You are creating search queries for an AI visibility audit.
+  const prompt = `Ты составляешь поисковые запросы для AI-аудита видимости бренда.
 
-Company: ${companyName}
-Niche/Industry: ${niche}
-Known Competitors: ${competitors.join(", ")}
+Компания: ${companyName}
+Ниша / отрасль: ${niche}
+Конкуренты: ${competitors.join(", ")}
 
-Generate exactly ${count} search queries that a potential customer would realistically ask an AI assistant like ChatGPT, Perplexity, or Claude when looking for products/services in this niche.
+Сгенерируй ровно ${count} запросов, которые потенциальный клиент реалистично напишет в ChatGPT, Perplexity, YandexGPT или Claude, когда ищет товар/услугу в данной нише.
 
-Requirements:
-- Mix of Russian and English queries (60% Russian, 40% English)
-- Include: recommendation queries ("What [service] do you recommend?"), comparison queries, specific use-case queries, location-based queries if relevant
-- Queries should be natural conversational language, not keyword-stuffed
-- Vary query length and type
-- Some queries should be direct ("лучшая [ниша]?"), some indirect ("помоги выбрать...")
+Требования:
+- 85% запросов на русском, 15% на английском
+- Типы запросов (распредели равномерно):
+  • Рекомендация: «Какую [услугу] выбрать?», «Посоветуй [нишу]»
+  • Сравнение: «[A] или [B] — что лучше?», «Плюсы и минусы [ниша]»
+  • Цена: «Сколько стоит [услуга]?», «Средний чек [ниша]»
+  • Как сделать: «Как выбрать [услугу]?», «На что обратить внимание при выборе»
+  • Проблема/боль: вопрос про конкретную проблему которую решает ниша
+- Запросы — естественная разговорная речь, не SEO-ключи
+- НЕ генерируй запросы про саму компанию («что такое ${companyName}») — только про нишу в целом
 
-Return ONLY a JSON array of strings, no other text:
-["query 1", "query 2", ...]`
+Верни JSON-объект с единственным полем "queries" — массив строк:
+{"queries": ["запрос 1", "запрос 2", ...]}`
 
   const response = await client.chat.completions.create({
     model: "gpt-4o-mini",
@@ -36,8 +40,8 @@ Return ONLY a JSON array of strings, no other text:
     max_tokens: 4000,
   })
 
-  const text = response.choices[0]?.message?.content ?? "[]"
+  const text = response.choices[0]?.message?.content ?? "{}"
   const parsed = JSON.parse(text)
-  const queries: string[] = Array.isArray(parsed) ? parsed : parsed.queries ?? []
+  const queries: string[] = Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
   return queries.slice(0, count)
 }

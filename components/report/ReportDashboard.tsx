@@ -20,6 +20,10 @@ import { VerbatimInsights } from "./VerbatimInsights"
 import type { VerbatimQuote } from "./VerbatimInsights"
 import { PlatformIntelligence } from "./PlatformIntelligence"
 import type { PlatformInsight } from "./PlatformIntelligence"
+import { CompetitorGapAnalysis } from "./CompetitorGapAnalysis"
+import { OpportunityMap } from "./OpportunityMap"
+import { ProgressComparison } from "./ProgressComparison"
+import type { AuditComparison } from "@/lib/analysis/compare-audits"
 
 interface PlatformScore {
   platform: string
@@ -87,6 +91,8 @@ interface ReportDashboardProps {
   sources?: SourceEntry[]
   verbatimQuotes?: VerbatimQuote[]
   platformInsights?: PlatformInsight[]
+  competitorGaps?: { name: string; score: number; theirSignals: string[]; yourSignals: string[] }[]
+  comparison?: AuditComparison | null
 }
 
 // ── Tier locking ─────────────────────────────────────────────────────────────
@@ -99,6 +105,7 @@ const TABS = [
   { key: "competitors", label: "Конкуренты",    availableFrom: "STANDARD" },
   { key: "weakpoints",  label: "Слабые места",  availableFrom: "BASIC"    },
   { key: "plan",        label: "План роста",     availableFrom: "STANDARD" },
+  { key: "progress",    label: "Прогресс",      availableFrom: "STANDARD" },
   { key: "queries",     label: "Все запросы",   availableFrom: "ADVANCED" },
 ] as const
 
@@ -114,7 +121,7 @@ function getFirstAvailableTab(tier: string): TabKey {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights }: ReportDashboardProps) {
+export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, comparison }: ReportDashboardProps) {
   const [tab, setTab] = useState<TabKey>(() => getFirstAvailableTab(job.tier))
 
   // Reset tab when tier changes (e.g. demo tier selector)
@@ -274,6 +281,30 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
             {verbatimQuotes && !isTabLocked("ADVANCED", job.tier) && (
               <VerbatimInsights quotes={verbatimQuotes} companyName={job.companyName} />
             )}
+
+            {/* Re-audit CTA */}
+            <section>
+              <div
+                className="rounded-xl px-6 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
+                style={{ background: "var(--bone-2)", border: "1px solid var(--rule)" }}
+              >
+                <div className="flex-1">
+                  <p className="font-bold text-base mb-1" style={{ fontFamily: "var(--font-serif)", color: "var(--ink)" }}>
+                    Проверьте свой бизнес
+                  </p>
+                  <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+                    Это демо-отчёт с примерными данными. Реальный аудит покажет как AI видит именно ваш сайт и бренд.
+                  </p>
+                </div>
+                <Link
+                  href="/"
+                  className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold transition-opacity hover:opacity-80"
+                  style={{ background: "var(--accent)", color: "var(--accent-ink)", whiteSpace: "nowrap" }}
+                >
+                  Запустить аудит →
+                </Link>
+              </div>
+            </section>
           </div>
         )}
 
@@ -302,6 +333,17 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                   </h2>
                   <CompetitorMatrixTable matrix={report.competitorMatrix} companyName={job.companyName} />
                 </div>
+                {competitorGaps && competitorGaps.length > 0 && (
+                  <CompetitorGapAnalysis
+                    gaps={competitorGaps}
+                    companyName={job.companyName}
+                  />
+                )}
+                <OpportunityMap
+                  results={job.queryResults}
+                  companyName={job.companyName}
+                  competitorNames={report.competitorMatrix.map((c) => c.name)}
+                />
                 {sources && sources.length > 0 && (
                   <SourceAuthority
                     sources={sources}
@@ -334,6 +376,30 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                 <ActionPlanTimeline plan={report.actionPlan} />
               </div>
             )
+        )}
+
+        {tab === "progress" && (
+          isTabLocked("STANDARD", job.tier)
+            ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="progress" />
+            : comparison
+              ? (
+                <div>
+                  <h2 className="text-lg font-bold mb-6" style={{ color: "var(--ink)" }}>
+                    Прогресс с предыдущего аудита
+                  </h2>
+                  <ProgressComparison comparison={comparison} />
+                </div>
+              )
+              : (
+                <div className="py-16 text-center space-y-3">
+                  <p className="text-base font-semibold" style={{ color: "var(--ink)" }}>
+                    Нет базового аудита для сравнения
+                  </p>
+                  <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+                    При следующем аудите укажите этот отчёт как baseline, чтобы видеть динамику.
+                  </p>
+                </div>
+              )
         )}
 
         {tab === "queries" && (

@@ -66,6 +66,34 @@ const ALL_HALLUCINATIONS: HallucinationItem[] = [
 
 // ── New premium data ────────────────────────────────────────────────────────
 
+export const DEMO_COMPETITOR_GAPS = [
+  {
+    name: "Моё дело",
+    score: 76,
+    theirSignals: [
+      "Schema.org Organization + Service разметка",
+      "FAQ-страница: 40+ вопросов с ответами",
+      "Блог: 50+ статей по бухгалтерии ИП/ООО",
+      "Присутствие в klerk.ru, buhonline.ru",
+      "2ГИС и Яндекс.Карты: полный профиль",
+      "Habr Q&A: зарегистрированный эксперт",
+    ],
+    yourSignals: [],
+  },
+  {
+    name: "Контур.Бухгалтерия",
+    score: 68,
+    theirSignals: [
+      "Schema.org Organization + Service разметка",
+      "FAQ-страница: 25 вопросов",
+      "Блог на kontur.ru: экспертные статьи",
+      "Публикации на buhonline.ru",
+      "Партнёрские упоминания в СМИ",
+    ],
+    yourSignals: [],
+  },
+]
+
 const DEMO_NICHE_INTEL = {
   totalQueries: 50,
   totalMentions: 6,
@@ -319,6 +347,7 @@ export function DemoReportClient() {
         nicheIntel={DEMO_NICHE_INTEL}
         sources={DEMO_SOURCES}
         verbatimQuotes={DEMO_VERBATIM}
+        competitorGaps={tier !== "BASIC" ? DEMO_COMPETITOR_GAPS : undefined}
         platformInsights={buildPlatformInsights(
           tier === "BASIC"
             ? Object.fromEntries(

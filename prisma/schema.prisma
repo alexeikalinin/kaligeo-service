@@ -54,6 +54,10 @@ model AuditJob {
   updatedAt        DateTime  @updatedAt
   completedAt      DateTime?
 
+  baselineJobId String?
+  baselineJob   AuditJob?  @relation("AuditComparison", fields: [baselineJobId], references: [id])
+  followUpJobs  AuditJob[] @relation("AuditComparison")
+
   queryResults QueryResult[]
   report       Report?
 }
