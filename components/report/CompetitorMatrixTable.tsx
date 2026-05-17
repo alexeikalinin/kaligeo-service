@@ -34,7 +34,7 @@ export function CompetitorMatrixTable({ matrix, companyName }: Props) {
 
   if (matrix.length === 0) {
     return (
-      <p className="text-zinc-500 text-sm py-8 text-center">
+      <p className="text-sm py-8 text-center" style={{ color: "var(--ink-3)" }}>
         Конкуренты не были указаны при запуске аудита
       </p>
     )
@@ -47,9 +47,12 @@ export function CompetitorMatrixTable({ matrix, companyName }: Props) {
           <button
             key={key}
             onClick={() => setSort(key)}
-            className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors ${
-              sort === key ? "bg-zinc-600 text-zinc-100" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-            }`}
+            className="px-3 py-1 rounded text-xs font-medium transition-colors"
+            style={
+              sort === key
+                ? { background: "var(--ink)", color: "var(--bone)" }
+                : { background: "var(--bone-2)", color: "var(--ink-2)", border: "1px solid var(--rule)" }
+            }
           >
             {key === "mentionCount" ? "По упоминаниям" : "По имени"}
           </button>
@@ -57,7 +60,10 @@ export function CompetitorMatrixTable({ matrix, companyName }: Props) {
       </div>
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-zinc-500 text-xs border-b border-zinc-800">
+          <tr
+            className="text-left text-xs border-b"
+            style={{ borderColor: "var(--rule)", color: "var(--ink-3)" }}
+          >
             <th className="pb-3 pr-4 font-medium">Конкурент</th>
             <th className="pb-3 pr-4 font-medium">Упоминаний</th>
             <th className="pb-3 font-medium">Платформы</th>
@@ -65,23 +71,28 @@ export function CompetitorMatrixTable({ matrix, companyName }: Props) {
         </thead>
         <tbody>
           {sorted.map((c) => (
-            <tr key={c.name} className="border-b border-zinc-800/50 hover:bg-zinc-800/30">
-              <td className="py-3 pr-4 text-zinc-200 font-medium">{c.name}</td>
-              <td className="py-3 pr-4 text-zinc-400">
+            <tr
+              key={c.name}
+              className="border-b hover:bg-[var(--bone-2)] transition-colors"
+              style={{ borderColor: "var(--rule)" }}
+            >
+              <td className="py-3 pr-4 font-medium" style={{ color: "var(--ink)" }}>
+                {c.name}
+              </td>
+              <td className="py-3 pr-4" style={{ color: "var(--ink-2)" }}>
                 <span className="font-mono">{c.mentionCount}</span>
               </td>
               <td className="py-3">
                 <div className="flex flex-wrap gap-1">
                   {c.platforms.map((p) => (
-                    <span
-                      key={p}
-                      className="px-1.5 py-0.5 bg-zinc-700 text-zinc-300 rounded text-xs"
-                    >
+                    <span key={p} className="monotag">
                       {PLATFORM_SHORT[p] ?? p}
                     </span>
                   ))}
                   {c.platforms.length === 0 && (
-                    <span className="text-zinc-600 text-xs">—</span>
+                    <span style={{ color: "var(--ink-3)" }} className="text-xs">
+                      —
+                    </span>
                   )}
                 </div>
               </td>
@@ -89,7 +100,9 @@ export function CompetitorMatrixTable({ matrix, companyName }: Props) {
           ))}
         </tbody>
       </table>
-      <p className="text-xs text-zinc-600 mt-3">vs. {companyName}</p>
+      <p className="text-xs mt-3" style={{ color: "var(--ink-3)" }}>
+        vs. {companyName}
+      </p>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { dispatchTool } from "./index"
+import type { RiskReport } from "./risk-agent"
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -47,6 +48,21 @@ const TOOLS: Anthropic.Tool[] = [
         },
       },
       required: ["jobId", "section"],
+    },
+  },
+  {
+    name: "invoke_risk_agent",
+    description: "Проверить текущий уровень риска: лимиты API, глубину очереди, доступность платформ. Вызывай перед запуском ресурсоёмких операций.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        platforms: {
+          type: "array",
+          items: { type: "string" },
+          description: "Список платформ для проверки (опционально, по умолчанию все)",
+        },
+      },
+      required: [],
     },
   },
 ]

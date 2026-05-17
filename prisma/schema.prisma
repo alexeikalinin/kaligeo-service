@@ -7,6 +7,7 @@ datasource db {
 }
 
 enum JobStatus {
+  PENDING_PAYMENT
   PENDING
   GENERATING_QUERIES
   EXECUTING_QUERIES
@@ -35,37 +36,39 @@ enum Platform {
 }
 
 model AuditJob {
-  id           String    @id @default(cuid())
-  status       JobStatus @default(PENDING)
-  tier         Tier      @default(STANDARD)
-  clientEmail  String
-  websiteUrl   String
-  companyName  String
-  niche        String
-  competitors  String[]
-  reportToken       String    @unique @default(cuid())
-  pdfUrl            String?
-  errorMessage      String?
-  chatMessagesUsed  Int       @default(0)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  completedAt  DateTime?
+  id               String    @id @default(cuid())
+  status           JobStatus @default(PENDING)
+  tier             Tier      @default(STANDARD)
+  clientEmail      String
+  websiteUrl       String
+  companyName      String
+  niche            String
+  competitors      String[]
+  reportToken      String    @unique @default(cuid())
+  pdfUrl           String?
+  errorMessage     String?
+  chatMessagesUsed Int       @default(0)
+  paidAt           DateTime?
+  adminNotes       String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  completedAt      DateTime?
 
   queryResults QueryResult[]
   report       Report?
 }
 
 model QueryResult {
-  id         String   @id @default(cuid())
-  jobId      String
-  platform   Platform
-  query      String
-  response   String   @db.Text
-  brandMentioned Boolean @default(false)
+  id             String   @id @default(cuid())
+  jobId          String
+  platform       Platform
+  query          String
+  response       String   @db.Text
+  brandMentioned Boolean  @default(false)
   competitors    String[]
   sources        String[]
   sentiment      String   @default("absent")
-  createdAt  DateTime @default(now())
+  createdAt      DateTime @default(now())
 
   job AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
@@ -83,4 +86,86 @@ model Report {
   createdAt        DateTime @default(now())
 
   job AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model FreemiumScan {
+  id            String   @id @default(cuid())
+  websiteUrl    String
+  companyName   String
+  niche         String
+  services      Json
+  keywords      Json
+  previewScore  Int
+  emailCaptured String?
+  createdAt     DateTime @default(now())
+
+  @@index([websiteUrl])
+}
+
+// ── Lead generation ──────────────────────────────────────────────────────────
+
+enum LeadStatus {
+  NEW
+  ENRICHED
+  CONTACTED
+  REPLIED
+  CONVERTED
+  UNSUBSCRIBED
+}
+
+enum CampaignStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  COMPLETED
+}
+
+model Lead {
+  id            String     @id @default(cuid())
+  email         String?
+  companyName   String
+  websiteUrl    String?
+  niche         String?
+  city          String?
+  source        String     @default("csv")
+  status        LeadStatus @default(NEW)
+  enrichedEmail String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  outreachEmails OutreachEmail[]
+
+  @@index([status])
+  @@index([niche])
+}
+
+model Campaign {
+  id          String         @id @default(cuid())
+  name        String
+  status      CampaignStatus @default(DRAFT)
+  targetNiche String?
+  sequences   Json
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  outreachEmails OutreachEmail[]
+}
+
+model OutreachEmail {
+  id         String    @id @default(cuid())
+  leadId     String
+  campaignId String
+  subject    String
+  body       String    @db.Text
+  messageId  String?
+  sentAt     DateTime?
+  openedAt   DateTime?
+  clickedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  lead     Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  @@index([leadId])
+  @@index([campaignId])
 }

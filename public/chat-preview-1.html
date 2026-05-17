@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KaliGEO Chat — Концепция 1: Observatory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #0F1115;
+    --ink-2: #3A3D45;
+    --ink-3: #6A6D75;
+    --bone: #FAFAF7;
+    --bone-2: #F2F1EB;
+    --rule: #E5E5E1;
+    --accent: #C8F24A;
+    --accent-ink: #0F1115;
+    --ink-border: #2A2D35;
+  }
+  html, body {
+    height: 100%;
+    background: var(--bone);
+    color: var(--ink);
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ── HEADER dark ── */
+  .header {
+    background: var(--ink);
+    border-bottom: 1px solid var(--ink-border);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    height: 60px;
+    flex-shrink: 0;
+    gap: 14px;
+  }
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    color: var(--bone);
+    letter-spacing: -0.02em;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .nav a {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8A8D95;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .nav a:hover { color: var(--bone); }
+  .nav a::before { content: "— "; }
+
+  /* ── HERO STRIP ── */
+  .hero {
+    background: var(--bone-2);
+    border-bottom: 1px solid var(--rule);
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .hero-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 40px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    text-align: center;
+  }
+  .hero-title em { font-style: italic; }
+  .platforms {
+    display: flex;
+    gap: 8px;
+  }
+  .platform-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--ink-3);
+  }
+
+  /* ── MESSAGES ── */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 16px;
+  }
+  .messages-inner {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .msg-row { display: flex; align-items: flex-start; gap: 12px; }
+  .msg-row.user { justify-content: flex-end; }
+  .ai-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 13px 17px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    line-height: 1.65;
+    font-family: 'Inter Tight', sans-serif;
+  }
+  .bubble.assistant {
+    background: var(--bone-2);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.user {
+    background: var(--ink);
+    color: var(--bone);
+    border-bottom-right-radius: 4px;
+  }
+
+  /* ── INPUT ── */
+  .input-area {
+    border-top: 1px solid var(--rule);
+    background: var(--bone);
+    padding: 16px 24px 20px;
+    flex-shrink: 0;
+  }
+  .input-row {
+    max-width: 720px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .input-field {
+    flex: 1;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--bone-2);
+    color: var(--ink);
+    outline: none;
+  }
+  .input-field::placeholder { color: var(--ink-3); }
+  .input-field:focus { border-color: var(--ink-3); }
+  .send-btn {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: var(--accent);
+    border: none;
+    color: var(--accent-ink);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .send-btn:hover { opacity: 0.85; }
+  .input-hint {
+    max-width: 720px;
+    margin: 8px auto 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .input-hint::before { content: "— "; }
+
+  /* ── LABEL ── */
+  .concept-label {
+    position: fixed;
+    top: 68px;
+    right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border: 1px solid var(--ink-border);
+    background: var(--ink);
+    color: #8A8D95;
+    border-radius: 4px;
+    z-index: 100;
+  }
+</style>
+</head>
+<body>
+<div class="concept-label">Концепция 1 — Observatory</div>
+<div class="page">
+
+  <header class="header">
+    <span class="logo">KaliGEO</span>
+    <span class="chip">AI Visibility Audit</span>
+    <nav class="nav">
+      <a href="#">Найти отчёт</a>
+      <a href="#">Admin</a>
+    </nav>
+  </header>
+
+  <div class="hero">
+    <h1 class="hero-title">Где вас видит <em>ИИ?</em></h1>
+    <div class="platforms">
+      <span class="platform-chip">ChatGPT</span>
+      <span class="platform-chip">Perplexity</span>
+      <span class="platform-chip">Gemini</span>
+      <span class="platform-chip">Claude</span>
+    </div>
+  </div>
+
+  <div class="messages">
+    <div class="messages-inner">
+      <div class="msg-row assistant">
+        <div class="ai-tag">AI</div>
+        <div class="bubble assistant">
+          Готов запустить AI-аудит. Введите URL сайта — проанализирую его и задам точечные вопросы по вашей нише.
+        </div>
+      </div>
+      <div class="msg-row user">
+        <div class="bubble user">
+          kaligeo.com
+        </div>
+      </div>
+      <div class="msg-row assistant">
+        <div class="ai-tag">AI</div>
+        <div class="bubble assistant">
+          Отлично. В какой нише работает kaligeo.com? Опишите в 1–2 словах целевую аудиторию — это поможет точнее сформировать запросы для проверки.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <input class="input-field" type="text" placeholder="Введите URL сайта или напишите сообщение..." />
+      <button class="send-btn">→</button>
+    </div>
+    <div class="input-hint">анализируем ChatGPT · Perplexity · Gemini · Claude</div>
+  </div>
+
+</div>
+</body>
+</html>

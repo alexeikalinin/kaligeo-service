@@ -4,7 +4,7 @@ import { cookies } from "next/headers"
 export async function POST(req: NextRequest) {
   const { password } = await req.json()
 
-  if (password !== process.env.ADMIN_PASSWORD) {
+  if (password !== process.env.ADMIN_SESSION_TOKEN) {
     return NextResponse.json({ error: "Неверный пароль" }, { status: 401 })
   }
 

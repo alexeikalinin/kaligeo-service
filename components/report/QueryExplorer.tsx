@@ -9,6 +9,7 @@ interface QueryResult {
   response: string
   brandMentioned: boolean
   sentiment: string
+  sources?: string[]
 }
 
 interface Props {
@@ -25,11 +26,11 @@ const PLATFORM_LABELS: Record<string, string> = {
   GIGACHAT: "GigaChat",
 }
 
-const SENTIMENT_CONFIG: Record<string, { label: string; cls: string }> = {
-  positive: { label: "Позитив", cls: "bg-emerald-900/30 text-emerald-400" },
-  neutral: { label: "Нейтрально", cls: "bg-zinc-700 text-zinc-400" },
-  negative: { label: "Негатив", cls: "bg-red-900/30 text-red-400" },
-  absent: { label: "Не упомянут", cls: "bg-zinc-800 text-zinc-500" },
+const SENTIMENT_CONFIG: Record<string, { label: string; color: string }> = {
+  positive: { label: "Позитив", color: "var(--accent)" },
+  neutral: { label: "Нейтрально", color: "var(--ink-3)" },
+  negative: { label: "Негатив", color: "#ef4444" },
+  absent: { label: "Не упомянут", color: "var(--ink-3)" },
 }
 
 export function QueryExplorer({ results }: Props) {
@@ -48,6 +49,16 @@ export function QueryExplorer({ results }: Props) {
     return true
   })
 
+  const inputStyle = {
+    background: "var(--bone-2)",
+    border: "1px solid var(--rule)",
+    color: "var(--ink)",
+    borderRadius: "var(--radius-md)",
+    padding: "6px 12px",
+    fontSize: "14px",
+    outline: "none",
+  }
+
   return (
     <div>
       <div className="flex flex-wrap gap-2 mb-5">
@@ -55,12 +66,13 @@ export function QueryExplorer({ results }: Props) {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Поиск по запросу..."
-          className="flex-1 min-w-48 bg-zinc-800 text-zinc-200 placeholder-zinc-600 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-zinc-600"
+          className="flex-1 min-w-48"
+          style={inputStyle}
         />
         <select
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
-          className="bg-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-sm outline-none"
+          style={inputStyle}
         >
           {platforms.map((p) => (
             <option key={p} value={p}>
@@ -71,7 +83,7 @@ export function QueryExplorer({ results }: Props) {
         <select
           value={mentioned}
           onChange={(e) => setMentioned(e.target.value as "all" | "yes" | "no")}
-          className="bg-zinc-800 text-zinc-300 rounded-lg px-3 py-2 text-sm outline-none"
+          style={inputStyle}
         >
           <option value="all">Все упоминания</option>
           <option value="yes">Только упомянутые</option>
@@ -79,7 +91,7 @@ export function QueryExplorer({ results }: Props) {
         </select>
       </div>
 
-      <p className="text-xs text-zinc-600 mb-4">
+      <p className="text-xs mb-4" style={{ color: "var(--ink-3)" }}>
         {filtered.length} из {results.length} запросов
       </p>
 
@@ -89,29 +101,52 @@ export function QueryExplorer({ results }: Props) {
           const isOpen = expanded === r.id
 
           return (
-            <div key={r.id} className="border border-zinc-800 rounded-xl overflow-hidden">
+            <div
+              key={r.id}
+              className="rounded-lg overflow-hidden"
+              style={{ border: "1px solid var(--rule)" }}
+            >
               <button
-                className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-zinc-800/50 transition-colors"
+                className="w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-[var(--bone-2)] transition-colors"
                 onClick={() => setExpanded(isOpen ? null : r.id)}
               >
-                <span className="text-xs text-zinc-600 pt-0.5 shrink-0 w-16">
+                <span className="text-xs pt-0.5 shrink-0 w-16 font-mono" style={{ color: "var(--ink-3)" }}>
                   {PLATFORM_LABELS[r.platform] ?? r.platform}
                 </span>
-                <span className="flex-1 text-sm text-zinc-300">{r.query}</span>
+                <span className="flex-1 text-sm" style={{ color: "var(--ink-2)" }}>
+                  {r.query}
+                </span>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${sentiment.cls}`}
-                  >
+                  <span className="monotag" style={{ color: sentiment.color, borderColor: sentiment.color }}>
                     {sentiment.label}
                   </span>
-                  <span className="text-zinc-600 text-xs">{isOpen ? "▲" : "▼"}</span>
+                  <span className="text-xs" style={{ color: "var(--ink-3)" }}>
+                    {isOpen ? "▲" : "▼"}
+                  </span>
                 </div>
               </button>
               {isOpen && (
-                <div className="px-4 pb-4 border-t border-zinc-800">
-                  <p className="text-xs text-zinc-400 mt-3 leading-relaxed whitespace-pre-wrap">
+                <div className="px-4 pb-4 border-t" style={{ borderColor: "var(--rule)" }}>
+                  <p className="text-xs mt-3 leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-2)" }}>
                     {r.response}
                   </p>
+                  {r.sources && r.sources.length > 0 && (
+                    <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--rule)" }}>
+                      <p className="t-eyebrow mb-2">Источники ({r.sources.length})</p>
+                      <div className="flex flex-wrap gap-2">
+                        {r.sources.map((url, i) => {
+                          const domain = (() => { try { return new URL(url).hostname.replace("www.", "") } catch { return url } })()
+                          return (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                               className="monotag text-xs hover:opacity-70 transition-opacity"
+                               style={{ color: "var(--ink-2)" }}>
+                              {domain}
+                            </a>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

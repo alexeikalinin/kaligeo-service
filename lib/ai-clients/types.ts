@@ -1,5 +1,7 @@
 export interface AIClient {
   name: string
+  /** Проверяет наличие необходимых env-переменных. Если false — платформа пропускается в аудите. */
+  isConfigured(): boolean
   query(prompt: string, systemPrompt?: string): Promise<string>
 }
 

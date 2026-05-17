@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "07-API-Keys/Trigger.dev Setup.md",
+                "file": "07-API-Keys/Vercel Blob Setup.md",
                 "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "Trigger.dev Setup"
+              "title": "Vercel Blob Setup"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "07-API-Keys/Trigger.dev Setup.md",
+                "file": "07-API-Keys/GigaChat API Key.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Обратные ссылки для Trigger.dev Setup"
+              "title": "Обратные ссылки для GigaChat API Key"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "07-API-Keys/Trigger.dev Setup.md",
+                "file": "07-API-Keys/GigaChat API Key.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Исходящие ссылки из Trigger.dev Setup"
+              "title": "Исходящие ссылки из GigaChat API Key"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "07-API-Keys/Trigger.dev Setup.md",
+                "file": "07-API-Keys/GigaChat API Key.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Структура Trigger.dev Setup"
+              "title": "Структура GigaChat API Key"
             }
           }
         ]
@@ -185,33 +185,34 @@
   },
   "active": "93b921dfaa6ea069",
   "lastOpenFiles": [
+    "07-API-Keys/Supabase Setup.md",
+    "07-API-Keys/Resend API Key.md",
+    "07-API-Keys/API Keys Overview.md",
+    "07-API-Keys/Anthropic API Key.md",
+    "07-API-Keys/GigaChat API Key.md",
+    "03-Monetization/Lead Magnets & Ad Copy.md",
+    "03-Monetization/Growth Strategy.md",
+    "03-Monetization/Lead Generation Strategy.md",
+    "07-API-Keys/Trigger.dev Setup.md",
     "07-API-Keys/Google Stitch MCP Setup.md",
     "01-Product/Brandbook.md",
     "07-API-Keys/Domain & Deployment Setup.md",
     "03-Monetization/Freemium Strategy.md",
     "01-Product/Product Vision.md",
     "01-Product/Google Stitch Integration.md",
-    "07-API-Keys/Supabase Setup.md",
-    "07-API-Keys/Resend API Key.md",
     "07-API-Keys/YandexGPT API Key.md",
     "07-API-Keys/Vercel Blob Setup.md",
     "07-API-Keys/Perplexity API Key.md",
-    "07-API-Keys/GigaChat API Key.md",
     "07-API-Keys/DeepSeek API Key.md",
     "07-API-Keys/Google Gemini API Key.md",
-    "07-API-Keys/API Keys Overview.md",
-    "07-API-Keys/Anthropic API Key.md",
     "02-Technical/AI Platforms.md",
     "07-API-Keys/Upstash Redis Setup.md",
-    "07-API-Keys/Trigger.dev Setup.md",
     "07-API-Keys/Neon Database Setup.md",
     "06-Clients/Clients Index.md",
     "assets/screenshots",
     "07-API-Keys",
     "06-Clients",
     "00-Inbox/Obsidian Setup.md",
-    "00-Inbox/Next Session.md",
-    "03-Monetization/Monetization Model.md",
-    "Home.md"
+    "00-Inbox/Next Session.md"
   ]
 }

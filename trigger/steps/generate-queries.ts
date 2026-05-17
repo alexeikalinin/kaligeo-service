@@ -30,7 +30,7 @@ Return ONLY a JSON array of strings, no other text:
 ["query 1", "query 2", ...]`
 
   const response = await client.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-mini",
     messages: [{ role: "user", content: prompt }],
     response_format: { type: "json_object" },
     max_tokens: 4000,

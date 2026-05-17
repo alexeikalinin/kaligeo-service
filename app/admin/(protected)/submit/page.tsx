@@ -42,22 +42,23 @@ export default function SubmitPage() {
     }
   }
 
-  const field = "w-full bg-zinc-800 text-zinc-100 placeholder-zinc-600 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-zinc-600"
+  const field = "w-full bg-zinc-900 border border-zinc-600 text-zinc-100 placeholder-zinc-500 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-400 focus:border-zinc-400 transition-colors"
+  const label = "block text-sm font-medium text-zinc-300 mb-2"
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-2xl font-bold mb-8">Новый аудит</h1>
-      <form onSubmit={handleSubmit} className="space-y-5">
+    <div className="max-w-2xl">
+      <h1 className="text-3xl font-bold mb-10">Новый аудит</h1>
+      <form onSubmit={handleSubmit} className="space-y-6">
         <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Название компании *</label>
+          <label className={label}>Название компании *</label>
           <input name="companyName" required placeholder="Например: ВкусВилл" className={field} />
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">URL сайта *</label>
+          <label className={label}>URL сайта *</label>
           <input name="websiteUrl" type="url" required placeholder="https://vkusvill.ru" className={field} />
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Ниша и описание бизнеса *</label>
+          <label className={label}>Ниша и описание бизнеса *</label>
           <textarea
             name="niche"
             required
@@ -67,7 +68,7 @@ export default function SubmitPage() {
           />
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Конкуренты (через запятую)</label>
+          <label className={label}>Конкуренты (через запятую)</label>
           <input
             name="competitors"
             placeholder="Азбука Вкуса, Перекрёсток, Лента"
@@ -75,22 +76,22 @@ export default function SubmitPage() {
           />
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Email для отчёта *</label>
+          <label className={label}>Email для отчёта *</label>
           <input name="clientEmail" type="email" required placeholder="you@example.com" className={field} />
         </div>
         <div>
-          <label className="block text-xs text-zinc-400 mb-1.5">Тариф</label>
+          <label className={label}>Тариф</label>
           <select name="tier" className={field}>
             <option value="BASIC">Basic (15 запросов)</option>
-            <option value="STANDARD" selected>Standard (50 запросов)</option>
+            <option value="STANDARD">Standard (50 запросов)</option>
             <option value="ADVANCED">Advanced (150 запросов)</option>
           </select>
         </div>
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-red-400 text-base">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-3 bg-zinc-100 text-zinc-900 rounded-xl font-semibold text-sm hover:bg-white transition-colors disabled:opacity-50"
+          className="w-full py-4 bg-zinc-100 text-zinc-900 rounded-xl font-semibold text-base hover:bg-white transition-colors disabled:opacity-50"
         >
           {loading ? "Запускаем..." : "Запустить аудит"}
         </button>

@@ -53,7 +53,9 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
   })
 
   const isLoading = status === "submitted" || status === "streaming"
-  const usedCount = chatStatus ? chatStatus.chatMessagesUsed + messages.filter(m => m.role === "user").length : 0
+  const usedCount = chatStatus
+    ? chatStatus.chatMessagesUsed + messages.filter((m) => m.role === "user").length
+    : 0
   const limit = chatStatus?.chatMessageLimit
   const remaining = limit !== null && limit !== undefined ? Math.max(0, limit - usedCount) : null
 
@@ -69,20 +71,28 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
     setInputValue("")
   }
 
-  // Determine what to show for Basic users
   if (chatStatus && !chatStatus.canChat) {
     return (
       <div className="fixed bottom-6 right-6 z-50">
-        <div className="bg-zinc-800 border border-zinc-700 rounded-2xl p-5 max-w-xs shadow-2xl">
-          <p className="text-zinc-100 font-semibold text-sm mb-1">Спросить AI о вашем аудите</p>
-          <p className="text-zinc-400 text-xs mb-4">
-            Доступно на тарифах Standard и Advanced — задайте вопросы по вашим данным
+        <div
+          className="rounded-2xl p-5 max-w-xs"
+          style={{
+            background: "var(--bone)",
+            border: "1px solid var(--rule)",
+          }}
+        >
+          <p className="font-semibold text-sm mb-1" style={{ color: "var(--ink)" }}>
+            Спросить AI о вашем аудите
+          </p>
+          <p className="text-xs mb-4" style={{ color: "var(--ink-3)" }}>
+            Доступно на тарифах Standard и Advanced
           </p>
           <a
             href="https://kaligeo.vercel.app/#pricing"
             target="_blank"
             rel="noopener noreferrer"
-            className="block w-full text-center py-2 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-semibold hover:bg-white transition-colors"
+            className="block w-full text-center py-2 rounded text-sm font-semibold transition-opacity hover:opacity-70"
+            style={{ background: "var(--ink)", color: "var(--bone)" }}
           >
             Обновить тариф →
           </a>
@@ -93,45 +103,54 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
 
   return (
     <>
-      {/* Toggle button */}
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-zinc-100 text-zinc-900 rounded-2xl font-semibold text-sm shadow-2xl hover:bg-white transition-all"
+          className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl font-semibold text-sm transition-opacity hover:opacity-80"
+          style={{ background: "var(--ink)", color: "var(--bone)" }}
         >
-          <span>💬</span>
+          <span>✦</span>
           <span>Спросить AI</span>
           {remaining !== null && (
-            <span className="ml-1 text-xs text-zinc-500">
-              {remaining} из {limit}
+            <span className="ml-1 text-xs opacity-60">
+              {remaining}/{limit}
             </span>
           )}
         </button>
       )}
 
-      {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-0 right-0 z-50 w-full sm:w-[420px] sm:bottom-6 sm:right-6 flex flex-col bg-zinc-900 border border-zinc-700 sm:rounded-2xl shadow-2xl max-h-[85vh]">
-          {/* Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800">
+        <div
+          className="fixed bottom-0 right-0 z-50 w-full sm:w-[420px] sm:bottom-6 sm:right-6 flex flex-col sm:rounded-2xl max-h-[85vh]"
+          style={{ background: "var(--bone)", border: "1px solid var(--rule)" }}
+        >
+          <div
+            className="flex items-center justify-between px-4 py-3 border-b"
+            style={{ borderColor: "var(--rule)" }}
+          >
             <div>
-              <p className="text-sm font-semibold text-zinc-100">AI-консультант</p>
-              {remaining !== null && (
-                <p className="text-xs text-zinc-500">{remaining} вопросов осталось</p>
-              )}
-              {remaining === null && (
-                <p className="text-xs text-emerald-500">Безлимитный доступ</p>
+              <p className="text-sm font-semibold" style={{ color: "var(--ink)" }}>
+                AI-консультант
+              </p>
+              {remaining !== null ? (
+                <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                  {remaining} вопросов осталось
+                </p>
+              ) : (
+                <p className="text-xs" style={{ color: "var(--accent)", filter: "brightness(0.7)" }}>
+                  Безлимитный доступ
+                </p>
               )}
             </div>
             <button
               onClick={() => setOpen(false)}
-              className="text-zinc-500 hover:text-zinc-300 text-xl leading-none"
+              className="text-xl leading-none transition-opacity hover:opacity-50"
+              style={{ color: "var(--ink-3)" }}
             >
               ×
             </button>
           </div>
 
-          {/* Messages */}
           <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3 min-h-[200px]">
             {messages.map((msg) => {
               const text = (msg.parts ?? [])
@@ -145,11 +164,12 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
                   className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap ${
+                    className="max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed whitespace-pre-wrap"
+                    style={
                       msg.role === "user"
-                        ? "bg-zinc-700 text-zinc-100 rounded-br-sm"
-                        : "bg-zinc-800 text-zinc-200 rounded-bl-sm"
-                    }`}
+                        ? { background: "var(--ink)", color: "var(--bone)", borderBottomRightRadius: "4px" }
+                        : { background: "var(--bone-2)", color: "var(--ink)", border: "1px solid var(--rule)", borderBottomLeftRadius: "4px" }
+                    }
                   >
                     {text}
                   </div>
@@ -159,13 +179,16 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
 
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-zinc-800 rounded-2xl rounded-bl-sm px-3 py-2">
+                <div
+                  className="rounded-2xl px-3 py-2"
+                  style={{ background: "var(--bone-2)", border: "1px solid var(--rule)", borderBottomLeftRadius: "4px" }}
+                >
                   <span className="flex gap-1">
                     {[0, 150, 300].map((d) => (
                       <span
                         key={d}
-                        className="w-1.5 h-1.5 bg-zinc-400 rounded-full animate-bounce"
-                        style={{ animationDelay: `${d}ms` }}
+                        className="w-1.5 h-1.5 rounded-full animate-bounce"
+                        style={{ background: "var(--ink-3)", animationDelay: `${d}ms` }}
                       />
                     ))}
                   </span>
@@ -173,17 +196,20 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
               </div>
             )}
 
-            {/* Limit reached */}
             {remaining !== null && remaining <= 0 && !isLoading && (
-              <div className="bg-zinc-800 border border-zinc-700 rounded-xl p-4 text-center">
-                <p className="text-zinc-300 text-sm mb-3">
+              <div
+                className="rounded-xl p-4 text-center"
+                style={{ border: "1px solid var(--rule)", background: "var(--bone-2)" }}
+              >
+                <p className="text-sm mb-3" style={{ color: "var(--ink-2)" }}>
                   Вы использовали все {limit} вопросов тарифа Standard
                 </p>
                 <a
                   href="https://kaligeo.vercel.app/#pricing"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-block px-4 py-2 bg-zinc-100 text-zinc-900 rounded-lg text-sm font-semibold hover:bg-white transition-colors"
+                  className="inline-block px-4 py-2 rounded text-sm font-semibold transition-opacity hover:opacity-70"
+                  style={{ background: "var(--ink)", color: "var(--bone)" }}
                 >
                   Перейти на Advanced →
                 </a>
@@ -191,26 +217,33 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
             )}
 
             {error && (
-              <p className="text-red-400 text-xs text-center">Ошибка соединения. Попробуйте ещё раз.</p>
+              <p className="text-xs text-center" style={{ color: "#ef4444" }}>
+                Ошибка соединения. Попробуйте ещё раз.
+              </p>
             )}
 
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
-          <div className="border-t border-zinc-800 px-3 py-3">
+          <div className="px-3 py-3 border-t" style={{ borderColor: "var(--rule)" }}>
             <form onSubmit={handleSubmit} className="flex gap-2">
               <input
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 placeholder={remaining === 0 ? "Лимит исчерпан" : "Задайте вопрос по отчёту..."}
                 disabled={isLoading || (remaining !== null && remaining <= 0)}
-                className="flex-1 bg-zinc-800 text-zinc-100 placeholder-zinc-600 rounded-xl px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-zinc-600 disabled:opacity-50"
+                className="flex-1 rounded-lg px-3 py-2 text-sm outline-none disabled:opacity-50"
+                style={{
+                  background: "var(--bone-2)",
+                  border: "1px solid var(--rule)",
+                  color: "var(--ink)",
+                }}
               />
               <button
                 type="submit"
                 disabled={isLoading || !inputValue.trim() || (remaining !== null && remaining <= 0)}
-                className="px-3 py-2 bg-zinc-100 text-zinc-900 rounded-xl text-sm font-bold hover:bg-white transition-colors disabled:opacity-40"
+                className="px-3 py-2 rounded-lg text-sm font-bold transition-opacity disabled:opacity-40"
+                style={{ background: "var(--ink)", color: "var(--bone)" }}
               >
                 →
               </button>

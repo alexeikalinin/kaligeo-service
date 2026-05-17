@@ -8,6 +8,10 @@ export interface TierConfig {
   hasCompetitorMatrix: boolean
   hasPostAuditChat: boolean
   chatMessageLimit: number // 0 = no access, Infinity = unlimited
+  hasAnalysisAgent: boolean
+  hasContentAgent: boolean
+  hasReportRegeneration: boolean
+  hasWebsiteFix: boolean // Google Stitch — 1 страница
   priorityHours: number // SLA в часах
 }
 
@@ -20,26 +24,38 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasCompetitorMatrix: false,
     hasPostAuditChat: false,
     chatMessageLimit: 0,
+    hasAnalysisAgent: false,
+    hasContentAgent: false,
+    hasReportRegeneration: false,
+    hasWebsiteFix: false,
     priorityHours: 48,
   },
   STANDARD: {
-    queryCount: 50,
+    queryCount: 30,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK"],
     hasPdf: true,
     hasActionPlan: true,
     hasCompetitorMatrix: true,
     hasPostAuditChat: true,
     chatMessageLimit: 10,
+    hasAnalysisAgent: false,
+    hasContentAgent: false,
+    hasReportRegeneration: false,
+    hasWebsiteFix: false,
     priorityHours: 48,
   },
   ADVANCED: {
-    queryCount: 150,
+    queryCount: 50,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK", "GIGACHAT", "ALISA"],
     hasPdf: true,
     hasActionPlan: true,
     hasCompetitorMatrix: true,
     hasPostAuditChat: true,
     chatMessageLimit: Infinity,
+    hasAnalysisAgent: true,
+    hasContentAgent: true,
+    hasReportRegeneration: true,
+    hasWebsiteFix: true,
     priorityHours: 24,
   },
 }

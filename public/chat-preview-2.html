@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KaliGEO Chat — Split Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:        #0F1115;
+    --ink-2:      #3A3D45;
+    --ink-3:      #6A6D75;
+    --bone:       #FAFAF7;
+    --bone-2:     #F2F1EB;
+    --rule:       #E5E5E1;
+    --accent:     #C8F24A;
+    --accent-ink: #0F1115;
+    --ink-border: #2A2D35;
+    --sidebar-w:  300px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bone);
+    color: var(--ink);
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ────────────────────────────
+     LAYOUT
+  ──────────────────────────── */
+  .app { display: flex; height: 100vh; overflow: hidden; }
+
+  /* ────────────────────────────
+     SIDEBAR
+  ──────────────────────────── */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--bone-2);
+    border-right: 1px solid var(--rule);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar-brand {
+    padding: 32px 28px 28px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 28px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    display: block;
+    margin-bottom: 10px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .sidebar-section { padding: 28px 28px 0; }
+  .sidebar-section + .sidebar-section { padding-top: 24px; }
+
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+    margin-bottom: 16px;
+    display: block;
+  }
+  .section-label::before { content: "— "; }
+
+  /* Platform list */
+  .platform-list { list-style: none; }
+  .platform-list li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 13px 0;
+    border-bottom: 1px solid var(--rule);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .platform-list li:last-child { border-bottom: none; }
+  .platform-list li:hover { opacity: 0.6; }
+  .platform-name {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .platform-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--rule);
+    border: 1.5px solid var(--rule);
+    flex-shrink: 0;
+  }
+  .platform-dot.active {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* Nav links */
+  .nav-list { list-style: none; }
+  .nav-list li a {
+    display: flex;
+    align-items: center;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink-2);
+    text-decoration: none;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--rule);
+    transition: color 0.15s;
+    gap: 10px;
+  }
+  .nav-list li:last-child a { border-bottom: none; }
+  .nav-list li a:hover { color: var(--ink); }
+  .nav-arrow {
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+
+  /* Sidebar quote */
+  .sidebar-quote {
+    margin-top: auto;
+    padding: 24px 28px;
+    border-top: 1px solid var(--rule);
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 16px;
+    line-height: 1.55;
+    color: var(--ink-3);
+  }
+
+  /* ────────────────────────────
+     MAIN PANEL
+  ──────────────────────────── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    background: var(--bone);
+  }
+
+  /* Top bar */
+  .topbar {
+    height: 60px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    flex-shrink: 0;
+    gap: 12px;
+  }
+  .topbar-title {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink-2);
+    letter-spacing: 0.01em;
+  }
+  .topbar-title::before {
+    content: "— ";
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-3);
+  }
+  .topbar-date {
+    margin-left: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--ink-3);
+    text-transform: uppercase;
+  }
+  .new-audit-btn {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    background: transparent;
+    border: 1.5px solid var(--rule);
+    border-radius: 8px;
+    padding: 7px 16px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    margin-left: 12px;
+  }
+  .new-audit-btn:hover {
+    border-color: var(--ink-3);
+    background: var(--bone-2);
+  }
+
+  /* Mobile menu button (hidden on desktop) */
+  .menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--ink);
+    font-size: 22px;
+    line-height: 1;
+  }
+
+  /* ── Messages ── */
+  .messages-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 32px;
+  }
+  .messages-inner {
+    max-width: 700px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .msg-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .msg-row.user { justify-content: flex-end; }
+
+  .ai-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    margin-top: 4px;
+    flex-shrink: 0;
+  }
+
+  .bubble {
+    max-width: 75%;
+    padding: 16px 20px;
+    border-radius: 14px;
+    font-size: 15px;
+    line-height: 1.7;
+    font-family: 'Inter Tight', sans-serif;
+  }
+  .bubble.assistant {
+    background: var(--bone-2);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.user {
+    background: var(--ink);
+    color: var(--bone);
+    border-bottom-right-radius: 4px;
+  }
+
+  /* ── Input ── */
+  .input-area {
+    border-top: 1px solid var(--rule);
+    background: var(--bone);
+    padding: 20px 32px 24px;
+    flex-shrink: 0;
+  }
+  .input-row {
+    max-width: 700px;
+    margin: 0 auto;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .input-field {
+    flex: 1;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    padding: 14px 20px;
+    border-radius: 10px;
+    border: 1.5px solid var(--rule);
+    background: var(--bone-2);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .input-field::placeholder { color: var(--ink-3); }
+  .input-field:focus { border-color: var(--ink-2); }
+
+  .send-btn {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: var(--accent);
+    border: none;
+    color: var(--accent-ink);
+    cursor: pointer;
+    transition: opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { opacity: 0.8; }
+
+  .input-hint {
+    max-width: 700px;
+    margin: 10px auto 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .input-hint::before { content: "— "; }
+
+  /* ────────────────────────────
+     MOBILE OVERLAY
+  ──────────────────────────── */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15,17,21,0.35);
+    z-index: 90;
+  }
+
+  /* ────────────────────────────
+     RESPONSIVE
+  ──────────────────────────── */
+  @media (max-width: 768px) {
+    :root { --sidebar-w: 280px; }
+
+    .sidebar {
+      position: fixed;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      z-index: 100;
+      transform: translateX(-100%);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .sidebar-overlay.open { display: block; }
+
+    .menu-btn { display: flex; }
+
+    .topbar { padding: 0 20px; height: 56px; }
+    .topbar-date { display: none; }
+    .new-audit-btn { display: none; }
+
+    .messages-wrap { padding: 24px 16px; }
+    .bubble { max-width: 88%; font-size: 15px; }
+
+    .input-area { padding: 16px 16px 20px; }
+    .input-field { font-size: 16px; /* prevent iOS zoom */ }
+  }
+
+  @media (max-width: 480px) {
+    .sidebar-brand { padding: 24px 20px 20px; }
+    .sidebar-section { padding: 20px 20px 0; }
+    .sidebar-quote { padding: 20px; }
+    .logo { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="overlay" onclick="closeSidebar()"></div>
+
+<div class="app">
+
+  <!-- ── SIDEBAR ── -->
+  <aside class="sidebar" id="sidebar">
+
+    <div class="sidebar-brand">
+      <span class="logo">KaliGEO</span>
+      <span class="chip">Visibility Audit</span>
+    </div>
+
+    <div class="sidebar-section">
+      <span class="section-label">Платформы</span>
+      <ul class="platform-list">
+        <li>
+          <span class="platform-name">ChatGPT</span>
+          <span class="platform-dot active"></span>
+        </li>
+        <li>
+          <span class="platform-name">Perplexity</span>
+          <span class="platform-dot active"></span>
+        </li>
+        <li>
+          <span class="platform-name">Gemini</span>
+          <span class="platform-dot"></span>
+        </li>
+        <li>
+          <span class="platform-name">Claude</span>
+          <span class="platform-dot"></span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="sidebar-section" style="margin-top: 8px;">
+      <span class="section-label">Навигация</span>
+      <ul class="nav-list">
+        <li>
+          <a href="#">
+            Найти отчёт
+            <span class="nav-arrow" style="margin-left:auto;">→</span>
+          </a>
+        </li>
+        <li>
+          <a href="#">
+            Admin
+            <span class="nav-arrow" style="margin-left:auto;">→</span>
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <p class="sidebar-quote">
+      «Поиск не умер.<br>Он стал диалогом.»
+    </p>
+
+  </aside>
+
+  <!-- ── MAIN ── -->
+  <main class="main">
+
+    <div class="topbar">
+      <button class="menu-btn" onclick="openSidebar()" aria-label="Меню">&#9776;</button>
+      <span class="topbar-title">Новый аудит</span>
+      <span class="topbar-date">03 мая 2026</span>
+      <button class="new-audit-btn">+ Новый</button>
+    </div>
+
+    <div class="messages-wrap">
+      <div class="messages-inner">
+
+        <div class="msg-row assistant">
+          <div class="ai-tag">AI</div>
+          <div class="bubble assistant">
+            Готов запустить AI-аудит. Введите URL сайта — проанализирую его и задам точечные вопросы по вашей нише.
+          </div>
+        </div>
+
+        <div class="msg-row user">
+          <div class="bubble user">kaligeo.com</div>
+        </div>
+
+        <div class="msg-row assistant">
+          <div class="ai-tag">AI</div>
+          <div class="bubble assistant">
+            Отлично. В какой нише работает kaligeo.com? Опишите целевую аудиторию в 1–2 словах — это поможет точнее сформировать запросы для проверки в ChatGPT, Perplexity, Gemini и Claude.
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="input-area">
+      <div class="input-row">
+        <input
+          class="input-field"
+          type="text"
+          placeholder="Введите URL сайта или напишите сообщение..."
+          autocomplete="off"
+        />
+        <button class="send-btn" aria-label="Отправить">→</button>
+      </div>
+      <div class="input-hint">анализируем ChatGPT · Perplexity · Gemini · Claude</div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  function openSidebar() {
+    document.getElementById('sidebar').classList.add('open');
+    document.getElementById('overlay').classList.add('open');
+  }
+  function closeSidebar() {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('overlay').classList.remove('open');
+  }
+</script>
+</body>
+</html>

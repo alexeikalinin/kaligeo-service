@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { tasks } from "@trigger.dev/sdk/v3"
-import { auditPipeline } from "@/trigger/audit-pipeline"
 import { z } from "zod"
 import { Redis } from "@upstash/redis"
 
@@ -58,15 +56,14 @@ export async function POST(req: NextRequest) {
         niche: data.niche,
         competitors: data.competitors,
         tier: data.tier,
+        status: "PENDING_PAYMENT",
       },
     })
-
-    await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: job.id })
 
     return NextResponse.json({
       success: true,
       jobId: job.id,
-      message: "Аудит запущен. Мы отправим отчёт на ваш email в течение 48 часов.",
+      message: "Заявка принята. После подтверждения оплаты мы запустим аудит и отправим отчёт на ваш email в течение 48 часов.",
     })
   } catch (error) {
     if (error instanceof z.ZodError) {

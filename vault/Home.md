@@ -8,8 +8,12 @@
 - [[01-Product/Tiers & Features]] — что входит в каждый тариф
 
 ### Монетизация
-- [[03-Monetization/Monetization Model]] — тарифы, ограничения, апсейл
+- [[03-Monetization/Monetization Model]] — тарифы, ограничения, апсейл + Stitch-продукты
+- [[03-Monetization/Freemium Strategy]] — freemium воронка и email capture
 - [[03-Monetization/Post-Audit Chat]] — чат после аудита ✅ реализован
+- [[03-Monetization/Lead Generation Strategy]] — каналы привлечения 3–10 заявок/день
+- [[03-Monetization/Growth Strategy]] — стратегия продвижения, фазы, скрапинг → аудитории
+- [[03-Monetization/Lead Magnets & Ad Copy]] — тексты писем, Яндекс.Директ, VK Ads, Look-alike
 
 ### Технический
 - [[02-Technical/Architecture]] — компоненты и агенты
@@ -69,4 +73,4 @@
 - Live SSE вместо polling
 
 ---
-*Последнее обновление: 2026-05-01*
+*Последнее обновление: 2026-05-02*

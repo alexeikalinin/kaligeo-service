@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KaliGEO Chat — Концепция 3: Centered Stage</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --ink: #0F1115;
+    --ink-2: #3A3D45;
+    --ink-3: #6A6D75;
+    --bone: #FAFAF7;
+    --bone-2: #F2F1EB;
+    --rule: #E5E5E1;
+    --accent: #C8F24A;
+    --accent-ink: #0F1115;
+    --ink-border: #2A2D35;
+  }
+  html, body {
+    height: 100%;
+    background: var(--bone);
+    color: var(--ink);
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .page { display: flex; flex-direction: column; height: 100vh; }
+
+  /* ── HEADER light, prominent ── */
+  .header {
+    background: var(--bone);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    height: 56px;
+    flex-shrink: 0;
+  }
+  .logo-wrap { display: flex; align-items: center; gap: 8px; }
+  .logo {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.02em;
+  }
+  .logo-chip {
+    display: inline-flex;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 3px;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .nav {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .nav-link {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-2);
+    text-decoration: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-link:hover { background: var(--bone-2); color: var(--ink); }
+  .nav-link.admin {
+    border: 1px solid var(--rule);
+  }
+
+  /* ── BODY split: welcome OR messages ── */
+  .body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* Welcome state (shown when no real messages) */
+  .welcome {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 24px 80px;
+    gap: 20px;
+  }
+  .welcome-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .welcome-eyebrow::before { content: "— "; }
+  .welcome-title {
+    font-family: 'Instrument Serif', serif;
+    font-size: 52px;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+    text-align: center;
+    line-height: 1.08;
+  }
+  .welcome-title em { font-style: italic; }
+  .welcome-sub {
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 15px;
+    color: var(--ink-2);
+    text-align: center;
+    max-width: 460px;
+    line-height: 1.6;
+  }
+  .platforms {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .platform-chip {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    color: var(--ink-3);
+  }
+
+  /* Messages state */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 16px;
+  }
+  .messages-inner {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .msg-row { display: flex; align-items: flex-start; gap: 12px; }
+  .msg-row.user { justify-content: flex-end; }
+  .ai-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 3px 6px;
+    border-radius: 4px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+  .bubble {
+    max-width: 78%;
+    padding: 13px 17px;
+    border-radius: 12px;
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+  .bubble.assistant {
+    background: var(--bone-2);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    border-bottom-left-radius: 4px;
+  }
+  .bubble.user {
+    background: var(--ink);
+    color: var(--bone);
+    border-bottom-right-radius: 4px;
+  }
+
+  /* ── INPUT fixed bottom ── */
+  .input-area {
+    border-top: 1px solid var(--rule);
+    background: var(--bone);
+    padding: 14px 24px;
+    flex-shrink: 0;
+  }
+  .input-row {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .input-field {
+    flex: 1;
+    font-family: 'Inter Tight', sans-serif;
+    font-size: 14px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--rule);
+    background: var(--bone-2);
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .input-field::placeholder { color: var(--ink-3); }
+  .input-field:focus { border-color: var(--ink-2); }
+  .send-btn {
+    font-family: 'Inter Tight', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    background: var(--accent);
+    border: none;
+    color: var(--accent-ink);
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .send-btn:hover { opacity: 0.85; }
+  .input-hint {
+    max-width: 680px;
+    margin: 7px auto 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+  .input-hint::before { content: "— "; }
+
+  .concept-label {
+    position: fixed;
+    top: 64px;
+    right: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 10px;
+    border: 1px solid var(--rule);
+    background: var(--bone-2);
+    color: var(--ink-3);
+    border-radius: 4px;
+    z-index: 100;
+  }
+
+  /* ── Tab switcher for demo ── */
+  .demo-tabs {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    background: var(--bone-2);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    padding: 6px;
+    z-index: 200;
+  }
+  .demo-tab {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 5px;
+    border: none;
+    background: transparent;
+    color: var(--ink-3);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .demo-tab.active {
+    background: var(--ink);
+    color: var(--bone);
+  }
+
+  .state-welcome { display: flex; }
+  .state-messages { display: none; }
+  .state-messages .messages { display: flex; flex-direction: column; }
+
+  body.show-messages .state-welcome { display: none; }
+  body.show-messages .state-messages { display: flex; flex: 1; flex-direction: column; overflow: hidden; }
+</style>
+</head>
+<body>
+<div class="concept-label">Концепция 3 — Centered Stage</div>
+
+<div class="page">
+  <header class="header">
+    <div class="logo-wrap">
+      <span class="logo">KaliGEO</span>
+      <span class="logo-chip">GEO</span>
+    </div>
+    <nav class="nav">
+      <a href="#" class="nav-link">Найти отчёт</a>
+      <a href="#" class="nav-link admin">Admin</a>
+    </nav>
+  </header>
+
+  <div class="body">
+    <!-- Welcome empty state -->
+    <div class="welcome state-welcome">
+      <span class="welcome-eyebrow">AI Visibility Audit</span>
+      <h1 class="welcome-title">Где вас видит <em>ИИ?</em></h1>
+      <p class="welcome-sub">
+        Введите URL — и ИИ проведёт аудит вашей видимости в ChatGPT, Perplexity, Gemini и Claude.
+      </p>
+      <div class="platforms">
+        <span class="platform-chip">ChatGPT</span>
+        <span class="platform-chip">Perplexity</span>
+        <span class="platform-chip">Gemini</span>
+        <span class="platform-chip">Claude</span>
+      </div>
+    </div>
+
+    <!-- Messages state -->
+    <div class="state-messages">
+      <div class="messages">
+        <div class="messages-inner">
+          <div class="msg-row assistant">
+            <div class="ai-tag">AI</div>
+            <div class="bubble assistant">
+              Готов запустить AI-аудит. Введите URL сайта — проанализирую его и задам точечные вопросы по вашей нише.
+            </div>
+          </div>
+          <div class="msg-row user">
+            <div class="bubble user">kaligeo.com</div>
+          </div>
+          <div class="msg-row assistant">
+            <div class="ai-tag">AI</div>
+            <div class="bubble assistant">
+              Отлично. В какой нише работает kaligeo.com? Опишите целевую аудиторию — это поможет точнее сформировать запросы.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <div class="input-row">
+      <input class="input-field" type="text" placeholder="Введите URL сайта или напишите сообщение..." />
+      <button class="send-btn">→</button>
+    </div>
+    <div class="input-hint">анализируем ChatGPT · Perplexity · Gemini · Claude</div>
+  </div>
+</div>
+
+<!-- Demo state switcher -->
+<div class="demo-tabs">
+  <button class="demo-tab active" onclick="showState('welcome')">Пустой экран</button>
+  <button class="demo-tab" onclick="showState('messages')">В диалоге</button>
+</div>
+
+<script>
+function showState(state) {
+  document.querySelectorAll('.demo-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  if (state === 'messages') {
+    document.body.classList.add('show-messages');
+  } else {
+    document.body.classList.remove('show-messages');
+  }
+}
+</script>
+</body>
+</html>

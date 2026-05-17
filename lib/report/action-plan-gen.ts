@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk"
+import { generateText } from "ai"
+import { getActionPlanModel } from "../models"
 import type { WeakPoint } from "../analysis/weak-points-checker"
 import type { PlatformScore } from "../analysis/calculate-scores"
 
@@ -15,54 +16,53 @@ export interface ActionPlan {
   "90d": ActionItem[]
 }
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
 export async function generateActionPlan(
   companyName: string,
   niche: string,
   weakPoints: WeakPoint[],
   platformScores: Record<string, PlatformScore>,
-  overallScore: number
+  overallScore: number,
+  tier: "BASIC" | "STANDARD" | "ADVANCED" = "STANDARD"
 ): Promise<ActionPlan> {
+  const model = getActionPlanModel(tier)
+
+  // Basic — план не генерируем
+  if (!model) return { "30d": [], "60d": [], "90d": [] }
+
   const weakPointsSummary = weakPoints.map((w) => `- ${w.title}: ${w.description}`).join("\n")
   const scoresSummary = Object.values(platformScores)
     .map((s) => `${s.platform}: ${s.score}/100 (${s.citationRate}% citation rate)`)
     .join("\n")
 
-  const prompt = `You are an AI search visibility expert. Create a prioritized 30/60/90-day action plan.
+  const prompt = `Ты эксперт по AI-видимости брендов. Создай приоритизированный 30/60/90-дневный план действий.
 
-Company: ${companyName}
-Niche: ${niche}
-Overall AI Visibility Score: ${overallScore}/100
+Компания: ${companyName}
+Ниша: ${niche}
+Общий AI Score: ${overallScore}/100
 
-Platform Scores:
+Scores по платформам:
 ${scoresSummary}
 
-Identified Weak Points:
+Слабые места:
 ${weakPointsSummary}
 
-Return a JSON object with this exact structure:
+Верни JSON строго в формате:
 {
   "30d": [{"title": "...", "description": "...", "effort": "low|medium|high", "impact": "low|medium|high"}],
   "60d": [...],
   "90d": [...]
 }
 
-Rules:
-- 30d: quick wins, 3-5 items, low effort / high impact
-- 60d: medium-term content & technical fixes, 3-4 items
-- 90d: strategic entity building and authority, 2-3 items
-- Be specific to the company's niche
-- Focus on AI visibility, not traditional SEO
-- Write in Russian`
+Правила:
+- 30d: быстрые победы, 3-5 пунктов, низкие усилия / высокий эффект
+- 60d: контентные и технические исправления, 3-4 пункта
+- 90d: стратегическое построение авторитета, 2-3 пункта
+- Конкретно под нишу компании
+- Фокус на AI-видимости, не SEO
+- На русском языке`
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 2000,
-    messages: [{ role: "user", content: prompt }],
-  })
+  const { text } = await generateText({ model, prompt, maxOutputTokens: 2000 })
 
-  const text = response.content[0].type === "text" ? response.content[0].text : ""
   const jsonMatch = text.match(/\{[\s\S]*\}/)
   if (!jsonMatch) throw new Error("Failed to parse action plan JSON")
 

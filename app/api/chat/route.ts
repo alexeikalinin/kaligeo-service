@@ -1,21 +1,30 @@
 import { streamText, stepCountIs, convertToModelMessages } from "ai"
-import { createAnthropic } from "@ai-sdk/anthropic"
 import { z } from "zod"
-
-const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
+import { CHAT_MODEL } from "@/lib/models"
 
 const SYSTEM_PROMPT = `Ты — ИИ-ассистент сервиса KaliGEO. Твоя задача — помочь клиенту запустить AI-аудит видимости его бренда в поисковых ИИ-системах (ChatGPT, Claude, Gemini, Perplexity, DeepSeek, YandexGPT, GigaChat).
 
-Веди непринуждённый диалог. Задавай вопросы по одному, не все сразу. Собери следующие данные:
-1. Название компании
+Веди непринуждённый диалог. Задавай вопросы по одному, не все сразу.
+
+КАК ТОЛЬКО пользователь называет URL сайта — сразу вызови инструмент analyze_website, не спрашивая ничего другого.
+После анализа — прочитай результаты вслух (название компании, ниша, услуги) и спроси, всё ли верно.
+Это сэкономит клиенту время — не нужно описывать бизнес вручную.
+
+Собери следующие данные:
+1. Название компании (из анализа сайта или от пользователя)
 2. URL сайта (должен начинаться с http:// или https://)
-3. Ниша или направление бизнеса (2-3 предложения — чем занимается, кто клиенты)
-4. Основные конкуренты (необязательно, до 5 штук через запятую — если не знает, пропусти)
+3. Ниша или направление бизнеса (из анализа сайта или от пользователя)
+4. Основные конкуренты (необязательно, до 5 штук — можно взять из анализа сайта, уточнить у пользователя)
 5. Email для отправки готового отчёта
 
-Когда все обязательные данные собраны (компания, сайт, ниша, email) — подтверди их и вызови инструмент submit_audit.
+Когда все обязательные данные собраны (компания, сайт, ниша, email) — подтверди итоговые данные и вызови submit_audit.
 
 Говори на том же языке, что и пользователь. Будь дружелюбным и профессиональным.`
+
+const analyzeWebsiteSchema = z.object({
+  websiteUrl: z.string().url().describe("URL сайта для анализа"),
+})
 
 const submitAuditSchema = z.object({
   companyName: z.string().describe("Название компании"),
@@ -50,18 +59,27 @@ export async function POST(req: Request) {
   const messages = await convertToModelMessages(uiMessages)
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4-6"),
+    model: CHAT_MODEL,
     system: SYSTEM_PROMPT,
     messages,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools: {
+      analyze_website: {
+        description:
+          "Проанализировать сайт компании и извлечь название, нишу, услуги, ключевые слова и возможных конкурентов",
+        parameters: analyzeWebsiteSchema,
+        execute: async ({ websiteUrl }: { websiteUrl: string }) => {
+          const result = await runWebsiteAnalysisAgent(websiteUrl)
+          return result
+        },
+      },
       submit_audit: {
         description: "Запустить AI-аудит после сбора всех необходимых данных",
         parameters: submitAuditSchema,
         execute: executeSubmitAudit,
       },
     } as any,
-    stopWhen: stepCountIs(10),
+    stopWhen: stepCountIs(15),
   })
 
   return result.toUIMessageStreamResponse()

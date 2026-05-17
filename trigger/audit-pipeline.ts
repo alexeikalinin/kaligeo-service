@@ -8,7 +8,12 @@ import { calculateVisibilityScores, calculateOverallScore } from "../lib/analysi
 import { buildCompetitorMatrix } from "../lib/analysis/competitor-matrix"
 import { detectWeakPoints } from "../lib/analysis/weak-points-checker"
 import { generateActionPlan } from "../lib/report/action-plan-gen"
+import { runGrowthPlanAgent } from "../lib/agents/growth-plan-agent"
+import { runAnalysisAgent } from "../lib/agents/analysis-agent"
+import { runContentAgent } from "../lib/agents/content-agent"
 import { getTierConfig, type Tier } from "../lib/gates"
+import { assertCanStartAudit } from "../lib/agents/risk-agent"
+import { getActivePlatforms } from "../lib/ai-clients"
 
 export interface AuditPayload {
   jobId: string
@@ -24,6 +29,7 @@ export const auditPipeline = task({
 
     const job = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
     const config = getTierConfig(job.tier as Tier)
+    const isAdvanced = job.tier === "ADVANCED"
 
     // ── Step 1: Generate queries ──────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_QUERIES" } })
@@ -33,8 +39,21 @@ export const auditPipeline = task({
     // ── Step 2: Execute queries — only platforms for this tier ────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "EXECUTING_QUERIES" } })
 
+    // Пересекаем тарифные платформы с теми у которых есть ключи
+    const activePlatforms = getActivePlatforms()
+    const tierPlatforms = config.platforms.filter((p) => activePlatforms.includes(p))
+    const suspendedByKey = config.platforms.filter((p) => !activePlatforms.includes(p))
+    if (suspendedByKey.length > 0) {
+      console.warn(`[platforms] Приостановлены (нет ключей): ${suspendedByKey.join(", ")}`)
+    }
+
+    const { platformsToUse, skippedPlatforms } = await assertCanStartAudit(tierPlatforms)
+    if (skippedPlatforms.length > 0) {
+      console.warn(`[risk-agent] Пропущены из-за лимитов: ${skippedPlatforms.join(", ")}`)
+    }
+
     await Promise.allSettled(
-      config.platforms.map((platform) =>
+      platformsToUse.map((platform) =>
         executeQueriesOnPlatform(jobId, queries, platform, job.companyName, job.websiteUrl, job.competitors)
       )
     )
@@ -51,27 +70,67 @@ export const auditPipeline = task({
       : []
     const weakPoints = detectWeakPoints(allResults, job.websiteUrl, overallScore)
 
-    // ── Step 4: Action plan (Standard+) ──────────────────────────────────
-    const actionPlan = config.hasActionPlan
-      ? await generateActionPlan(job.companyName, job.niche, weakPoints, platformScores, overallScore)
-      : { "30d": [], "60d": [], "90d": [] }
+    // ── Step 4: Advanced — параллельный запуск агентов анализа ───────────
+    let competitorAnalysis: string | undefined
+    let gapsAnalysis: string | undefined
+    let contentRecommendations: string | undefined
+
+    if (isAdvanced) {
+      const [compAnalysis, gaps, contentRecs] = await Promise.allSettled([
+        runAnalysisAgent(jobId, "competitors"),
+        runAnalysisAgent(jobId, "gaps"),
+        runContentAgent({
+          companyName: job.companyName,
+          niche: job.niche,
+          weakPoints: weakPoints.filter((w) => w.detected).map((w) => w.title),
+          competitorStrengths: [],
+        }).then((r) => JSON.stringify(r, null, 2)),
+      ])
+
+      competitorAnalysis = compAnalysis.status === "fulfilled" ? compAnalysis.value : undefined
+      gapsAnalysis       = gaps.status === "fulfilled"         ? gaps.value        : undefined
+      contentRecommendations = contentRecs.status === "fulfilled" ? contentRecs.value : undefined
+    }
+
+    // ── Step 5: Action Plan / Growth Plan ─────────────────────────────────
+    let actionPlan: object = { "30d": [], "60d": [], "90d": [] }
+
+    if (config.hasActionPlan) {
+      if (isAdvanced) {
+        // Advanced: детальный план внедрения с конкретными шагами
+        actionPlan = await runGrowthPlanAgent({
+          companyName: job.companyName,
+          niche: job.niche,
+          websiteUrl: job.websiteUrl,
+          overallScore,
+          weakPoints,
+          platformScores,
+          competitors: job.competitors,
+          competitorAnalysis,
+          gapsAnalysis,
+          contentRecommendations,
+        })
+      } else {
+        // Standard: базовый план (GPT-4o-mini)
+        actionPlan = await generateActionPlan(
+          job.companyName, job.niche, weakPoints, platformScores, overallScore,
+          job.tier as "BASIC" | "STANDARD" | "ADVANCED"
+        )
+      }
+    }
 
     await prisma.report.create({
       data: {
         jobId,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         visibilityScores: platformScores as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        competitorMatrix: competitorMatrix as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        weakPoints: weakPoints as any,
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        actionPlan: actionPlan as any,
+        competitorMatrix:  competitorMatrix as any,
+        weakPoints:        weakPoints as any,
+        actionPlan:        actionPlan as any,
         overallScore,
       },
     })
 
-    // ── Step 5: PDF (Standard+) ───────────────────────────────────────────
+    // ── Step 6: PDF (Standard+) ───────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_REPORT" } })
 
     let pdfUrl: string | undefined
@@ -80,7 +139,7 @@ export const auditPipeline = task({
       await prisma.auditJob.update({ where: { id: jobId }, data: { pdfUrl } })
     }
 
-    // ── Step 6: Email delivery ────────────────────────────────────────────
+    // ── Step 7: Email delivery ────────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "DELIVERING" } })
 
     await sendReportEmail({

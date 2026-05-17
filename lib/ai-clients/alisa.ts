@@ -5,6 +5,7 @@ import { AUDIT_SYSTEM_PROMPT } from "./types"
 // оптимизированной под разговорный стиль
 export const alisaClient: AIClient = {
   name: "Alisa",
+  isConfigured: () => !!(process.env.YANDEXGPT_API_KEY && process.env.YANDEX_FOLDER_ID),
   async query(prompt: string, systemPrompt = AUDIT_SYSTEM_PROMPT): Promise<string> {
     const apiKey = process.env.YANDEXGPT_API_KEY
     const folderId = process.env.YANDEX_FOLDER_ID

@@ -58,6 +58,7 @@ async function getAccessToken(): Promise<string> {
 
 export const gigachatClient: AIClient = {
   name: "GigaChat",
+  isConfigured: () => !!(process.env.GIGACHAT_CLIENT_ID && process.env.GIGACHAT_CLIENT_SECRET),
   async query(prompt: string, systemPrompt = AUDIT_SYSTEM_PROMPT): Promise<string> {
     const token = await getAccessToken()
 
