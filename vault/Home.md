@@ -14,6 +14,8 @@
 - [[03-Monetization/Lead Generation Strategy]] — каналы привлечения 3–10 заявок/день
 - [[03-Monetization/Growth Strategy]] — стратегия продвижения, фазы, скрапинг → аудитории
 - [[03-Monetization/Lead Magnets & Ad Copy]] — тексты писем, Яндекс.Директ, VK Ads, Look-alike
+- [[03-Monetization/Advertising Playbook]] — техтребования платформ, готовые объявления, автоматизация заявок
+- [[03-Monetization/Sales Strategy — Мнение и Синтез]] — ⭐ единый документ: freemium vs оплата, воронка, конверсия
 
 ### Технический
 - [[02-Technical/Architecture]] — компоненты и агенты

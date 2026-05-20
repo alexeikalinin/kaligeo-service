@@ -83,16 +83,17 @@ model TelegramSession {
 }
 
 model FreemiumScan {
-  id            String   @id @default(cuid())
-  websiteUrl    String
-  companyName   String
-  niche         String
-  services      Json
-  keywords      Json
-  previewScore  Int
-  emailCaptured String?
-  source        String?
-  createdAt     DateTime @default(now())
+  id                   String   @id @default(cuid())
+  websiteUrl           String
+  companyName          String
+  niche                String
+  services             Json
+  keywords             Json
+  suggestedCompetitors String[]
+  previewScore         Int
+  emailCaptured        String?
+  source               String?
+  createdAt            DateTime @default(now())
 
   @@index([websiteUrl])
 }

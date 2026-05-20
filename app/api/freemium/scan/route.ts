@@ -50,7 +50,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ scanId: existing.id })
     }
 
-    const analysis = await runWebsiteAnalysisAgent(websiteUrl)
+    let analysis
+    try {
+      analysis = await runWebsiteAnalysisAgent(websiteUrl)
+    } catch (agentError) {
+      console.error("Website analysis agent failed, using fallback:", agentError)
+      analysis = {
+        companyName: "",
+        niche: "",
+        description: "",
+        services: [] as string[],
+        targetAudience: "",
+        keywords: [] as string[],
+        suggestedCompetitors: [] as string[],
+      }
+    }
 
     const previewScore = estimatePreviewScore(
       analysis.niche,

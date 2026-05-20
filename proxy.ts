@@ -9,7 +9,7 @@ function detectRegion(host: string): Region {
   return 'default'
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const host = request.headers.get('host') || ''
   const region = detectRegion(host)
 

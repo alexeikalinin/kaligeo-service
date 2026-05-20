@@ -2,13 +2,16 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { tg, inlineKeyboard } from "@/lib/telegram"
 import { notifyNewAuditRequest } from "@/lib/notify"
+import { tasks } from "@trigger.dev/sdk/v3"
+import type { freemiumSequence } from "@/trigger/freemium-sequence"
+import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
 
 const ADMIN_CHAT_ID = process.env.ADMIN_TELEGRAM_CHAT_ID ?? "UNSET"
 
 const TIERS = {
-  BASIC:    { label: "Basic",    desc: "15 запросов · 3 платформы · $50",  price: "$50" },
-  STANDARD: { label: "Standard", desc: "30 запросов · 6 платформ · $150",  price: "$150" },
-  ADVANCED: { label: "Advanced", desc: "50 запросов · 9 платформ · $300",  price: "$300" },
+  BASIC:    { label: "Basic",    desc: "15 запросов · ChatGPT, Gemini, YandexGPT · базовый отчёт",  price: "$50" },
+  STANDARD: { label: "Standard", desc: "30 запросов · 6 платформ · PDF-отчёт · план на 90 дней",   price: "$150" },
+  ADVANCED: { label: "Advanced", desc: "50 запросов · 9 платформ · AI-агенты · разбор конкурентов", price: "$300" },
 } as const
 
 type Tier = keyof typeof TIERS
@@ -22,6 +25,7 @@ interface SessionData {
   email?: string
   source?: string
   freemiumScore?: number
+  freemiumScanId?: string
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -43,29 +47,84 @@ async function setStep(chatId: string, step: string, data?: SessionData) {
 
 function parseUrl(raw: string): string | null {
   try {
-    const url = raw.startsWith("http") ? raw : `https://${raw}`
-    new URL(url)
+    const url = raw.startsWith("https://") || raw.startsWith("http://") ? raw : `https://${raw}`
+    const parsed = new URL(url)
+    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null
     return url
   } catch {
     return null
   }
 }
 
-async function runFreemiumScan(websiteUrl: string, source?: string): Promise<{ scanId: string; score: number } | null> {
+function estimatePreviewScore(niche: string, services: string[], keywords: string[]): number {
+  let score = 10
+  if (services.length >= 3) score += 5
+  if (keywords.length >= 5) score += 5
+  if (niche.length > 100) score += 3
+  const aiTerms = ["ai", "chatgpt", "llm", "нейро", "искусственный", "автомат"]
+  const hasAiTerms = aiTerms.some(
+    (t) => niche.toLowerCase().includes(t) || services.join(" ").toLowerCase().includes(t)
+  )
+  if (hasAiTerms) score += 7
+  return Math.min(score, 42)
+}
+
+async function runFreemiumScan(websiteUrl: string, source?: string): Promise<{ scanId: string; score: number; companyName: string; niche: string; suggestedCompetitors: string[] } | null> {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-    const res = await fetch(`${appUrl}/api/freemium/scan`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ websiteUrl, source }),
+    const existing = await prisma.freemiumScan.findFirst({
+      where: {
+        websiteUrl,
+        createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      },
+      orderBy: { createdAt: "desc" },
     })
-    if (!res.ok) return null
-    const { scanId } = await res.json() as { scanId?: string }
-    if (!scanId) return null
-    const scan = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
-    if (!scan) return null
-    return { scanId, score: scan.previewScore }
-  } catch {
+    if (existing) return {
+      scanId: existing.id,
+      score: existing.previewScore,
+      companyName: existing.companyName,
+      niche: existing.niche,
+      suggestedCompetitors: existing.suggestedCompetitors,
+    }
+
+    let analysis
+    try {
+      analysis = await runWebsiteAnalysisAgent(websiteUrl)
+    } catch {
+      analysis = {
+        companyName: "",
+        niche: "",
+        description: "",
+        services: [] as string[],
+        targetAudience: "",
+        keywords: [] as string[],
+        suggestedCompetitors: [] as string[],
+      }
+    }
+
+    const previewScore = estimatePreviewScore(analysis.niche, analysis.services, analysis.keywords)
+
+    const scan = await prisma.freemiumScan.create({
+      data: {
+        websiteUrl,
+        companyName: analysis.companyName || new URL(websiteUrl).hostname,
+        niche: analysis.niche || "Не определено",
+        services: analysis.services,
+        keywords: analysis.keywords,
+        suggestedCompetitors: analysis.suggestedCompetitors,
+        previewScore,
+        ...(source ? { source } : {}),
+      },
+    })
+
+    return {
+      scanId: scan.id,
+      score: scan.previewScore,
+      companyName: scan.companyName,
+      niche: scan.niche,
+      suggestedCompetitors: scan.suggestedCompetitors,
+    }
+  } catch (err) {
+    console.error("runFreemiumScan error:", err)
     return null
   }
 }
@@ -116,7 +175,9 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
       [
         "👋 <b>Добро пожаловать в KaliGEO!</b>",
         "",
-        "Мы измеряем, насколько ChatGPT, Claude, Gemini и другие AI рекомендуют ваш бренд.",
+        "Мы измеряем, насколько <b>ChatGPT, Claude, Gemini</b> и другие AI-платформы упоминают и рекомендуют ваш бренд.",
+        "",
+        "Это новый канал продаж: всё больше людей спрашивают у AI «посоветуй сервис для X» — и получают имена конкурентов. <b>KaliGEO показывает, где вы теряете клиентов, и что с этим делать.</b>",
         "",
         "С чего начнём?",
       ].join("\n"),
@@ -143,38 +204,52 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
   if (step === "free_url") {
     const url = parseUrl(text)
     if (!url) {
-      await tg.send(chatId, "Не похоже на URL. Попробуйте ещё раз, например: company.ru")
+      await tg.send(chatId, "Не похоже на URL. Попробуйте ещё раз, например:\n<code>company.ru</code>")
       return
     }
-    await tg.send(chatId, "⏳ Анализирую сайт... (~30 сек)")
+    await tg.send(
+      chatId,
+      "⏳ <b>Анализирую сайт...</b>\n\nЗахожу на главную, страницы «О компании» и «Услуги», собираю ключевые слова и нишу. Займёт ~30 секунд."
+    )
     const result = await runFreemiumScan(url, data.source)
     if (!result) {
       await tg.send(chatId, "Не удалось проанализировать сайт. Проверьте URL и попробуйте снова.")
       return
     }
 
-    const { score } = result
+    const { scanId, score, companyName, niche, suggestedCompetitors } = result
     const emoji = score >= 60 ? "🟢" : score >= 30 ? "🟡" : "🔴"
     const verdict =
       score < 30
-        ? "AI-платформы почти не упоминают ваш бренд"
+        ? "AI-платформы почти не упоминают ваш бренд — вы отдаёте клиентов конкурентам"
         : score < 60
-        ? "Есть потенциал роста — конкуренты могут обгонять вас"
+        ? "Есть потенциал роста — конкуренты уже присутствуют в AI-ответах, а вы нет"
         : "Неплохой результат, но всегда есть куда расти"
 
-    await setStep(chatId, "free_offer", { ...data, websiteUrl: url, freemiumScore: score })
+    await setStep(chatId, "free_offer", {
+      ...data,
+      websiteUrl: url,
+      freemiumScore: score,
+      freemiumScanId: scanId,
+      companyName,
+      niche,
+      competitors: suggestedCompetitors,
+    })
     await tg.send(
       chatId,
       [
         `${emoji} <b>Индекс AI-видимости: ${score}/100</b>`,
         `<i>${verdict}</i>`,
         "",
+        `📌 Компания: <b>${companyName}</b>`,
+        `📂 Ниша: ${niche.slice(0, 120)}${niche.length > 120 ? "…" : ""}`,
+        "",
         "📊 Средний конкурент в нише — 61/100",
         "",
-        "Полный аудит покажет:",
-        "· Результаты по 3–9 платформам (зависит от тарифа)",
+        "<b>Полный аудит покажет:</b>",
+        "· Подробный результат по 3–9 AI-платформам",
         "· Где именно конкуренты вас обходят",
-        "· Конкретный план на 90 дней",
+        "· Конкретный план действий на 90 дней",
         "",
         "Запустить полный аудит?",
       ].join("\n"),
@@ -182,6 +257,7 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
         [{ text: "Basic — $50", data: "tier:BASIC" }],
         [{ text: "Standard — $150 ⭐", data: "tier:STANDARD" }],
         [{ text: "Advanced — $300 🚀", data: "tier:ADVANCED" }],
+        [{ text: "Что входит в каждый тариф?", data: "tier:info" }],
         [{ text: "Нет, спасибо", data: "free_offer:decline" }],
       ])
     )
@@ -193,30 +269,51 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
     return
   }
 
+  if (step === "free_confirm") {
+    await tg.send(chatId, "Нажмите одну из кнопок выше.")
+    return
+  }
+
   if (step === "free_email_capture") {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(text)) {
       await tg.send(chatId, "Не похоже на email. Попробуйте ещё раз:")
       return
     }
-    if (data.websiteUrl) {
+
+    const scanId = data.freemiumScanId ?? null
+    if (scanId) {
+      const scan = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
+      if (scan && !scan.emailCaptured) {
+        await prisma.freemiumScan.update({ where: { id: scanId }, data: { emailCaptured: text } })
+        await tasks.trigger<typeof freemiumSequence>("send-freemium-sequence", { scanId, email: text })
+      }
+    } else if (data.websiteUrl) {
       const scan = await prisma.freemiumScan.findFirst({
         where: { websiteUrl: data.websiteUrl },
         orderBy: { createdAt: "desc" },
       })
       if (scan && !scan.emailCaptured) {
         await prisma.freemiumScan.update({ where: { id: scan.id }, data: { emailCaptured: text } })
+        await tasks.trigger<typeof freemiumSequence>("send-freemium-sequence", { scanId: scan.id, email: text })
       }
     }
+
     await setStep(chatId, "done", {})
     await tg.send(
       chatId,
-      "✅ Готово! Пришлём советы по AI-видимости на ваш email.\n\nЧтобы запустить полный аудит — напишите /start."
+      [
+        "✅ <b>Готово!</b>",
+        "",
+        "Пришлём советы по AI-видимости на ваш email в течение нескольких минут.",
+        "",
+        "Если захотите провести полный аудит — напишите /start.",
+      ].join("\n")
     )
     return
   }
 
-  // ── Freemium → Paid transition ────────────────────────────────────────────
+  // ── Freemium → Paid: override company/niche manually ─────────────────────
 
   if (step === "free_company") {
     if (text.length < 2) {
@@ -224,7 +321,14 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
       return
     }
     await setStep(chatId, "free_niche", { ...data, companyName: text })
-    await tg.send(chatId, "Опишите ваш бизнес и нишу (2–3 предложения):\n\n<i>Например: сеть магазинов здорового питания.</i>")
+    await tg.send(
+      chatId,
+      [
+        "Опишите ваш бизнес и нишу (2–3 предложения).",
+        "",
+        "<i>Например: сеть магазинов здорового питания для людей, следящих за питанием и спортом.</i>",
+      ].join("\n")
+    )
     return
   }
 
@@ -233,8 +337,15 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
       await tg.send(chatId, "Напишите немного подробнее — это важно для качества аудита.")
       return
     }
-    await setStep(chatId, "email", { ...data, niche: text, competitors: [] })
-    await tg.send(chatId, "Укажите email для получения отчёта:")
+    await setStep(chatId, "email", { ...data, niche: text, competitors: data.competitors ?? [] })
+    await tg.send(
+      chatId,
+      [
+        "Отлично! Последний шаг — укажите email для получения отчёта:",
+        "",
+        "<i>На него придут результаты аудита, PDF и план действий.</i>",
+      ].join("\n")
+    )
     return
   }
 
@@ -246,18 +357,35 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
       return
     }
     await setStep(chatId, "url", { ...data, companyName: text })
-    await tg.send(chatId, `Отлично, <b>${text}</b>!\n\nУкажите URL вашего сайта:`)
+    await tg.send(
+      chatId,
+      [
+        `Отлично, <b>${text}</b>!`,
+        "",
+        "Укажите URL вашего сайта:",
+        "<i>Например: vkusvill.ru</i>",
+      ].join("\n")
+    )
     return
   }
 
   if (step === "url") {
     const url = parseUrl(text)
     if (!url) {
-      await tg.send(chatId, "Не похоже на URL. Попробуйте ещё раз, например: vkusvill.ru")
+      await tg.send(chatId, "Не похоже на URL. Попробуйте ещё раз, например:\n<code>vkusvill.ru</code>")
       return
     }
     await setStep(chatId, "niche", { ...data, websiteUrl: url })
-    await tg.send(chatId, "Опишите ваш бизнес и нишу (2–3 предложения):\n\n<i>Например: сеть магазинов здорового питания, аудитория — люди, следящие за здоровьем.</i>")
+    await tg.send(
+      chatId,
+      [
+        "Опишите ваш бизнес и нишу (2–3 предложения).",
+        "",
+        "<i>Например: сеть магазинов здорового питания, аудитория — люди, следящие за здоровьем и спортом.</i>",
+        "",
+        "Это поможет AI-агентам сформулировать правильные запросы для аудита.",
+      ].join("\n")
+    )
     return
   }
 
@@ -267,7 +395,16 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
       return
     }
     await setStep(chatId, "competitors", { ...data, niche: text })
-    await tg.send(chatId, "Укажите 2–3 главных конкурента через запятую.\n\nЕсли конкурентов нет — напишите <b>нет</b>.")
+    await tg.send(
+      chatId,
+      [
+        "Укажите 2–3 главных конкурента через запятую.",
+        "",
+        "<i>Если конкурентов нет — напишите <b>нет</b>.</i>",
+        "",
+        "Мы проверим, насколько они видимы в AI-ответах по сравнению с вами.",
+      ].join("\n")
+    )
     return
   }
 
@@ -328,19 +465,41 @@ async function handleCallback(cb: {
 
   if (cbData === "entry:free") {
     await setStep(chatId, "free_url", sessionData)
-    await tg.send(chatId, "Укажите URL вашего сайта:")
+    await tg.send(
+      chatId,
+      [
+        "Укажите URL вашего сайта:",
+        "<i>Например: <code>company.ru</code></i>",
+        "",
+        "Мы зайдём на ваш сайт, определим нишу и рассчитаем предварительный индекс AI-видимости.",
+      ].join("\n")
+    )
     return
   }
 
   if (cbData === "entry:paid") {
     await setStep(chatId, "company", sessionData)
-    await tg.send(chatId, "Как называется ваша компания?")
+    await tg.send(
+      chatId,
+      [
+        "Отлично! Запустим полный аудит.",
+        "",
+        "Как называется ваша компания?",
+      ].join("\n")
+    )
     return
   }
 
   if (cbData === "free_offer:decline") {
     await setStep(chatId, "free_email_capture", sessionData)
-    await tg.send(chatId, "Хорошо! Оставьте email — пришлём советы по улучшению AI-видимости бесплатно:")
+    await tg.send(
+      chatId,
+      [
+        "Хорошо! Оставьте email — пришлём советы по улучшению AI-видимости бесплатно:",
+        "",
+        "<i>Никакого спама, только практические рекомендации для вашей ниши.</i>",
+      ].join("\n")
+    )
     return
   }
 
@@ -350,7 +509,7 @@ async function handleCallback(cb: {
       "",
       "🔹 <b>Basic — $50</b>",
       "· 15 запросов · ChatGPT, Gemini, YandexGPT",
-      "· Базовый отчёт",
+      "· Базовый отчёт с позициями по платформам",
       "",
       "⭐ <b>Standard — $150</b>",
       "· 30 запросов · 6 платформ",
@@ -359,9 +518,9 @@ async function handleCallback(cb: {
       "",
       "🚀 <b>Advanced — $300</b>",
       "· 50 запросов · 9 платформ",
-      "· AI-агенты: глубокий анализ конкурентов",
-      "· Исправление страницы сайта",
-      "· Безлимитный чат",
+      "· AI-агенты: глубокий анализ конкурентов и пробелов",
+      "· Оптимизация страницы сайта под AI",
+      "· Безлимитный чат с отчётом",
     ].join("\n"),
     inlineKeyboard([
       [{ text: "Basic — $50", data: "tier:BASIC" }],
@@ -376,12 +535,46 @@ async function handleCallback(cb: {
     if (!(tier in TIERS)) return
 
     const validSteps = ["tier", "free_offer"]
-    if (!validSteps.includes(session.step)) return
+    if (!validSteps.includes(session.step)) {
+      await tg.send(chatId, "Напишите /start чтобы начать заново.")
+      return
+    }
 
     const t = TIERS[tier]
 
-    // Coming from freemium — need company name and niche still
+    // Coming from freemium — pre-fill from scan, show confirmation
     if (session.step === "free_offer") {
+      const { companyName, niche, competitors } = sessionData
+      const hasData = companyName && niche
+
+      if (hasData) {
+        const competitorsList = competitors && competitors.length > 0
+          ? competitors.slice(0, 3).join(", ")
+          : "не указаны"
+
+        await setStep(chatId, "free_confirm", { ...sessionData, tier })
+        await tg.send(
+          chatId,
+          [
+            `Отличный выбор! <b>${t.label} · ${t.price}</b>`,
+            "",
+            "Мы уже знаем ваш бизнес по анализу сайта — проверьте данные:",
+            "",
+            `🏢 Компания: <b>${companyName}</b>`,
+            `📂 Ниша: ${niche.slice(0, 150)}${niche.length > 150 ? "…" : ""}`,
+            `👥 Конкуренты: <i>${competitorsList}</i>`,
+            "",
+            "Всё верно?",
+          ].join("\n"),
+          inlineKeyboard([
+            [{ text: "✅ Верно, ввести email", data: "free_confirm:ok" }],
+            [{ text: "✏️ Изменить данные", data: "free_confirm:edit" }],
+          ])
+        )
+        return
+      }
+
+      // Fallback — scan data missing, collect manually
       await setStep(chatId, "free_company", { ...sessionData, tier })
       await tg.send(chatId, [
         `Отличный выбор! <b>${t.label} · ${t.price}</b>`,
@@ -391,13 +584,42 @@ async function handleCallback(cb: {
       return
     }
 
+    // From paid path
     await setStep(chatId, "email", { ...sessionData, tier })
     await tg.send(chatId, [
       `Отличный выбор! <b>${t.label} · ${t.price}</b>`,
       `<i>${t.desc}</i>`,
       "",
-      "Укажите email для получения отчёта:",
+      "Последний шаг — укажите email для получения отчёта:",
+      "<i>На него придут результаты аудита и PDF с планом.</i>",
     ].join("\n"))
+    return
+  }
+
+  if (cbData === "free_confirm:ok") {
+    if (session.step !== "free_confirm") return
+    await setStep(chatId, "email", sessionData)
+    await tg.send(
+      chatId,
+      [
+        "Укажите email для получения отчёта:",
+        "<i>На него придут результаты аудита и PDF с планом действий.</i>",
+      ].join("\n")
+    )
+    return
+  }
+
+  if (cbData === "free_confirm:edit") {
+    if (session.step !== "free_confirm") return
+    await setStep(chatId, "free_company", sessionData)
+    await tg.send(
+      chatId,
+      [
+        "Хорошо, введём данные вручную.",
+        "",
+        "Как называется ваша компания?",
+      ].join("\n")
+    )
     return
   }
 }
@@ -439,9 +661,10 @@ async function createAuditJob(chatId: string, data: SessionData) {
     "",
     `<b>${companyName}</b> · ${tierInfo.label} · ${tierInfo.price}`,
     "",
-    "Наш менеджер свяжется с вами в ближайшее время для оформления оплаты.",
-    "Как только оплата пройдёт — сразу запустим аудит и пришлём отчёт на",
-    `<b>${email}</b>`,
+    "Что будет дальше:",
+    "1️⃣ Наш менеджер свяжется с вами в течение нескольких часов для оформления оплаты",
+    `2️⃣ После оплаты запустим аудит — результаты придут на <b>${email}</b>`,
+    "3️⃣ В среднем аудит занимает 15–30 минут",
     "",
     `<i>Номер заявки: ${job.id.slice(-8).toUpperCase()}</i>`,
   ].join("\n"))
