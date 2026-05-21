@@ -24,6 +24,9 @@ import { CompetitorGapAnalysis } from "./CompetitorGapAnalysis"
 import { OpportunityMap } from "./OpportunityMap"
 import { ProgressComparison } from "./ProgressComparison"
 import type { AuditComparison } from "@/lib/analysis/compare-audits"
+import { SourcesAnalysis } from "./SourcesAnalysis"
+import { TrendsChart } from "./TrendsChart"
+import { RecurringPanel } from "./RecurringPanel"
 
 interface PlatformScore {
   platform: string
@@ -64,6 +67,8 @@ interface ReportDashboardProps {
     tier: string
     pdfUrl: string | null
     completedAt: Date | null
+    clientEmail?: string
+    reportToken?: string
     queryResults: {
       id: string
       platform: string
@@ -93,6 +98,12 @@ interface ReportDashboardProps {
   platformInsights?: PlatformInsight[]
   competitorGaps?: { name: string; score: number; theirSignals: string[]; yourSignals: string[] }[]
   comparison?: AuditComparison | null
+  sourcesReport?: {
+    topDomains: { domain: string; count: number; category: string }[]
+    byCategory: Record<string, { urls: string[]; count: number }>
+    totalSources: number
+    competitorSourceAdvantage: { competitor: string; uniqueDomains: string[]; count: number }[]
+  } | null
 }
 
 // ── Tier locking ─────────────────────────────────────────────────────────────
@@ -103,6 +114,8 @@ const TABS = [
   { key: "overview",    label: "Обзор",        availableFrom: "BASIC"    },
   { key: "platforms",   label: "Платформы",     availableFrom: "BASIC"    },
   { key: "competitors", label: "Конкуренты",    availableFrom: "STANDARD" },
+  { key: "sources",     label: "Источники",     availableFrom: "STANDARD" },
+  { key: "trends",      label: "История",       availableFrom: "STANDARD" },
   { key: "weakpoints",  label: "Слабые места",  availableFrom: "BASIC"    },
   { key: "plan",        label: "План роста",     availableFrom: "STANDARD" },
   { key: "progress",    label: "Прогресс",      availableFrom: "STANDARD" },
@@ -121,7 +134,7 @@ function getFirstAvailableTab(tier: string): TabKey {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, comparison }: ReportDashboardProps) {
+export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, comparison, sourcesReport }: ReportDashboardProps) {
   const [tab, setTab] = useState<TabKey>(() => getFirstAvailableTab(job.tier))
 
   // Reset tab when tier changes (e.g. demo tier selector)
@@ -278,6 +291,11 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
               </section>
             )}
             <AIResponsesSample results={job.queryResults} companyName={job.companyName} />
+
+            {/* Recurring monitoring panel */}
+            {job.reportToken && (
+              <RecurringPanel jobId={job.id} token={job.reportToken} tier={job.tier} />
+            )}
             {verbatimQuotes && !isTabLocked("ADVANCED", job.tier) && (
               <VerbatimInsights quotes={verbatimQuotes} companyName={job.companyName} />
             )}
@@ -351,6 +369,54 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                     youPresent={[]}
                   />
                 )}
+              </div>
+            )
+        )}
+
+        {tab === "sources" && (
+          isTabLocked("STANDARD", job.tier)
+            ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="sources" />
+            : (
+              <div>
+                <h2 className="text-lg font-bold mb-2" style={{ color: "var(--ink)" }}>
+                  RAG-источники
+                </h2>
+                <p className="text-sm mb-6" style={{ color: "var(--ink-3)" }}>
+                  Сайты, которые нейросети использовали как источники при формировании ответов
+                </p>
+                {sourcesReport ? (
+                  <SourcesAnalysis sourcesReport={sourcesReport as any} />
+                ) : (
+                  <div
+                    className="rounded-xl p-8 text-center"
+                    style={{ background: "var(--card)", border: "1px solid var(--rule)" }}
+                  >
+                    <p style={{ color: "var(--ink-3)" }}>
+                      Данные по источникам появятся после следующего аудита
+                    </p>
+                  </div>
+                )}
+              </div>
+            )
+        )}
+
+        {tab === "trends" && (
+          isTabLocked("STANDARD", job.tier)
+            ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="trends" />
+            : (
+              <div>
+                <h2 className="text-lg font-bold mb-2" style={{ color: "var(--ink)" }}>
+                  История видимости
+                </h2>
+                <p className="text-sm mb-6" style={{ color: "var(--ink-3)" }}>
+                  Динамика AI-видимости по всем аудитам компании {job.companyName}
+                </p>
+                <TrendsChart
+                  jobId={job.id}
+                  token={job.reportToken ?? ""}
+                  clientEmail={job.clientEmail ?? ""}
+                  companyName={job.companyName}
+                />
               </div>
             )
         )}

@@ -7,6 +7,7 @@ import { sendReportEmail, sendFollowUpEmail } from "./steps/deliver"
 import { calculateVisibilityScores, calculateOverallScore } from "../lib/analysis/calculate-scores"
 import { buildCompetitorMatrix } from "../lib/analysis/competitor-matrix"
 import { detectWeakPoints } from "../lib/analysis/weak-points-checker"
+import { aggregateSources } from "../lib/analysis/aggregate-sources"
 import { generateActionPlan } from "../lib/report/action-plan-gen"
 import { runGrowthPlanAgent } from "../lib/agents/growth-plan-agent"
 import { runAnalysisAgent } from "../lib/agents/analysis-agent"
@@ -93,6 +94,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       ? buildCompetitorMatrix(allResults, job.competitors)
       : []
     const weakPoints = detectWeakPoints(allResults, job.websiteUrl, overallScore)
+    const sourcesReport = aggregateSources(allResults, job.websiteUrl, job.competitors)
 
     // ── Step 4: Advanced — параллельный запуск агентов анализа ───────────
     let competitorAnalysis: string | undefined
@@ -151,6 +153,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
         weakPoints:        weakPoints as any,
         actionPlan:        actionPlan as any,
         overallScore,
+        sourcesReport:     sourcesReport as any,
       },
     })
 

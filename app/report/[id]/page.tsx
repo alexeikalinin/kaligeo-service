@@ -87,6 +87,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         )
       : null
 
+  const sourcesReport = (job.report as any).sourcesReport ?? null
+
   return (
     <>
       <ReportDashboard
@@ -98,10 +100,13 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           tier: job.tier,
           pdfUrl: job.pdfUrl,
           completedAt: job.completedAt,
+          clientEmail: job.clientEmail,
+          reportToken: job.reportToken,
           queryResults: job.queryResults,
         }}
         report={report}
         comparison={comparison}
+        sourcesReport={sourcesReport}
       />
       {/* Chat panel — shown for all tiers, upgrade prompt for Basic */}
       <ReportChatPanel

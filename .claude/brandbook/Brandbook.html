@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>KaliGEO — Brandbook</title>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@300;400;500;600;700&family=Inter+Tight:wght@700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0F1115; --bone:#FAFAF7; --accent:#C8F24A; --danger:#C8412C;
+    --bg:#FAFAF7; --bg-2:#F2F1EB; --card:#FFFFFF;
+    --ink-2:#3A3D45; --ink-3:#7A7D85;
+    --rule:#E4E2D8; --rule-2:#D6D3C5;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Inter',system-ui,sans-serif;font-feature-settings:"ss01","cv11","cv05";line-height:1.55;letter-spacing:-0.005em;-webkit-font-smoothing:antialiased}
+  .serif{font-family:'Instrument Serif',serif;font-weight:400;letter-spacing:-0.022em}
+  .mono{font-family:'JetBrains Mono',ui-monospace,monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+  .wrap{max-width:1240px;margin:0 auto;padding:0 32px}
+  .eyebrow{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:500;color:var(--ink-2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px}
+  .eyebrow::before{content:"";width:28px;height:1px;background:var(--ink)}
+  .eyebrow .num{font-family:'JetBrains Mono',monospace;color:var(--ink-3)}
+  h2.section{font-family:'Instrument Serif',serif;font-size:clamp(36px,4vw,56px);line-height:1.05;letter-spacing:-0.025em;margin:0 0 12px;text-wrap:balance}
+  h2.section .aside{display:block;font-style:italic;color:var(--ink-2);font-size:.7em;margin-top:6px;letter-spacing:-0.02em}
+  .lede{font-size:18px;color:var(--ink-2);max-width:680px;margin:0 0 56px}
+  section{padding:96px 0;border-bottom:1px solid var(--rule)}
+  section:first-of-type{border-top:1px solid var(--rule)}
+
+  /* COVER */
+  .cover{padding:80px 0 96px;background:var(--ink);color:var(--bone);border-bottom:none}
+  .cover .wrap{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:end;min-height:560px}
+  .cover .meta{font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#8A8D95;display:flex;gap:32px;margin-bottom:40px}
+  .cover h1{font-family:'Instrument Serif',serif;font-size:clamp(72px,10vw,144px);line-height:.92;letter-spacing:-0.03em;margin:0;color:var(--bone)}
+  .cover h1 em{font-style:italic;color:#8A8D95}
+  .cover h1 .hl{background:var(--accent);color:var(--ink);font-style:normal;padding:0 .12em;margin:0 .02em;border-radius:6px;box-decoration-break:clone;-webkit-box-decoration-break:clone;display:inline-block;line-height:.92}
+  .cover .right{display:flex;flex-direction:column;gap:24px}
+  .cover .ver{font-family:'JetBrains Mono',monospace;font-size:11px;color:#8A8D95;text-transform:uppercase;letter-spacing:.1em}
+  .cover .desc{font-size:17px;color:#C6C8CE;max-width:380px;line-height:1.55}
+
+  .brand-mark{display:flex;align-items:center;gap:10px;font-weight:600;letter-spacing:-0.02em;font-size:18px;color:var(--ink)}
+  .cover .brand-mark{color:var(--bone)}
+  .wd-geo{font-weight:600;color:var(--ink);letter-spacing:.02em;padding:2px 7px;border-radius:6px;background:var(--accent);font-size:.85em;margin-left:3px}
+
+  /* LOGO SHOWCASE */
+  .logo-grid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:24px}
+  .logo-tile{border:1px solid var(--rule);border-radius:18px;padding:48px 32px;display:flex;flex-direction:column;gap:24px;justify-content:space-between;min-height:280px}
+  .logo-tile.dark{background:var(--ink);border-color:var(--ink)}
+  .logo-tile.bone{background:var(--bg-2)}
+  .logo-tile .hero-mark{display:flex;align-items:center;gap:12px;font-weight:600;letter-spacing:-0.02em;font-size:32px}
+  .logo-tile.dark .hero-mark{color:var(--bone)}
+  .logo-tile .hero-mark .wd-geo{font-size:.7em;padding:4px 10px;border-radius:8px}
+  .tile-cap{font-family:'JetBrains Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3)}
+  .logo-tile.dark .tile-cap{color:#8A8D95}
+
+  .logo-detail{display:grid;grid-template-columns:280px 1fr;gap:48px;margin-top:48px;align-items:start}
+  .logo-detail .big-symbol{background:var(--bg-2);border-radius:20px;padding:40px;display:grid;place-items:center}
+  .clear-space{position:relative;display:inline-flex;align-items:center;gap:10px;padding:24px;border:1px dashed var(--rule-2);border-radius:8px}
+
+  /* COLOR */
+  .swatch-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .swatch{border:1px solid var(--rule);border-radius:14px;overflow:hidden;background:var(--card)}
+  .swatch .chip{height:120px;display:flex;align-items:flex-end;padding:14px;color:var(--ink);font-family:'JetBrains Mono',monospace;font-size:11px;text-transform:uppercase;letter-spacing:.06em}
+  .swatch .meta{padding:14px}
+  .swatch .name{font-weight:600;font-size:14px}
+  .swatch .role{color:var(--ink-3);font-size:12px;margin-top:4px}
+  .swatch .vals{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-2);margin-top:8px;letter-spacing:.04em}
+
+  .neutral-strip{display:grid;grid-template-columns:repeat(7,1fr);margin-top:24px;border-radius:14px;overflow:hidden;border:1px solid var(--rule)}
+  .neutral-strip .cell{padding:24px 16px;text-align:left}
+  .neutral-strip .cell .h{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em}
+  .neutral-strip .cell .v{font-family:'JetBrains Mono',monospace;font-size:10px;margin-top:6px;opacity:.7}
+
+  /* TYPE */
+  .type-row{display:grid;grid-template-columns:160px 1fr;gap:32px;padding:28px 0;border-top:1px solid var(--rule);align-items:baseline}
+  .type-row:last-child{border-bottom:1px solid var(--rule)}
+  .type-row .label{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);padding-top:6px}
+  .type-row .label .spec{display:block;color:var(--ink-2);margin-top:6px;text-transform:none;letter-spacing:0;font-size:11px;line-height:1.5}
+  .type-sample{margin:0}
+  .ts-display{font-family:'Instrument Serif',serif;font-size:84px;line-height:.95;letter-spacing:-0.03em}
+  .ts-display em{font-style:italic;color:var(--ink-2)}
+  .ts-h1{font-size:48px;font-weight:600;line-height:1;letter-spacing:-0.025em}
+  .ts-h2{font-family:'Instrument Serif',serif;font-size:40px;line-height:1.02;letter-spacing:-0.025em}
+  .ts-h3{font-size:24px;font-weight:600;letter-spacing:-0.022em}
+  .ts-lede{font-size:19px;color:var(--ink-2);line-height:1.5}
+  .ts-body{font-size:16px;line-height:1.55}
+  .ts-caption{font-size:13px;color:var(--ink-3)}
+  .ts-eyebrow{font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2)}
+  .ts-mono{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;text-transform:uppercase}
+
+  /* COMPONENTS */
+  .comp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:32px}
+  .comp{border:1px solid var(--rule);border-radius:18px;padding:28px;background:var(--card);display:flex;flex-direction:column;gap:18px;min-height:200px}
+  .comp .ttl{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+  .btn{display:inline-flex;align-items:center;gap:10px;padding:14px 20px;border-radius:999px;font-weight:600;font-size:15px;text-decoration:none;border:1px solid transparent;cursor:pointer;font-family:inherit}
+  .btn-primary{background:var(--ink);color:var(--bone)}
+  .btn-accent{background:var(--accent);color:var(--ink)}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:var(--rule-2)}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap}
+  .pill{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border:1px solid var(--rule-2);border-radius:999px;font-size:12px;font-weight:500;color:var(--ink-2)}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+  .pill.solid{background:var(--accent);color:var(--ink);border-color:var(--accent);font-weight:600}
+
+  .hl-demo{background:var(--accent);color:var(--ink);padding:.02em .18em;border-radius:6px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+
+  .bar-demo{display:grid;grid-template-columns:80px 1fr 40px;gap:12px;align-items:center;font-size:12px}
+  .bar-track{height:8px;background:var(--bg-2);border-radius:99px;position:relative;overflow:hidden}
+  .bar-fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px}
+  .bar-row .v{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink-2);text-align:right}
+
+  /* VOICE */
+  .voice-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px}
+  .voice-col{border:1px solid var(--rule);border-radius:18px;padding:28px;background:var(--card)}
+  .voice-col h4{margin:0 0 14px;font-size:17px;font-weight:600}
+  .voice-col.do{border-color:color-mix(in oklab, var(--accent) 60%, var(--rule))}
+  .voice-col.dont{border-color:color-mix(in oklab, var(--danger) 30%, var(--rule))}
+  .voice-col ul{margin:0;padding-left:20px;color:var(--ink-2);font-size:14px;line-height:1.7}
+
+  .quote-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:32px}
+  .qcard{border:1px solid var(--rule);border-radius:18px;padding:28px;background:var(--card)}
+  .qcard .q{font-family:'Instrument Serif',serif;font-size:24px;line-height:1.25;letter-spacing:-0.01em;margin:0 0 16px}
+  .qcard .ctx{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3)}
+
+  /* GRID & SPACING */
+  .ruler{display:grid;grid-template-columns:repeat(11,1fr);gap:8px;margin-top:24px}
+  .ruler .step{padding:14px 10px;background:var(--bg-2);border-radius:8px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink-2)}
+  .ruler .step .n{font-family:'Instrument Serif',serif;font-size:24px;color:var(--ink);display:block;margin-bottom:4px}
+
+  /* PRESENTATION RULES */
+  .deck-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px;margin-top:32px}
+  .slide{aspect-ratio:16/9;border-radius:14px;overflow:hidden;border:1px solid var(--rule);position:relative;display:grid;grid-template-rows:auto 1fr auto;padding:28px;gap:14px}
+  .slide > .seyebrow{align-self:start}
+  .slide > .scontent{align-self:center;display:flex;flex-direction:column;justify-content:center;gap:14px}
+  .slide > .stype{align-self:end}
+  .slide.bone{background:var(--bone)}
+  .slide.ink{background:var(--ink);color:var(--bone)}
+  .slide.bg2{background:var(--bg-2)}
+  .slide .stitle{font-family:'Instrument Serif',serif;font-size:42px;line-height:1;letter-spacing:-0.025em;margin:0}
+  .slide.ink .stitle{color:var(--bone)}
+  .slide .sttl em{font-style:italic;color:var(--ink-2)}
+  .slide.ink .stitle em{color:#8A8D95}
+  .slide .stat-num{font-family:'Inter Tight','Inter',sans-serif;font-weight:900;font-size:140px;line-height:.88;letter-spacing:-0.045em;font-feature-settings:'tnum' 1}
+  .slide .stat-num .u{color:var(--accent);font-weight:900}
+  .ts-stat{font-family:'Inter Tight','Inter',sans-serif;font-weight:900;letter-spacing:-0.04em;font-feature-settings:'tnum' 1;line-height:.88}
+  .slide .seyebrow{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3)}
+  .slide.ink .seyebrow{color:#8A8D95}
+  .slide .stype{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);position:absolute;bottom:14px;right:18px}
+  .slide.ink .stype{color:#6A6D75}
+  .slide .skicker{font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+  .slide .shl{background:var(--accent);color:var(--ink);padding:0 .14em;border-radius:6px;display:inline-block;line-height:1.05}
+
+  /* CHECKLIST */
+  .check-list{display:grid;grid-template-columns:1fr 1fr;gap:14px 32px;margin-top:24px}
+  .check-list .item{display:flex;gap:12px;align-items:flex-start;font-size:14px;line-height:1.5;color:var(--ink-2)}
+  .check-list .item::before{content:"✓";color:var(--accent);font-weight:700;background:var(--ink);width:18px;height:18px;border-radius:5px;display:grid;place-items:center;flex-shrink:0;font-size:11px;margin-top:2px}
+
+  footer{padding:40px 0 60px;color:var(--ink-3);font-size:13px}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+
+  @media (max-width:960px){
+    .cover .wrap,.logo-grid,.swatch-grid,.comp-grid,.voice-grid,.quote-row,.deck-grid{grid-template-columns:1fr}
+    .neutral-strip{grid-template-columns:repeat(2,1fr)}
+    .ruler{grid-template-columns:repeat(4,1fr)}
+    .check-list{grid-template-columns:1fr}
+    .logo-detail{grid-template-columns:1fr}
+    .type-row{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- COVER -->
+<section class="cover">
+  <div class="wrap">
+    <div>
+      <div class="brand-mark">
+        <svg width="34" height="34" viewBox="0 0 40 40" aria-hidden="true">
+          <rect x="1" y="1" width="38" height="38" rx="9" fill="#FAFAF7"/>
+          <path d="M12 10 L12 30 M12 20 L21 10 M12 20 L21 30" stroke="#0F1115" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="28" cy="20" r="6" stroke="#C8F24A" stroke-width="2.4" fill="none"/>
+          <circle cx="28" cy="20" r="1.8" fill="#C8F24A"/>
+        </svg>
+        <span>Kali</span><span class="wd-geo">GEO</span>
+      </div>
+      <div class="meta" style="margin-top:240px"><span>Brand book</span><span>v 1.0</span><span>April 2026</span></div>
+      <h1>Brand <em>book</em><br>for <span class="hl">KaliGEO</span></h1>
+    </div>
+    <div class="right">
+      <div class="ver">— Ref. document for AI assistants & contributors</div>
+      <p class="desc">Единая визуальная и вербальная система KaliGEO — для презентаций, лендингов, постов и любого артефакта, который представляет бренд.</p>
+    </div>
+  </div>
+</section>
+
+<!-- LOGO -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">01</span> Logo</div>
+    <h2 class="section">Знак, словесная марка <span class="aside">и правила использования.</span></h2>
+    <p class="lede">Монограмма — линии K и «окуляр» из окружности с зрачком. Метафора видимости в AI. Словесная марка комбинирует Ink и Accent-плашку GEO.</p>
+
+    <div class="logo-grid">
+      <div class="logo-tile bone">
+        <div class="hero-mark">
+          <svg width="44" height="44" viewBox="0 0 40 40">
+            <rect x="1" y="1" width="38" height="38" rx="9" fill="#0F1115"/>
+            <path d="M12 10 L12 30 M12 20 L21 10 M12 20 L21 30" stroke="#FAFAF7" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="28" cy="20" r="6" stroke="#C8F24A" stroke-width="2.4" fill="none"/>
+            <circle cx="28" cy="20" r="1.8" fill="#C8F24A"/>
+          </svg>
+          <span>Kali</span><span class="wd-geo">GEO</span>
+        </div>
+        <div class="tile-cap">Primary · on bone</div>
+      </div>
+      <div class="logo-tile dark">
+        <div class="hero-mark">
+          <svg width="44" height="44" viewBox="0 0 40 40">
+            <rect x="1" y="1" width="38" height="38" rx="9" fill="#FAFAF7"/>
+            <path d="M12 10 L12 30 M12 20 L21 10 M12 20 L21 30" stroke="#0F1115" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <circle cx="28" cy="20" r="6" stroke="#C8F24A" stroke-width="2.4" fill="none"/>
+            <circle cx="28" cy="20" r="1.8" fill="#C8F24A"/>
+          </svg>
+          <span style="color:#FAFAF7">Kali</span><span class="wd-geo">GEO</span>
+        </div>
+        <div class="tile-cap">Inverse · on ink</div>
+      </div>
+      <div class="logo-tile">
+        <div class="hero-mark">
+          <svg width="44" height="44" viewBox="0 0 40 40">
+            <rect x="1" y="1" width="38" height="38" rx="9" fill="#0F1115"/>
+            <path d="M12 10 L12 30 M12 20 L21 10 M12 20 L21 30" stroke="#FAFAF7" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+          <span>Kali</span><span style="font-weight:600;color:var(--ink);letter-spacing:.02em;margin-left:3px">GEO</span>
+        </div>
+        <div class="tile-cap">Mono · single colour use</div>
+      </div>
+    </div>
+
+    <div class="logo-detail">
+      <div class="big-symbol">
+        <svg width="180" height="180" viewBox="0 0 40 40">
+          <rect x="1" y="1" width="38" height="38" rx="9" fill="#0F1115"/>
+          <path d="M12 10 L12 30 M12 20 L21 10 M12 20 L21 30" stroke="#FAFAF7" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <circle cx="28" cy="20" r="6" stroke="#C8F24A" stroke-width="2.4" fill="none"/>
+          <circle cx="28" cy="20" r="1.8" fill="#C8F24A"/>
+        </svg>
+      </div>
+      <div>
+        <h3 style="margin:0 0 8px;font-size:22px;letter-spacing:-0.022em">Конструкция знака</h3>
+        <p style="color:var(--ink-2);font-size:15px;line-height:1.6;max-width:520px">Скруглённый квадрат 40×40 (radius 9) с двумя элементами:<br>— <b>K</b>: три линии stroke 2.4px (вертикаль 12,10→12,30 + диагонали из центра 12,20 в 21,10 и 21,30).<br>— <b>Окуляр</b>: окружность r=6 центром 28,20 (Accent) + зрачок r=1.8 (Accent fill).</p>
+        <h4 style="margin:24px 0 8px;font-size:15px;font-weight:600">Clear space &amp; minimum size</h4>
+        <p style="color:var(--ink-2);font-size:14px;line-height:1.6;max-width:520px">Минимальное защитное поле = высота буквы K. Минимальный размер: 80px digital, 18mm print.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- COLOR -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">02</span> Color</div>
+    <h2 class="section">Один акцент. <span class="aside">Никаких градиентов AI-клише.</span></h2>
+    <p class="lede">Тёплая нейтральная база (Bone), глубокий Ink для контраста, единственный акцентный цвет — кислотный лайм Accent. Один акцент на блок, никогда два.</p>
+
+    <div class="swatch-grid">
+      <div class="swatch">
+        <div class="chip" style="background:#0F1115;color:#FAFAF7">INK</div>
+        <div class="meta"><div class="name">Ink</div><div class="role">Primary text · dark surfaces</div><div class="vals">#0F1115 · oklch(.18 .01 270)</div></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:#FAFAF7;border-bottom:1px solid var(--rule)">BONE</div>
+        <div class="meta"><div class="name">Bone</div><div class="role">Default page background</div><div class="vals">#FAFAF7 · oklch(.98 .005 90)</div></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:#C8F24A">ACCENT</div>
+        <div class="meta"><div class="name">Accent</div><div class="role">Single signal — AI · «зрение»</div><div class="vals">#C8F24A · oklch(.92 .18 120)</div></div>
+      </div>
+      <div class="swatch">
+        <div class="chip" style="background:#C8412C;color:#FAFAF7">DANGER</div>
+        <div class="meta"><div class="name">Danger</div><div class="role">«Не упомянут» · потери</div><div class="vals">#C8412C · oklch(.55 .17 30)</div></div>
+      </div>
+    </div>
+
+    <div class="mono" style="margin-top:48px;color:var(--ink-2)">— Neutral scale (warm)</div>
+    <div class="neutral-strip">
+      <div class="cell" style="background:#FFFFFF"><div class="h">Card</div><div class="v">#FFFFFF</div></div>
+      <div class="cell" style="background:#FAFAF7"><div class="h">Bone</div><div class="v">#FAFAF7</div></div>
+      <div class="cell" style="background:#F2F1EB"><div class="h">Bg-2</div><div class="v">#F2F1EB</div></div>
+      <div class="cell" style="background:#E4E2D8"><div class="h">Rule</div><div class="v">#E4E2D8</div></div>
+      <div class="cell" style="background:#D6D3C5"><div class="h">Rule-2</div><div class="v">#D6D3C5</div></div>
+      <div class="cell" style="background:#7A7D85;color:#FAFAF7"><div class="h">Ink-3</div><div class="v">#7A7D85</div></div>
+      <div class="cell" style="background:#3A3D45;color:#FAFAF7"><div class="h">Ink-2</div><div class="v">#3A3D45</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TYPE -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">03</span> Typography</div>
+    <h2 class="section">Inter + Instrument Serif <span class="aside">+ JetBrains Mono.</span></h2>
+    <p class="lede">Inter — для UI и тела. Instrument Serif — для display и итальянских ремарок. JetBrains Mono — для метаданных, цифр и технических подписей. Никаких других шрифтов.</p>
+
+    <div class="type-row">
+      <div class="label">Display H1<span class="spec">Inter 600 · clamp(40, 5.6vw, 76)<br>line-height 1 · letter-spacing −0.025em</span></div>
+      <p class="type-sample ts-h1">Ваши клиенты больше не «гуглят».</p>
+    </div>
+    <div class="type-row">
+      <div class="label">Section H2<span class="spec">Instrument Serif 400 · clamp(34, 4.4vw, 58)<br>+ italic Instrument Serif для ремарки</span></div>
+      <p class="type-sample ts-h2 serif">Четыре артефакта, <em>никакой воды.</em></p>
+    </div>
+    <div class="type-row">
+      <div class="label">Display number<span class="spec">Inter Tight 900 · 80–240px<br>letter-spacing −0.04em · tnum</span></div>
+      <p class="type-sample ts-stat" style="font-size:96px">63<span style="color:#C8F24A">%</span></p>
+    </div>
+    <div class="type-row">
+      <div class="label">Display serif<span class="spec">Instrument Serif 400 · 64–120px<br>для фраз-заявлений, не для цифр</span></div>
+      <p class="type-sample ts-display" style="font-size:72px">Аудит <em>видимости.</em></p>
+    </div>
+    <div class="type-row">
+      <div class="label">Lede<span class="spec">Inter 400 · 19px · line-height 1.5<br>color ink-2</span></div>
+      <p class="type-sample ts-lede">Аудит видимости бизнеса в AI-поиске: ChatGPT, Perplexity, Gemini, Claude.</p>
+    </div>
+    <div class="type-row">
+      <div class="label">Body<span class="spec">Inter 400 · 16px · 1.55<br>letter-spacing −0.005em</span></div>
+      <p class="type-sample ts-body">Запускаем 50+ запросов в шести AI-платформах и фиксируем каждое упоминание, каждую цитату и каждое замалчивание. Затем отдаём план — а не гору данных.</p>
+    </div>
+    <div class="type-row">
+      <div class="label">Eyebrow<span class="spec">Inter 500 · 12px · uppercase<br>letter-spacing +0.1em</span></div>
+      <p class="type-sample ts-eyebrow">— 02 · Аудит</p>
+    </div>
+    <div class="type-row">
+      <div class="label">Mono / data<span class="spec">JetBrains Mono 400 · 11px · uppercase<br>letter-spacing +0.06em</span></div>
+      <p class="type-sample ts-mono">SAMPLE.RU · 42 prompts · 28 pp</p>
+    </div>
+  </div>
+</section>
+
+<!-- COMPONENTS -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">04</span> Components</div>
+    <h2 class="section">Pill-кнопки, плашки <span class="aside">и хайлайт.</span></h2>
+    <p class="lede">Минимальный набор повторяющихся элементов. Все радиусы — pill (999px) либо 18–20px у карточек.</p>
+
+    <div class="comp-grid">
+      <div class="comp">
+        <div class="ttl">Buttons</div>
+        <div class="btn-row">
+          <a class="btn btn-primary">Заказать аудит →</a>
+          <a class="btn btn-accent">Проверить →</a>
+          <a class="btn btn-ghost">Подробнее</a>
+        </div>
+      </div>
+      <div class="comp">
+        <div class="ttl">Pills</div>
+        <div class="btn-row">
+          <span class="pill"><span class="dot"></span>ChatGPT · Perplexity · Gemini</span>
+          <span class="pill solid">Выбор большинства</span>
+        </div>
+      </div>
+      <div class="comp">
+        <div class="ttl">Highlight</div>
+        <div style="font-family:'Instrument Serif',serif;font-size:34px;line-height:1.1;letter-spacing:-0.025em">Поиск стал <span class="hl-demo">диалогом</span>.</div>
+      </div>
+      <div class="comp">
+        <div class="ttl">Bars</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div class="bar-demo"><span>ChatGPT</span><span class="bar-track"><span class="bar-fill" style="width:18%;background:#C8412C"></span></span><span class="v">18%</span></div>
+          <div class="bar-demo"><span>Gemini</span><span class="bar-track"><span class="bar-fill" style="width:42%;background:#D9A42B"></span></span><span class="v">42%</span></div>
+          <div class="bar-demo"><span>Claude</span><span class="bar-track"><span class="bar-fill" style="width:78%;background:#C8F24A"></span></span><span class="v">78%</span></div>
+        </div>
+      </div>
+      <div class="comp">
+        <div class="ttl">Eyebrow</div>
+        <div class="ts-eyebrow">— 03 · Что вы получите</div>
+        <div class="ts-eyebrow" style="color:var(--ink)">— 07 · Последнее</div>
+      </div>
+      <div class="comp">
+        <div class="ttl">Stat</div>
+        <div style="display:flex;align-items:baseline;gap:10px">
+          <div class="ts-stat" style="font-size:72px">42<span style="color:#C8F24A">/100</span></div>
+        </div>
+        <div class="ts-mono">— prompts tested</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- VOICE -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">05</span> Voice &amp; tone</div>
+    <h2 class="section">Прямой, уверенный, <span class="aside">без снобизма.</span></h2>
+    <p class="lede">Аналитик-консультант с лёгкой иронией к маркетинговому языку. Короткие предложения, цифры, факты. Кавычки-ёлочки, тире вместо дефиса.</p>
+
+    <div class="voice-grid">
+      <div class="voice-col do">
+        <h4>Do — пишем так</h4>
+        <ul>
+          <li>«Аудит», «отчёт», «видимость», «цитируемость»</li>
+          <li>Глаголы действия: находим, фиксируем, показываем</li>
+          <li>Конкретные цифры: 48 часов, 50+ запросов, 6 платформ</li>
+          <li>Кавычки-ёлочки «текст»</li>
+          <li>Тире (—), а не дефис (-) в смысловых паузах</li>
+        </ul>
+      </div>
+      <div class="voice-col dont">
+        <h4>Don't — никогда</h4>
+        <ul>
+          <li>«Революционный», «инновационный», «синергия», «комплексный»</li>
+          <li>Восклицательные знаки в маркетинге</li>
+          <li>Эмодзи в продуктовых поверхностях</li>
+          <li>«Узнайте больше», «купите сейчас», «не упустите шанс»</li>
+          <li>ПРОПИСНЫЕ ДЛЯ ЭМФАЗЫ</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="quote-row">
+      <div class="qcard">
+        <p class="q">Ваши клиенты больше не «гуглят». Они спрашивают AI.</p>
+        <div class="ctx">— Hero / реклама</div>
+      </div>
+      <div class="qcard">
+        <p class="q">Из «невидимых» в цитируемые за 42 дня.</p>
+        <div class="ctx">— Кейс / proof</div>
+      </div>
+      <div class="qcard">
+        <p class="q">Если не наберём 15 запросов в нише — вернём деньги. Без драмы.</p>
+        <div class="ctx">— FAQ / возражение</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LAYOUT -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">06</span> Layout &amp; spacing</div>
+    <h2 class="section">12-колоночная сетка <span class="aside">и шкала из 11 шагов.</span></h2>
+    <p class="lede">Max width 1240px, padding 32px, секции по 104px. Spacing scale: 4 / 8 / 12 / 16 / 20 / 24 / 32 / 40 / 56 / 72 / 104.</p>
+
+    <div class="ruler">
+      <div class="step"><span class="n">04</span>px</div>
+      <div class="step"><span class="n">08</span>px</div>
+      <div class="step"><span class="n">12</span>px</div>
+      <div class="step"><span class="n">16</span>px</div>
+      <div class="step"><span class="n">20</span>px</div>
+      <div class="step"><span class="n">24</span>px</div>
+      <div class="step"><span class="n">32</span>px</div>
+      <div class="step"><span class="n">40</span>px</div>
+      <div class="step"><span class="n">56</span>px</div>
+      <div class="step"><span class="n">72</span>px</div>
+      <div class="step"><span class="n">104</span>px</div>
+    </div>
+  </div>
+</section>
+
+<!-- PRESENTATION -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">07</span> Presentations</div>
+    <h2 class="section">Как должен выглядеть слайд <span class="aside">в фирменном стиле.</span></h2>
+    <p class="lede">1920×1080. Один тезис на слайд. Не более 25 слов на основной поверхности. Большая цифра вместо абзаца. 70% слайдов — Bone, 20% Ink, 10% Bg-2.</p>
+
+    <div class="deck-grid">
+      <!-- Title slide -->
+      <div class="slide ink">
+        <div class="seyebrow">— KaliGEO · Q2 2026</div>
+        <div>
+          <h3 class="stitle" style="font-size:48px;line-height:1.05">Аудит видимости<br>в AI-поиске</h3>
+          <div style="margin-top:18px;display:flex;gap:8px;flex-wrap:wrap">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#0F1115;background:#C8F24A;padding:4px 8px;border-radius:4px">Бутик-юрфирма</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:#C6C8CE;border:1px solid #2A2D35;padding:4px 8px;border-radius:4px">SPB · 14 сотрудников</span>
+          </div>
+          <div style="margin-top:14px;color:#C6C8CE;font-size:12px;max-width:280px;line-height:1.5">Отчёт о видимости бренда в 6 AI-платформах и план роста на 90 дней.</div>
+        </div>
+        <div class="stype">01 · Title</div>
+      </div>
+
+      <!-- Section header -->
+      <div class="slide bone">
+        <div class="seyebrow">— 02 · Проблема</div>
+        <div>
+          <h3 class="stitle" style="font-size:46px;line-height:1.02">Поиск не умер.</h3>
+          <h3 class="stitle" style="font-size:30px;line-height:1.1;font-style:italic;color:var(--ink-2);margin-top:6px">Он стал диалогом.</h3>
+          <div style="margin-top:18px;font-size:12px;color:var(--ink-2);max-width:340px;line-height:1.55">Клиенты больше не листают 10 результатов. Они читают один ответ. Если вас в нём нет — сделка закончилась.</div>
+        </div>
+        <div class="stype">02 · Section header</div>
+      </div>
+
+      <!-- Stat A — Big number + sparkline -->
+      <div class="slide bone" style="display:flex;flex-direction:column;justify-content:space-between">
+        <div class="seyebrow">— 03A · Big number + spark</div>
+        <div class="scontent" style="display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:10px;width:170px">
+            <div class="stat-num" style="font-size:118px;line-height:.85">63<span class="u">%</span></div>
+            <svg width="150" height="34" viewBox="0 0 150 34" style="overflow:visible;display:block">
+              <polyline points="0,28 37.5,22 75,14 112.5,8 150,2" fill="none" stroke="#0F1115" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              <circle cx="150" cy="2" r="4" fill="#C8F24A" stroke="#0F1115" stroke-width="1.5"/>
+            </svg>
+            <div style="display:flex;justify-content:space-between;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--ink-3);letter-spacing:.06em;width:150px"><span>2022</span><span>+51 п.п.</span><span>2026</span></div>
+          </div>
+          <div>
+            <div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1.15;letter-spacing:-0.02em">покупательских запросов теперь идут <em style="font-style:italic;color:var(--ink-2)">через AI</em></div>
+            <div style="margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase">— Stripe Search Trends · 2022→2026</div>
+          </div>
+        </div>
+        <div class="stype">03A · Stat — sparkline</div>
+      </div>
+
+      <!-- Stat B — Donut + meta -->
+      <div class="slide bone">
+        <div class="seyebrow">— 03B · Цифра в круге</div>
+        <div class="scontent" style="display:grid;grid-template-columns:auto 1fr;gap:28px;align-items:center">
+          <div style="position:relative;width:170px;height:170px">
+            <svg width="170" height="170" viewBox="0 0 100 100" style="transform:rotate(-90deg)">
+              <circle cx="50" cy="50" r="44" fill="none" stroke="#E5E5E1" stroke-width="10"/>
+              <circle cx="50" cy="50" r="44" fill="none" stroke="#C8F24A" stroke-width="10" stroke-dasharray="174 276" stroke-linecap="butt"/>
+            </svg>
+            <div style="position:absolute;inset:0;display:grid;place-items:center;font-family:'Inter Tight',sans-serif;font-weight:900;letter-spacing:-0.04em;line-height:1">
+              <span style="display:inline-flex;align-items:flex-start;gap:2px"><span style="font-size:64px">63</span><span style="font-size:24px;margin-top:6px;color:var(--ink-2)">%</span></span>
+            </div>
+          </div>
+          <div>
+            <div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1.15;letter-spacing:-0.02em">покупательских запросов теперь идут <em style="font-style:italic;color:var(--ink-2)">через AI</em></div>
+            <div style="margin-top:14px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-3);letter-spacing:.08em;text-transform:uppercase">— Stripe Search Trends · Q1 2026 · n=12,400</div>
+          </div>
+        </div>
+        <div class="stype">03B · Stat — donut</div>
+      </div>
+
+      <!-- Stat C — Comparison hero -->
+      <div class="slide ink">
+        <div class="seyebrow">— 03C · Было / Стало</div>
+        <div class="scontent">
+          <div style="display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:18px">
+            <div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8D95;letter-spacing:.08em;text-transform:uppercase">2022</div>
+              <div class="ts-stat" style="font-size:64px;color:#6A6D75;margin-top:4px">12%</div>
+            </div>
+            <div style="font-family:'Inter Tight',sans-serif;font-weight:900;color:#C8F24A;font-size:32px;padding-bottom:12px">→</div>
+            <div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#C8F24A;letter-spacing:.08em;text-transform:uppercase">2026</div>
+              <div class="ts-stat" style="font-size:104px;color:#FAFAF7;margin-top:4px">63<span style="color:#C8F24A">%</span></div>
+            </div>
+          </div>
+          <div style="font-size:13px;color:#C6C8CE;max-width:380px;line-height:1.55">Доля покупательских запросов, проходящих через AI-ассистента.</div>
+        </div>
+        <div class="stype">03C · Stat — before/after</div>
+      </div>
+
+      <!-- Quote slide -->
+      <div class="slide bg2">
+        <div class="seyebrow">— 04 · Отзыв</div>
+        <div>
+          <p style="font-family:'Instrument Serif',serif;font-size:32px;line-height:1.2;letter-spacing:-0.015em;font-style:italic;margin:0;color:var(--ink)">«ChatGPT советовал трёх конкурентов, о которых мы не слышали.»</p>
+          <div style="margin-top:14px;font-size:12px;color:var(--ink-3)">— Мария Романова, основатель</div>
+        </div>
+        <div class="stype">04 · Quote slide</div>
+      </div>
+
+      <!-- Comparison -->
+      <div class="slide bone">
+        <div class="seyebrow">— 05 · Сравнение</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div style="padding:14px;background:var(--bone);border:1px solid var(--rule);border-radius:10px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-3)">До</div>
+            <div style="font-family:'Instrument Serif',serif;font-size:48px;line-height:.9;margin-top:6px">0%</div>
+            <div style="font-size:11px;color:var(--ink-2);margin-top:6px">Ни одной цитаты</div>
+          </div>
+          <div style="padding:14px;background:color-mix(in oklab, #C8F24A 18%, var(--bone));border:1px solid color-mix(in oklab, #C8F24A 40%, var(--rule));border-radius:10px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--ink-3)">После 42 дн.</div>
+            <div class="ts-stat" style="font-size:54px;margin-top:6px">73%</div>
+            <div style="font-size:11px;color:var(--ink-2);margin-top:6px">Цитируется в ChatGPT</div>
+          </div>
+        </div>
+        <div class="stype">05 · Comparison</div>
+      </div>
+
+      <!-- CTA slide -->
+      <div class="slide ink">
+        <div class="seyebrow">— Last thing</div>
+        <div class="scontent">
+          <div>
+            <h3 class="stitle" style="font-size:38px;line-height:1.08">Узнайте, что AI<br>говорит про вас.</h3>
+            <h3 class="stitle" style="font-size:24px;line-height:1.2;font-style:italic;color:#8A8D95;margin-top:8px">Раньше, чем это узнает конкурент.</h3>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center">
+            <span class="btn btn-accent" style="font-size:12px;padding:8px 14px">Заказать →</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#8A8D95;letter-spacing:.08em;text-transform:uppercase">17 слотов</span>
+          </div>
+        </div>
+        <div class="stype">06 · CTA slide</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHECKLIST -->
+<section>
+  <div class="wrap">
+    <div class="eyebrow"><span class="num">08</span> Checklist</div>
+    <h2 class="section">Что проверить перед <span class="aside">отправкой артефакта.</span></h2>
+    <p class="lede">Короткий список для AI-ассистента и для дизайнера. Если хоть один пункт не выполнен — не публикуем.</p>
+
+    <div class="check-list">
+      <div class="item">Палитра: только Ink / Bone / Accent / Bg-2 + neutral. Ничего лишнего.</div>
+      <div class="item">Шрифты: Inter, Instrument Serif, JetBrains Mono. Ничего больше.</div>
+      <div class="item">Один акцентный цвет на блок. Никогда два.</div>
+      <div class="item">Заголовок секции = eyebrow с номером + Instrument Serif H2 + italic ремарка.</div>
+      <div class="item">Кнопки — pill, радиус 999px.</div>
+      <div class="item">Без эмодзи, без 3D-блобов, без неоновых градиентов.</div>
+      <div class="item">Кавычки-ёлочки «...», тире (—) вместо дефиса в смысловых паузах.</div>
+      <div class="item">Ни «революционного», ни «синергии», ни «инновационного».</div>
+      <div class="item">Не больше 4 пунктов в bullet-списке. Иначе — split / grid.</div>
+      <div class="item">Логотип: Kali (Ink) + GEO (на лаймовой плашке Accent).</div>
+      <div class="item">Текст на Accent — всегда Ink, не белый.</div>
+      <div class="item">На слайде 1920×1080 — не меньше 24px текста.</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="brand-mark">
+      <svg width="22" height="22" viewBox="0 0 40 40">
+        <rect x="1" y="1" width="38" height="38" rx="9" fill="#0F1115"/>
+        <path d="M12 10 L12 30 M12 20 L21 10 M12 20 L21 30" stroke="#FAFAF7" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <circle cx="28" cy="20" r="6" stroke="#C8F24A" stroke-width="2.4" fill="none"/>
+        <circle cx="28" cy="20" r="1.8" fill="#C8F24A"/>
+      </svg>
+      <span style="font-size:14px">Kali</span><span class="wd-geo" style="font-size:12px">GEO</span>
+    </div>
+    <div>Brandbook v1.0 · April 2026</div>
+    <div class="mono">Документ для AI-ассистентов и контрибьюторов</div>
+  </div>
+</footer>
+
+</body>
+</html>

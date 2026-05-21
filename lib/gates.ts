@@ -1,5 +1,7 @@
 export type Tier = "BASIC" | "STANDARD" | "ADVANCED"
 
+export type RecurringFrequency = "weekly" | "monthly" | "quarterly"
+
 export interface TierConfig {
   queryCount: number
   platforms: string[]
@@ -13,6 +15,9 @@ export interface TierConfig {
   hasReportRegeneration: boolean
   hasWebsiteFix: boolean // Google Stitch — 1 страница
   hasComparison: boolean // сравнительный анализ с предыдущим аудитом
+  hasHistoricalTrends: boolean // график динамики по нескольким аудитам
+  hasRagSources: boolean // RAG Source Attribution tab
+  recurringFrequencies: RecurringFrequency[] // доступные частоты повторных аудитов
   priorityHours: number // SLA в часах
 }
 
@@ -30,6 +35,9 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasReportRegeneration: false,
     hasWebsiteFix: false,
     hasComparison: false,
+    hasHistoricalTrends: false,
+    hasRagSources: false,
+    recurringFrequencies: [],
     priorityHours: 48,
   },
   STANDARD: {
@@ -45,6 +53,9 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasReportRegeneration: false,
     hasWebsiteFix: false,
     hasComparison: true,
+    hasHistoricalTrends: true,
+    hasRagSources: true,
+    recurringFrequencies: ["monthly", "quarterly"],
     priorityHours: 48,
   },
   ADVANCED: {
@@ -60,6 +71,9 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasReportRegeneration: true,
     hasWebsiteFix: true,
     hasComparison: true,
+    hasHistoricalTrends: true,
+    hasRagSources: true,
+    recurringFrequencies: ["weekly", "monthly", "quarterly"],
     priorityHours: 24,
   },
 }
@@ -91,4 +105,16 @@ export function getPlatformsForTier(tier: Tier) {
 
 export function getQueryCountForTier(tier: Tier) {
   return TIER_CONFIG[tier].queryCount
+}
+
+export function getAvailableFrequencies(tier: Tier): RecurringFrequency[] {
+  return TIER_CONFIG[tier].recurringFrequencies
+}
+
+export function hasHistoricalTrends(tier: Tier) {
+  return TIER_CONFIG[tier].hasHistoricalTrends
+}
+
+export function hasRagSources(tier: Tier) {
+  return TIER_CONFIG[tier].hasRagSources
 }

@@ -10,6 +10,7 @@ export interface QueryExecutionResult {
   competitors: string[]
   sources: string[]
   sentiment: string
+  positionScore: number
 }
 
 export async function executeQueriesOnPlatform(
@@ -27,8 +28,19 @@ export async function executeQueriesOnPlatform(
 
   for (const query of queries) {
     try {
-      const response = await aiClient.query(query)
-      const mentions = extractMentions(response, companyName, websiteUrl, competitors)
+      // Приоритет: queryWithSources (Perplexity native citations) > query() + regex fallback
+      let response: string
+      let citationsFromApi: string[] | undefined
+
+      if (aiClient.queryWithSources) {
+        const structured = await aiClient.queryWithSources(query)
+        response = structured.response
+        citationsFromApi = structured.citations.length > 0 ? structured.citations : undefined
+      } else {
+        response = await aiClient.query(query)
+      }
+
+      const mentions = extractMentions(response, companyName, websiteUrl, competitors, citationsFromApi)
 
       const result: QueryExecutionResult = {
         platform,
@@ -38,6 +50,7 @@ export async function executeQueriesOnPlatform(
         competitors: mentions.competitors,
         sources: mentions.sources,
         sentiment: mentions.sentiment,
+        positionScore: mentions.positionScore,
       }
 
       // Persist immediately so we don't lose data on crashes
@@ -51,6 +64,8 @@ export async function executeQueriesOnPlatform(
           competitors: mentions.competitors,
           sources: mentions.sources,
           sentiment: mentions.sentiment,
+          positionScore: mentions.positionScore,
+          sourceCategories: mentions.sourceCategories as any,
         },
       })
 

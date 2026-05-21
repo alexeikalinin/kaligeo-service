@@ -43,22 +43,25 @@ model AuditJob {
   followUpJobs        AuditJob[]    @relation("AuditComparison")
   followUpScheduledAt DateTime?
   followUpSentAt      DateTime?
+  recurringFrequency  String?       // "weekly" | "monthly" | "quarterly" | null
   queryResults        QueryResult[]
   report              Report?
 }
 
 model QueryResult {
-  id             String   @id @default(cuid())
-  jobId          String
-  platform       Platform
-  query          String
-  response       String
-  brandMentioned Boolean  @default(false)
-  competitors    String[]
-  sources        String[]
-  sentiment      String   @default("absent")
-  createdAt      DateTime @default(now())
-  job            AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id               String   @id @default(cuid())
+  jobId            String
+  platform         Platform
+  query            String
+  response         String
+  brandMentioned   Boolean  @default(false)
+  competitors      String[]
+  sources          String[]
+  sentiment        String   @default("absent")
+  positionScore    Int      @default(0) // 0=absent 1=first 2=early 3=middle 4=late
+  sourceCategories Json?                // Record<SourceCategory, string[]>
+  createdAt        DateTime @default(now())
+  job              AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId, platform])
 }
@@ -71,6 +74,7 @@ model Report {
   weakPoints       Json
   actionPlan       Json
   overallScore     Int      @default(0)
+  sourcesReport    Json?    // SourcesReport — top domains, by category, competitor advantage
   createdAt        DateTime @default(now())
   job              AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
