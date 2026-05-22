@@ -1810,7 +1810,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 (function(){
   /* ---------- Currency helpers ---------- */
   window.setCurrency = function(c){
-    const prices = {usd:[50,150,300],byn:[149,449,899],rub:[4900,14900,29900]};
+    const prices = {usd:[50,150,300],byn:[149,449,899],rub:[4900,13900,27900]};
     document.getElementById('btn-usd').classList.toggle('active', c==='usd');
     document.getElementById('btn-byn').classList.toggle('active', c==='byn');
     document.getElementById('btn-rub').classList.toggle('active', c==='rub');
@@ -2170,14 +2170,14 @@ const PRICES = {
   ],
   rub: [
     '4&nbsp;900<span class="cur cur-suf">₽</span>',
-    '14&nbsp;900<span class="cur cur-suf">₽</span>',
-    '29&nbsp;900<span class="cur cur-suf">₽</span><span class="amt-plus">+</span>'
+    '13&nbsp;900<span class="cur cur-suf">₽</span>',
+    '27&nbsp;900<span class="cur cur-suf">₽</span>'
   ]
 };
 const PLAN_LABELS = {
   usd: ['Базовый ($50)', 'Стандарт ($150)', 'Продвинутый ($300+)'],
   byn: ['Базовый (149 BYN)','Стандарт (449 BYN)','Продвинутый (899 BYN+)'],
-  rub: ['Базовый (4 900 ₽)', 'Стандарт (14 900 ₽)', 'Продвинутый (29 900 ₽+)']
+  rub: ['Базовый (4 900 ₽)', 'Стандарт (13 900 ₽)', 'Продвинутый (27 900 ₽)']
 };
 
 let currentCurrency = 'usd';
