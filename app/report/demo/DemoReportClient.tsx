@@ -11,7 +11,7 @@ import type { ShareOfVoiceResult } from "@/lib/analysis/share-of-voice"
 import type { CompetitivePosition } from "@/lib/analysis/competitive-positioning"
 
 type Tier = "BASIC" | "STANDARD" | "ADVANCED"
-type Currency = "RUB" | "USD" | "EUR"
+type Currency = "RUB" | "USD" | "BYN"
 
 // ── Competitor name mapping (anonymized) ─────────────────────────────────────
 const C1 = "Конкурент 1"
@@ -25,13 +25,13 @@ const C5 = "Конкурент 5"
 const CURRENCIES: { key: Currency; label: string }[] = [
   { key: "RUB", label: "₽ RUB" },
   { key: "USD", label: "$ USD" },
-  { key: "EUR", label: "€ EUR" },
+  { key: "BYN", label: "Br BYN" },
 ]
 
 const TIER_PRICES: Record<Tier, Record<Currency, string>> = {
-  BASIC:    { RUB: "4 900 ₽",  USD: "$55",  EUR: "€50"  },
-  STANDARD: { RUB: "13 900 ₽", USD: "$155", EUR: "€140" },
-  ADVANCED: { RUB: "27 900 ₽", USD: "$310", EUR: "€285" },
+  BASIC:    { RUB: "4 900 ₽",  USD: "$55",  BYN: "175 Br" },
+  STANDARD: { RUB: "13 900 ₽", USD: "$155", BYN: "495 Br" },
+  ADVANCED: { RUB: "27 900 ₽", USD: "$310", BYN: "995 Br" },
 }
 
 // ── Платформы по тарифам ─────────────────────────────────────────────────────
@@ -500,12 +500,12 @@ const TIERS: { key: Tier; label: string; accent: boolean; description: string }[
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export function DemoReportClient() {
-  const [tier, setTier] = useState<Tier>("ADVANCED")
-  const [currency, setCurrency] = useState<Currency>("RUB")
   const searchParams = useSearchParams()
-
   const from = (searchParams.get("from") ?? "ru") as DomainKey
   const domain = DOMAIN_CONFIG[from] ?? DOMAIN_CONFIG.ru
+
+  const [tier, setTier] = useState<Tier>("ADVANCED")
+  const [currency, setCurrency] = useState<Currency>(from === "by" ? "BYN" : "RUB")
 
   const isStandardPlus = tier !== "BASIC"
 
