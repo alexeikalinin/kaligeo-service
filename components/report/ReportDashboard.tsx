@@ -27,6 +27,9 @@ import type { AuditComparison } from "@/lib/analysis/compare-audits"
 import { SourcesAnalysis } from "./SourcesAnalysis"
 import { TrendsChart } from "./TrendsChart"
 import { RecurringPanel } from "./RecurringPanel"
+import { ShareOfVoiceTab } from "./ShareOfVoiceTab"
+import type { ShareOfVoiceResult } from "@/lib/analysis/share-of-voice"
+import type { CompetitivePosition } from "@/lib/analysis/competitive-positioning"
 
 interface PlatformScore {
   platform: string
@@ -77,6 +80,8 @@ interface ReportDashboardProps {
       brandMentioned: boolean
       sentiment: string
       sources?: string[]
+      mentionContext?: string | null
+      mentionQuality?: number | null
     }[]
   }
   report: {
@@ -98,6 +103,8 @@ interface ReportDashboardProps {
   platformInsights?: PlatformInsight[]
   competitorGaps?: { name: string; score: number; theirSignals: string[]; yourSignals: string[] }[]
   comparison?: AuditComparison | null
+  shareOfVoice?: ShareOfVoiceResult | null
+  competitivePosition?: CompetitivePosition | null
   sourcesReport?: {
     topDomains: { domain: string; count: number; category: string }[]
     byCategory: Record<string, { urls: string[]; count: number }>
@@ -108,11 +115,16 @@ interface ReportDashboardProps {
 
 // ── Tier locking ─────────────────────────────────────────────────────────────
 
-const TIER_ORDER: Record<string, number> = { BASIC: 0, STANDARD: 1, ADVANCED: 2 }
+// MONITOR_* тиры приравниваются к базовым для целей разблокировки вкладок
+const TIER_ORDER: Record<string, number> = {
+  BASIC: 0, STANDARD: 1, ADVANCED: 2,
+  MONITOR_START: 0, MONITOR_PRO: 1, MONITOR_AGENT: 2,
+}
 
 const TABS = [
   { key: "overview",    label: "Обзор",        availableFrom: "BASIC"    },
   { key: "platforms",   label: "Платформы",     availableFrom: "BASIC"    },
+  { key: "sov",         label: "SoV",           availableFrom: "STANDARD" },
   { key: "competitors", label: "Конкуренты",    availableFrom: "STANDARD" },
   { key: "sources",     label: "Источники",     availableFrom: "STANDARD" },
   { key: "trends",      label: "История",       availableFrom: "STANDARD" },
@@ -134,7 +146,7 @@ function getFirstAvailableTab(tier: string): TabKey {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, comparison, sourcesReport }: ReportDashboardProps) {
+export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, comparison, sourcesReport, shareOfVoice, competitivePosition }: ReportDashboardProps) {
   const [tab, setTab] = useState<TabKey>(() => getFirstAvailableTab(job.tier))
 
   // Reset tab when tier changes (e.g. demo tier selector)
@@ -340,6 +352,32 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
           </div>
         )}
 
+        {tab === "sov" && (
+          isTabLocked("STANDARD", job.tier)
+            ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="sov" />
+            : shareOfVoice && competitivePosition
+              ? (
+                <ShareOfVoiceTab
+                  companyName={job.companyName}
+                  sov={shareOfVoice}
+                  positioning={competitivePosition}
+                />
+              )
+              : (
+                <div
+                  className="rounded-xl p-8 text-center"
+                  style={{ background: "var(--card)", border: "1px solid var(--rule)" }}
+                >
+                  <p className="font-semibold mb-2" style={{ color: "var(--ink)" }}>
+                    Нет данных для Share of Voice
+                  </p>
+                  <p className="text-sm" style={{ color: "var(--ink-3)" }}>
+                    Для расчёта SoV укажите конкурентов при следующем аудите.
+                  </p>
+                </div>
+              )
+        )}
+
         {tab === "competitors" && (
           isTabLocked("STANDARD", job.tier)
             ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="competitors" />
@@ -476,7 +514,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                 <h2 className="text-lg font-bold mb-6" style={{ color: "var(--ink)" }}>
                   Все запросы
                 </h2>
-                <QueryExplorer results={job.queryResults} />
+                <QueryExplorer results={job.queryResults as Parameters<typeof QueryExplorer>[0]["results"]} />
               </div>
             )
         )}

@@ -47,9 +47,10 @@ export interface GrowthPlanInput {
   weakPoints: WeakPoint[]
   platformScores: Record<string, PlatformScore>
   competitors: string[]
-  competitorAnalysis?: string  // результат analysis-agent (competitors)
-  gapsAnalysis?: string        // результат analysis-agent (gaps)
-  contentRecommendations?: string // результат content-agent
+  competitorAnalysis?: string      // результат analysis-agent (competitors)
+  gapsAnalysis?: string            // результат analysis-agent (gaps)
+  sentimentAnalysis?: string       // результат analysis-agent (sentiment)
+  contentRecommendations?: string  // результат content-agent
 }
 
 export async function runGrowthPlanAgent(input: GrowthPlanInput): Promise<GrowthPlan> {
@@ -65,8 +66,9 @@ export async function runGrowthPlanAgent(input: GrowthPlanInput): Promise<Growth
     .join("\n")
 
   const contextBlocks = [
-    input.competitorAnalysis && `=== АНАЛИЗ КОНКУРЕНТОВ ===\n${input.competitorAnalysis}`,
-    input.gapsAnalysis       && `=== ПРОБЕЛЫ ВИДИМОСТИ ===\n${input.gapsAnalysis}`,
+    input.competitorAnalysis  && `=== АНАЛИЗ КОНКУРЕНТОВ ===\n${input.competitorAnalysis}`,
+    input.gapsAnalysis        && `=== ПРОБЕЛЫ ВИДИМОСТИ ===\n${input.gapsAnalysis}`,
+    input.sentimentAnalysis   && `=== ТОНАЛЬНОСТЬ УПОМИНАНИЙ ===\n${input.sentimentAnalysis}`,
     input.contentRecommendations && `=== КОНТЕНТНЫЕ РЕКОМЕНДАЦИИ ===\n${input.contentRecommendations}`,
   ]
     .filter(Boolean)

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180" viewBox="0 0 180 180">
+  <!-- Background with rounded corners (iOS clips automatically) -->
+  <rect width="180" height="180" rx="40" fill="#0F1115"/>
+
+  <!-- Radar rings -->
+  <circle cx="115" cy="90" r="65" fill="none" stroke="#1E2129" stroke-width="1.5"/>
+  <circle cx="115" cy="90" r="42" fill="none" stroke="#252A35" stroke-width="1.5"/>
+  <circle cx="115" cy="90" r="20" fill="none" stroke="#2E3440" stroke-width="1.5"/>
+
+  <!-- Target -->
+  <circle cx="115" cy="90" r="8" fill="none" stroke="#C8F24A" stroke-width="2"/>
+  <circle cx="115" cy="90" r="3" fill="#C8F24A"/>
+  <circle cx="115" cy="25" r="3.5" fill="#C8F24A" opacity="0.6"/>
+
+  <!-- K letterform -->
+  <path d="M44 46 L44 134 M44 90 L76 46 M44 90 L76 134" stroke="#FAFAF7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Bottom accent bar -->
+  <rect x="0" y="174" width="180" height="6" rx="3" fill="#C8F24A"/>
+</svg>

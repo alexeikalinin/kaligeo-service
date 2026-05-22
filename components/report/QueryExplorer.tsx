@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { MENTION_CONTEXT_LABELS } from "@/lib/agents/semantic-analysis-agent"
+import type { MentionContext } from "@/lib/agents/semantic-analysis-agent"
 
 interface QueryResult {
   id: string
@@ -10,6 +12,8 @@ interface QueryResult {
   brandMentioned: boolean
   sentiment: string
   sources?: string[]
+  mentionContext?: MentionContext | null
+  mentionQuality?: number | null
 }
 
 interface Props {
@@ -56,6 +60,7 @@ function QueryRow({ r, expanded, onToggle }: { r: QueryResult; expanded: boolean
   const sentiment = SENTIMENT_CONFIG[r.sentiment] ?? SENTIMENT_CONFIG.absent
   const intent = classifyIntent(r.query)
   const intentCfg = INTENT_CONFIG[intent]
+  const mentionCtx = r.mentionContext ? MENTION_CONTEXT_LABELS[r.mentionContext] : null
 
   return (
     <div className="rounded-lg overflow-hidden" style={{ border: "1px solid var(--rule)" }}>
@@ -69,7 +74,15 @@ function QueryRow({ r, expanded, onToggle }: { r: QueryResult; expanded: boolean
         <span className="flex-1 text-sm" style={{ color: "var(--ink-2)" }}>
           {r.query}
         </span>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+          {mentionCtx && (
+            <span
+              className="monotag text-xs"
+              style={{ color: mentionCtx.color, borderColor: mentionCtx.color, background: mentionCtx.bg }}
+            >
+              {mentionCtx.label}
+            </span>
+          )}
           <span className="monotag text-xs" style={{ color: intentCfg.color, borderColor: intentCfg.color }}>
             {intentCfg.label}
           </span>
@@ -86,6 +99,33 @@ function QueryRow({ r, expanded, onToggle }: { r: QueryResult; expanded: boolean
           <p className="text-xs mt-3 leading-relaxed whitespace-pre-wrap" style={{ color: "var(--ink-2)" }}>
             {r.response}
           </p>
+          {/* Semantic quality (ADVANCED only) */}
+          {mentionCtx && r.mentionQuality != null && (
+            <div className="mt-3 pt-3 border-t flex items-center gap-3" style={{ borderColor: "var(--rule)" }}>
+              <span className="t-eyebrow">Качество упоминания</span>
+              <span
+                className="monotag text-xs"
+                style={{ color: mentionCtx.color, borderColor: mentionCtx.color, background: mentionCtx.bg }}
+              >
+                {mentionCtx.label}
+              </span>
+              <div className="flex items-center gap-2 ml-auto">
+                <div className="w-20 h-1.5 rounded-full" style={{ background: "var(--bone-2)" }}>
+                  <div
+                    className="h-1.5 rounded-full"
+                    style={{
+                      width: `${r.mentionQuality}%`,
+                      background: r.mentionQuality >= 70 ? "#166534" : r.mentionQuality >= 40 ? "#854d0e" : "#991b1b",
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-mono font-semibold" style={{ color: "var(--ink)" }}>
+                  {r.mentionQuality}/100
+                </span>
+              </div>
+            </div>
+          )}
+
           {r.sources && r.sources.length > 0 && (
             <div className="mt-3 pt-3 border-t" style={{ borderColor: "var(--rule)" }}>
               <p className="t-eyebrow mb-2">Источники ({r.sources.length})</p>

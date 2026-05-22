@@ -9,9 +9,14 @@ import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
 const ADMIN_CHAT_ID = process.env.ADMIN_TELEGRAM_CHAT_ID ?? "UNSET"
 
 const TIERS = {
-  BASIC:    { label: "Basic",    desc: "15 запросов · ChatGPT, Gemini, YandexGPT · базовый отчёт",  price: "$50" },
-  STANDARD: { label: "Standard", desc: "30 запросов · 6 платформ · PDF-отчёт · план на 90 дней",   price: "$150" },
-  ADVANCED: { label: "Advanced", desc: "50 запросов · 9 платформ · AI-агенты · разбор конкурентов", price: "$300" },
+  // Разовые аудиты
+  BASIC:         { label: "Базовый",          desc: "15 запросов · ChatGPT, Gemini, YandexGPT · базовый отчёт",                   price: "4 900 ₽",       isSubscription: false },
+  STANDARD:      { label: "Стандарт",         desc: "30 запросов · 6 платформ · PDF-отчёт · план действий · Share of Voice",      price: "13 900 ₽",      isSubscription: false },
+  ADVANCED:      { label: "Продвинутый",      desc: "50 запросов · 9 платформ · AI-агенты · разбор конкурентов · фикс сайта",     price: "27 900 ₽",      isSubscription: false },
+  // Подписка (мониторинг)
+  MONITOR_START: { label: "Мониторинг Старт", desc: "Ежемесячный аудит · 3 платформы · дельта к прошлому месяцу",                 price: "4 990 ₽/мес",   isSubscription: true  },
+  MONITOR_PRO:   { label: "Мониторинг Про",   desc: "Ежемесячный аудит · 6 платформ · PDF · Share of Voice · алерты",             price: "9 990 ₽/мес",   isSubscription: true  },
+  MONITOR_AGENT: { label: "Мониторинг Агент", desc: "Еженедельный аудит · 9 платформ · AI-агенты · фикс сайта · приоритет 24ч",   price: "19 990 ₽/мес",  isSubscription: true  },
 } as const
 
 type Tier = keyof typeof TIERS
@@ -254,9 +259,10 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
         "Запустить полный аудит?",
       ].join("\n"),
       inlineKeyboard([
-        [{ text: "Basic — $50", data: "tier:BASIC" }],
-        [{ text: "Standard — $150 ⭐", data: "tier:STANDARD" }],
-        [{ text: "Advanced — $300 🚀", data: "tier:ADVANCED" }],
+        [{ text: "Базовый — 4 900 ₽", data: "tier:BASIC" }],
+        [{ text: "Стандарт — 13 900 ₽ ⭐", data: "tier:STANDARD" }],
+        [{ text: "Продвинутый — 27 900 ₽ 🚀", data: "tier:ADVANCED" }],
+        [{ text: "📅 Мониторинг Про — 9 990 ₽/мес", data: "tier:MONITOR_PRO" }],
         [{ text: "Что входит в каждый тариф?", data: "tier:info" }],
         [{ text: "Нет, спасибо", data: "free_offer:decline" }],
       ])
@@ -415,11 +421,19 @@ async function handleMessage(msg: { chat: { id: number }; text?: string; message
     await setStep(chatId, "tier", { ...data, competitors })
     await tg.send(
       chatId,
-      "Выберите тариф:",
+      [
+        "Выберите тариф:",
+        "",
+        "<b>Разовый аудит:</b>",
+      ].join("\n"),
       inlineKeyboard([
-        [{ text: "Basic — $50", data: "tier:BASIC" }],
-        [{ text: "Standard — $150 ⭐", data: "tier:STANDARD" }],
-        [{ text: "Advanced — $300 🚀", data: "tier:ADVANCED" }],
+        [{ text: "Базовый — 4 900 ₽", data: "tier:BASIC" }],
+        [{ text: "Стандарт — 13 900 ₽ ⭐", data: "tier:STANDARD" }],
+        [{ text: "Продвинутый — 27 900 ₽ 🚀", data: "tier:ADVANCED" }],
+        [{ text: "── Подписка (мониторинг) ──", data: "noop" }],
+        [{ text: "📅 Мониторинг Старт — 4 990 ₽/мес", data: "tier:MONITOR_START" }],
+        [{ text: "📅 Мониторинг Про — 9 990 ₽/мес ⭐", data: "tier:MONITOR_PRO" }],
+        [{ text: "📅 Мониторинг Агент — 19 990 ₽/мес 🚀", data: "tier:MONITOR_AGENT" }],
         [{ text: "Что входит в каждый тариф?", data: "tier:info" }],
       ])
     )
@@ -507,25 +521,42 @@ async function handleCallback(cb: {
     await tg.send(chatId, [
       "<b>Тарифы KaliGEO:</b>",
       "",
-      "🔹 <b>Basic — $50</b>",
+      "━━ <b>Разовый аудит</b> ━━",
+      "",
+      "🔹 <b>Базовый — 4 900 ₽</b>",
       "· 15 запросов · ChatGPT, Gemini, YandexGPT",
       "· Базовый отчёт с позициями по платформам",
       "",
-      "⭐ <b>Standard — $150</b>",
+      "⭐ <b>Стандарт — 13 900 ₽</b>",
       "· 30 запросов · 6 платформ",
-      "· PDF-отчёт, матрица конкурентов, план на 90 дней",
+      "· PDF-отчёт, Share of Voice, план действий",
       "· Чат с отчётом (10 вопросов)",
       "",
-      "🚀 <b>Advanced — $300</b>",
+      "🚀 <b>Продвинутый — 27 900 ₽</b>",
       "· 50 запросов · 9 платформ",
-      "· AI-агенты: глубокий анализ конкурентов и пробелов",
+      "· AI-агенты: глубокий анализ конкурентов",
       "· Оптимизация страницы сайта под AI",
       "· Безлимитный чат с отчётом",
+      "",
+      "━━ <b>Мониторинг (подписка)</b> ━━",
+      "",
+      "📅 <b>Мониторинг Старт — 4 990 ₽/мес</b>",
+      "· Ежемесячный автоаудит · 3 платформы",
+      "· Дельта к прошлому месяцу · алерт при падении",
+      "",
+      "📅 <b>Мониторинг Про — 9 990 ₽/мес</b> (дешевле VisioBrand!)",
+      "· Ежемесячный аудит · 6 платформ · Share of Voice",
+      "· PDF + чат с отчётом",
+      "",
+      "📅 <b>Мониторинг Агент — 19 990 ₽/мес</b>",
+      "· Еженедельный аудит · 9 платформ · AI-агенты",
+      "· Фикс сайта · приоритетная поддержка 24ч",
     ].join("\n"),
     inlineKeyboard([
-      [{ text: "Basic — $50", data: "tier:BASIC" }],
-      [{ text: "Standard — $150 ⭐", data: "tier:STANDARD" }],
-      [{ text: "Advanced — $300 🚀", data: "tier:ADVANCED" }],
+      [{ text: "Базовый — 4 900 ₽", data: "tier:BASIC" }],
+      [{ text: "Стандарт — 13 900 ₽ ⭐", data: "tier:STANDARD" }],
+      [{ text: "Продвинутый — 27 900 ₽ 🚀", data: "tier:ADVANCED" }],
+      [{ text: "📅 Мониторинг Про — 9 990 ₽/мес ⭐", data: "tier:MONITOR_PRO" }],
     ]))
     return
   }
@@ -640,6 +671,12 @@ async function createAuditJob(chatId: string, data: SessionData) {
     create: { email, companyName, websiteUrl },
   })
 
+  // Для подписочных тиров — авто-проставляем recurringFrequency
+  const isMonitor = tier.startsWith("MONITOR_")
+  const autoRecurring = tier === "MONITOR_AGENT" ? "weekly" : isMonitor ? "monthly" : null
+  // subscriptionActiveUntil = сейчас + 1 месяц (активируется после подтверждения оплаты менеджером)
+  const subActiveUntil = isMonitor ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) : null
+
   const job = await prisma.auditJob.create({
     data: {
       clientEmail: email,
@@ -651,20 +688,33 @@ async function createAuditJob(chatId: string, data: SessionData) {
       tier,
       status: "PENDING_PAYMENT",
       source: source ?? "tg",
+      ...(autoRecurring ? { recurringFrequency: autoRecurring } : {}),
+      ...(isMonitor ? { subscriptionTier: tier, subscriptionActiveUntil: subActiveUntil } : {}),
     },
   })
 
   const tierInfo = TIERS[tier]
+  const isSubscription = tierInfo.isSubscription
 
   await tg.send(chatId, [
     "✅ <b>Заявка принята!</b>",
     "",
     `<b>${companyName}</b> · ${tierInfo.label} · ${tierInfo.price}`,
     "",
-    "Что будет дальше:",
-    "1️⃣ Наш менеджер свяжется с вами в течение нескольких часов для оформления оплаты",
-    `2️⃣ После оплаты запустим аудит — результаты придут на <b>${email}</b>`,
-    "3️⃣ В среднем аудит занимает 15–30 минут",
+    isSubscription
+      ? [
+          "Что будет дальше:",
+          "1️⃣ Наш менеджер свяжется с вами для оформления подписки",
+          `2️⃣ После оплаты запустим первый аудит — результаты придут на <b>${email}</b>`,
+          "3️⃣ Следующие аудиты будут запускаться автоматически согласно расписанию",
+          "4️⃣ При падении видимости пришлём алерт на email",
+        ].join("\n")
+      : [
+          "Что будет дальше:",
+          "1️⃣ Наш менеджер свяжется с вами в течение нескольких часов для оформления оплаты",
+          `2️⃣ После оплаты запустим аудит — результаты придут на <b>${email}</b>`,
+          "3️⃣ В среднем аудит занимает 15–30 минут",
+        ].join("\n"),
     "",
     `<i>Номер заявки: ${job.id.slice(-8).toUpperCase()}</i>`,
   ].join("\n"))

@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { compareAudits } from "@/lib/analysis/compare-audits"
-import { getTierConfig } from "@/lib/gates"
+import { getTierConfig, type Tier } from "@/lib/gates"
+import { calculateShareOfVoice } from "@/lib/analysis/share-of-voice"
+import { calculateCompetitivePosition } from "@/lib/analysis/competitive-positioning"
 
 export async function GET(
   req: NextRequest,
@@ -24,7 +26,7 @@ export async function GET(
     return NextResponse.json({ status: job.status, ready: false })
   }
 
-  const tierConfig = getTierConfig(job.tier)
+  const tierConfig = getTierConfig(job.tier as Tier)
   let comparison = null
 
   if (tierConfig.hasComparison && job.baselineJob?.report) {
@@ -50,6 +52,18 @@ export async function GET(
     )
   }
 
+  // SoV и позиционирование — вычисляем на лету для STANDARD+
+  let shareOfVoice = null
+  let competitivePosition = null
+
+  if (tierConfig.hasShareOfVoice && job.competitors.length > 0) {
+    const queryResults = await prisma.queryResult.findMany({ where: { jobId: id } })
+    if (queryResults.length > 0) {
+      shareOfVoice = calculateShareOfVoice(queryResults, job.companyName, job.competitors)
+      competitivePosition = calculateCompetitivePosition(queryResults, job.competitors)
+    }
+  }
+
   return NextResponse.json({
     ready: true,
     companyName: job.companyName,
@@ -61,5 +75,7 @@ export async function GET(
     pdfUrl: job.pdfUrl,
     report: job.report,
     comparison,
+    shareOfVoice,
+    competitivePosition,
   })
 }

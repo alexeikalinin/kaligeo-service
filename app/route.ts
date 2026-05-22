@@ -17,6 +17,7 @@ interface RegionPatch {
   orgEmail: string
   ogUrl: string
   ctaApiPath: string
+  yandexVerification?: string // перекрывает тег из index.html
 }
 
 const PATCHES: Record<string, RegionPatch> = {
@@ -26,6 +27,7 @@ const PATCHES: Record<string, RegionPatch> = {
     orgEmail:   'hello@kaligeo.by',
     ogUrl:      'https://kaligeo.by/',
     ctaApiPath: '/api/payment/create',
+    yandexVerification: '065bd60ddfaff2db',
   },
   ru: {
     canonical:  'https://kaligeo.ru/',
@@ -46,7 +48,7 @@ const PATCHES: Record<string, RegionPatch> = {
 function patchHtml(html: string, region: string): string {
   const p = PATCHES[region] ?? PATCHES.default
 
-  return html
+  let result = html
     // canonical
     .replace(
       /<link rel="canonical" href="[^"]*">/,
@@ -70,6 +72,16 @@ function patchHtml(html: string, region: string): string {
       '</head>',
       `<meta name="x-region" content="${region}">\n</head>`
     )
+
+  // Подменить yandex-verification если для региона задан свой токен
+  if (p.yandexVerification) {
+    result = result.replace(
+      /<meta name="yandex-verification" content="[^"]*">/,
+      `<meta name="yandex-verification" content="${p.yandexVerification}">`
+    )
+  }
+
+  return result
 }
 
 export async function GET(request: NextRequest) {

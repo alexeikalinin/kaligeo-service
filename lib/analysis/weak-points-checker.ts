@@ -1,4 +1,6 @@
 import type { QueryResult } from "@prisma/client"
+import { calculateShareOfVoice } from "./share-of-voice"
+import { calculateCompetitivePosition } from "./competitive-positioning"
 
 export interface WeakPoint {
   id: string
@@ -11,9 +13,15 @@ export interface WeakPoint {
 export function detectWeakPoints(
   results: QueryResult[],
   websiteUrl: string,
-  overallScore: number
+  overallScore: number,
+  competitors?: string[]
 ): WeakPoint[] {
   const domain = websiteUrl.replace("https://", "").replace("http://", "").split("/")[0]
+
+  // SoV и позиционирование (если есть конкуренты)
+  const compList = competitors ?? []
+  const sov = compList.length > 0 ? calculateShareOfVoice(results, "", compList) : null
+  const positioning = compList.length >= 2 ? calculateCompetitivePosition(results, compList) : null
 
   const mentionedInSources = results.filter((r) => {
     const sources = r.sources as string[]
@@ -42,11 +50,10 @@ export function detectWeakPoints(
     : 1 // нет comparison-запросов — не флагируем
 
   // positionScore из схемы (Фаза 3) — если есть данные, используем
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type ResultWithPos = QueryResult & { positionScore: number }
   const positionScores = results
-    .filter((r) => r.brandMentioned && (r as any).positionScore > 0)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .map((r) => (r as any).positionScore as number)
+    .filter((r) => r.brandMentioned && (r as ResultWithPos).positionScore > 0)
+    .map((r) => (r as ResultWithPos).positionScore)
   const avgPositionScore = positionScores.length > 0
     ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
     : 0
@@ -125,6 +132,28 @@ export function detectWeakPoints(
       description: "Ваш бренд плохо представлен в Wikipedia, Wikidata или отраслевых справочниках, которые AI использует как источник.",
       severity: "low",
       detected: brandMentionRate < 0.15,
+    },
+    // ── SoV & Positioning ─────────────────────────────────────────────────────
+    {
+      id: "sov-below-20",
+      title: "Проигрываете конкурентам по доле упоминаний",
+      description: `Share of Voice бренда: ${sov?.overall ?? 0}%. Конкуренты упоминаются в AI-ответах чаще. Увеличьте контентное присутствие и авторитет источников.`,
+      severity: "high",
+      detected: sov !== null && sov.overall < 20,
+    },
+    {
+      id: "not-ranked-first",
+      title: "Редко упоминаетесь первым",
+      description: `Первое место в ответе AI получаете только в ${positioning?.firstMentionRate ?? 0}% запросов. Первое упоминание получает в 3–5× больше внимания — нужен контент формата primary recommendation.`,
+      severity: "medium",
+      detected: positioning !== null && positioning.firstMentionRate < 30,
+    },
+    {
+      id: "competitive-position-weak",
+      title: "Слабые конкурентные позиции",
+      description: `По частоте упоминаний в AI вы занимаете ${positioning?.rank ?? "?"} место из ${positioning?.totalParticipants ?? "?"}. Конкуренты системно опережают вас в ответах нейросетей.`,
+      severity: "high",
+      detected: positioning !== null && positioning.rank > 2 && positioning.totalParticipants >= 3,
     },
   ] as const).map(wp => ({ ...wp, severity: wp.severity as WeakPoint["severity"] })).filter((wp) => wp.detected)
 }

@@ -12,7 +12,8 @@ import { generateActionPlan } from "../lib/report/action-plan-gen"
 import { runGrowthPlanAgent } from "../lib/agents/growth-plan-agent"
 import { runAnalysisAgent } from "../lib/agents/analysis-agent"
 import { runContentAgent } from "../lib/agents/content-agent"
-import { getTierConfig, type Tier } from "../lib/gates"
+import { runSemanticAnalysisAgent } from "../lib/agents/semantic-analysis-agent"
+import { getTierConfig, getBaseTier, type Tier } from "../lib/gates"
 import { assertCanStartAudit } from "../lib/agents/risk-agent"
 import { getActivePlatforms } from "../lib/ai-clients"
 import { notifyAuditCompleted, notifyAuditFailed } from "../lib/notify"
@@ -52,13 +53,15 @@ export const auditPipeline = task({
 
 async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUniqueOrThrow>>) {
     const jobId = job.id
-    const config = getTierConfig(job.tier as Tier)
-    const isAdvanced = job.tier === "ADVANCED"
+    const tier = job.tier as Tier
+    const baseTier = getBaseTier(tier)   // MONITOR_* → BASIC/STANDARD/ADVANCED
+    const config = getTierConfig(tier)
+    const isAdvanced = baseTier === "ADVANCED"
 
     // ── Step 1: Generate queries ──────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_QUERIES" } })
 
-    const queries = await generateQueries(job.companyName, job.niche, job.competitors, job.tier)
+    const queries = await generateQueries(job.companyName, job.niche, job.competitors, baseTier)
 
     // ── Step 2: Execute queries — only platforms for this tier ────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "EXECUTING_QUERIES" } })
@@ -93,29 +96,38 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     const competitorMatrix = config.hasCompetitorMatrix
       ? buildCompetitorMatrix(allResults, job.competitors)
       : []
-    const weakPoints = detectWeakPoints(allResults, job.websiteUrl, overallScore)
+    const weakPoints = detectWeakPoints(allResults, job.websiteUrl, overallScore, job.competitors)
     const sourcesReport = aggregateSources(allResults, job.websiteUrl, job.competitors)
 
     // ── Step 4: Advanced — параллельный запуск агентов анализа ───────────
     let competitorAnalysis: string | undefined
     let gapsAnalysis: string | undefined
+    let sentimentAnalysis: string | undefined
     let contentRecommendations: string | undefined
 
     if (isAdvanced) {
-      const [compAnalysis, gaps, contentRecs] = await Promise.allSettled([
+      const [compAnalysis, gaps, sentiment, contentRecs, semanticStats] = await Promise.allSettled([
         runAnalysisAgent(jobId, "competitors"),
         runAnalysisAgent(jobId, "gaps"),
+        runAnalysisAgent(jobId, "sentiment"),
         runContentAgent({
           companyName: job.companyName,
           niche: job.niche,
           weakPoints: weakPoints.filter((w) => w.detected).map((w) => w.title),
           competitorStrengths: [],
         }).then((r) => JSON.stringify(r, null, 2)),
+        // Волна 3: семантическая классификация упоминаний (Haiku, дешево)
+        runSemanticAnalysisAgent(jobId),
       ])
 
-      competitorAnalysis = compAnalysis.status === "fulfilled" ? compAnalysis.value : undefined
-      gapsAnalysis       = gaps.status === "fulfilled"         ? gaps.value        : undefined
-      contentRecommendations = contentRecs.status === "fulfilled" ? contentRecs.value : undefined
+      competitorAnalysis     = compAnalysis.status === "fulfilled" ? compAnalysis.value : undefined
+      gapsAnalysis           = gaps.status === "fulfilled"         ? gaps.value         : undefined
+      sentimentAnalysis      = sentiment.status === "fulfilled"    ? sentiment.value    : undefined
+      contentRecommendations = contentRecs.status === "fulfilled"  ? contentRecs.value  : undefined
+
+      if (semanticStats.status === "fulfilled") {
+        console.log(`[pipeline] Semantic analysis: ${semanticStats.value.classified}/${semanticStats.value.total} mentions classified, avg quality: ${semanticStats.value.avgQuality}`)
+      }
     }
 
     // ── Step 5: Action Plan / Growth Plan ─────────────────────────────────
@@ -134,17 +146,19 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
           competitors: job.competitors,
           competitorAnalysis,
           gapsAnalysis,
+          sentimentAnalysis,
           contentRecommendations,
         })
       } else {
         // Standard: базовый план (GPT-4o-mini)
         actionPlan = await generateActionPlan(
           job.companyName, job.niche, weakPoints, platformScores, overallScore,
-          job.tier as "BASIC" | "STANDARD" | "ADVANCED"
+          baseTier
         )
       }
     }
 
+    /* eslint-disable @typescript-eslint/no-explicit-any */
     await prisma.report.create({
       data: {
         jobId,
@@ -156,6 +170,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
         sourcesReport:     sourcesReport as any,
       },
     })
+    /* eslint-enable @typescript-eslint/no-explicit-any */
 
     // ── Step 6: PDF (Standard+) ───────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_REPORT" } })

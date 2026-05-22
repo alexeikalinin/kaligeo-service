@@ -8,14 +8,14 @@
 <meta name="description" content="KaliGEO — аудит видимости бизнеса в AI-поиске. Проверяем как ChatGPT, Perplexity, Алиса, GigaChat и Google AI упоминают вашу компанию. Детальный отчёт и план действий за 48 часов.">
 <meta name="robots" content="index, follow">
 <meta name="google-site-verification" content="yMRkN2govoYHiZNyWil_SSMxIOn_84ch5PbeFujETmY">
-<meta name="yandex-verification" content="fad3445ace547e7a">
-<link rel="canonical" href="https://kaligeo.ru/">
+<meta name="yandex-verification" content="065bd60ddfaff2db">
+<link rel="canonical" href="https://kaligeo.by/">
 <!-- SEO: Open Graph -->
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://kaligeo.ru/">
+<meta property="og:url" content="https://kaligeo.by/">
 <meta property="og:title" content="KaliGEO — Аудит видимости бизнеса в AI-поиске">
 <meta property="og:description" content="Проверяем как ChatGPT, Perplexity, Алиса, GigaChat и Google AI упоминают вашу компанию. Узнайте что AI говорит о вас раньше, чем это узнает конкурент. Отчёт за 48 часов.">
-<meta property="og:image" content="https://kaligeo.ru/og-image.png">
+<meta property="og:image" content="https://kaligeo.by/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:locale" content="ru_RU">
@@ -24,7 +24,7 @@
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="KaliGEO — Аудит видимости бизнеса в AI-поиске">
 <meta name="twitter:description" content="Проверяем как ChatGPT, Perplexity, Алиса, GigaChat и Google AI упоминают вашу компанию. Отчёт за 48 часов.">
-<meta name="twitter:image" content="https://kaligeo.ru/og-image.png">
+<meta name="twitter:image" content="https://kaligeo.by/og-image.png">
 <!-- Favicon -->
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -390,7 +390,7 @@
 
   /* ══ GEO EXPLAINER ══ */
   .geo-explain{padding:104px 0;background:var(--bg-2)}
-  .geo-compare{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:56px;align-items:stretch}
+  .geo-compare{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:56px;align-items:stretch}
   .geo-col{background:var(--card);border:1px solid var(--rule);border-radius:18px;overflow:hidden;display:flex;flex-direction:column}
   .geo-col-body{padding:14px 16px;flex:1;display:flex;flex-direction:column}
 
@@ -588,10 +588,19 @@
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "Organization",
-      "@id": "https://kaligeo.ru/#organization",
+      "@type": "WebSite",
+      "@id": "https://kaligeo.by/#website",
+      "url": "https://kaligeo.by",
       "name": "KaliGEO",
-      "url": "https://kaligeo.ru",
+      "description": "Аудит видимости бизнеса в AI-поиске — ChatGPT, Perplexity, Gemini, Алиса, GigaChat",
+      "publisher": {"@id": "https://kaligeo.by/#organization"},
+      "inLanguage": "ru-RU"
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://kaligeo.by/#organization",
+      "name": "KaliGEO",
+      "url": "https://kaligeo.by",
       "email": "hello@kaligeo.ru",
       "description": "KaliGEO — сервис аудита видимости бизнеса в AI-поиске. Анализируем как ChatGPT, Perplexity, Алиса, GigaChat, Google AI Overviews, Gemini и DeepSeek упоминают и рекомендуют ваш бизнес.",
       "foundingDate": "2025",
@@ -600,9 +609,9 @@
     },
     {
       "@type": "ProfessionalService",
-      "@id": "https://kaligeo.ru/#service",
+      "@id": "https://kaligeo.by/#service",
       "name": "Аудит видимости бизнеса в AI-поиске (GEO-аудит)",
-      "provider": {"@id": "https://kaligeo.ru/#organization"},
+      "provider": {"@id": "https://kaligeo.by/#organization"},
       "description": "Детальный анализ того, как ChatGPT, Perplexity, Алиса, GigaChat, Gemini и DeepSeek описывают ваш бизнес. Выявляем конкурентов, которых AI рекомендует вместо вас, и даём пошаговый план улучшения видимости.",
       "serviceType": "GEO Audit / AI Visibility Audit",
       "offers": [
@@ -704,6 +713,15 @@
             "text": "AI Visibility Score — индекс от 0 до 100, отражающий насколько часто, на каких позициях и с какой тональностью AI-системы упоминают ваш бизнес в релевантных запросах. Рассчитывается по формуле KaliGEO: частота упоминаний × позиция в ответе × тональность × тип рекомендации."
           }
         }
+,
+        {
+          "@type": "Question",
+          "name": "Есть ли гарантия возврата?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Да. Если отчёт вас не устроил — вернём деньги в течение 7 дней без вопросов. Напишите на hello@kaligeo.ru с темой «Возврат»."
+          }
+        }
       ]
     }
   ]
@@ -716,6 +734,7 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
 'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
 })(window,document,'script','dataLayer','GTM-WRTHCHVF');</script>
 <!-- End Google Tag Manager -->
+<meta name="x-region" content="by">
 </head>
 <body>
 <!-- Google Tag Manager (noscript) -->
@@ -790,6 +809,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <span class="check">Срок — 48 часов</span>
           <span class="check">Без подписки</span>
           <span class="check">PDF + видеоразбор</span>
+          <span class="check">Гарантия возврата 7 дней</span>
         </div>
       </div>
 
@@ -946,54 +966,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <div class="sl-desc">Позиция 8+. Клиент сюда не доходит.</div>
           </div>
           <div style="margin-top:auto;padding-top:10px;font-size:11px;color:#70757a;font-style:italic">Видит 10 ссылок — выбирает сам.</div>
-        </div>
-      </div>
-
-      <!-- ── Яндекс SERP ── -->
-      <div class="geo-col">
-        <div class="ya-bar">
-          <div class="ya-bar-top">
-            <img class="ya-logo-img" src="https://avatars.mds.yandex.net/get-yapic/69015/BydtvUGZ4OlAuARxn3QEonhnz0-1/orig" alt="Яндекс" onerror="this.onerror=null;this.src='';this.outerHTML='<div style=\'width:30px;height:30px;border-radius:50%;background:#FC3F1D;display:grid;place-items:center;color:#fff;font-weight:700;font-size:17px;font-family:Arial,sans-serif;flex-shrink:0\'>Я</div>'">
-            <div class="ya-bar-input">
-              <span class="ya-bar-query">корпоративный юрист Москва</span>
-              <span class="ya-bar-icon">✕</span>
-            </div>
-          </div>
-        </div>
-        <div class="ya-tabs">
-          <div class="ya-tab on">Поиск</div>
-          <div class="ya-tab">Картинки</div>
-          <div class="ya-tab">Карты</div>
-          <div class="ya-tab">Все</div>
-        </div>
-        <div class="geo-col-body">
-          <div class="ya-result">
-            <div class="yr-meta">
-              <div class="yr-icon" style="background:#fff0f0;color:#c00">Ю</div>
-              <span class="yr-url">competitor-one.ru › uslugi</span>
-              <span class="yr-ad">Реклама</span>
-            </div>
-            <div class="yr-title">Юридическая фирма Competitor One</div>
-            <div class="yr-desc">Корпоративные споры и M&A. Опыт 12 лет. Бесплатная консультация. Москва, пн–пт 9:00–18:00.</div>
-            <div class="yr-stars">★★★★☆ <span style="color:#333;font-size:11px">4.7 · 38 отзывов</span></div>
-          </div>
-          <div class="ya-result">
-            <div class="yr-meta">
-              <div class="yr-icon" style="background:#f0f8ff;color:#00c">L</div>
-              <span class="yr-url">legalfirm.ru › about</span>
-            </div>
-            <div class="yr-title">LegalFirm — юридические услуги для бизнеса</div>
-            <div class="yr-desc">Специализируемся на корпоративном праве. Более 300 клиентов. Москва, пн–пт 9:00–18:00.</div>
-          </div>
-          <div class="ya-result dim">
-            <div class="yr-meta">
-              <div class="yr-icon" style="background:#f5f5f5;color:#aaa">В</div>
-              <span class="yr-url" style="color:#bbb">ваш-сайт.ru</span>
-            </div>
-            <div class="yr-title" style="color:#aaa;font-weight:400">Ваша компания — корпоративные услуги</div>
-            <div class="yr-desc" style="color:#aaa">Страница 2 или ниже. Яндекс не показывает в топе.</div>
-          </div>
-          <div style="margin-top:auto;padding-top:10px;font-size:11px;color:#999;font-style:italic">Здесь вы тоже не в топе.</div>
         </div>
       </div>
 
@@ -1501,155 +1473,66 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <section id="pricing">
   <div class="wrap">
     <div class="eyebrow"><span class="num">08</span> Тарифы</div>
-    <h2 class="section-title serif">Разовый аудит <em>или постоянный мониторинг.</em></h2>
-    <p class="lede">AI-видимость меняется каждые 2–4 недели. Выберите подходящий формат.</p>
-
-    <!-- Переключатель Разовый / Подписка -->
-    <div class="pricing-toggle" style="display:flex;align-items:center;justify-content:center;gap:16px;margin:32px 0 40px;user-select:none">
-      <span id="toggle-label-once" style="font-weight:600;font-size:14px;color:var(--ink)">Разовый аудит</span>
-      <label style="position:relative;display:inline-block;width:48px;height:26px;cursor:pointer">
-        <input type="checkbox" id="pricing-mode-toggle" onchange="setPricingMode(this.checked)" style="opacity:0;width:0;height:0">
-        <span style="position:absolute;inset:0;background:#D0D3DA;border-radius:13px;transition:.2s" id="toggle-track"></span>
-        <span style="position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 4px rgba(0,0,0,.2)" id="toggle-thumb"></span>
-      </label>
-      <span id="toggle-label-sub" style="font-size:14px;color:var(--ink-3)">Мониторинг (подписка)</span>
+    <h2 class="section-title serif">Разовые аудиты, <em>без подписки и абонементов.</em></h2>
+    <p class="lede">Выбирайте глубину под ставку. Любой тариф — результат за 48 часов.</p>
+    <div class="currency-switcher">
+      <span class="currency-switcher-label">Валюта:</span>
+      <button id="btn-byn" class="cur-btn active" onclick="setCurrency('byn')">BYN</button>
+      <button id="btn-usd" class="cur-btn" onclick="setCurrency('usd')">$&nbsp;USD</button>
+      <button id="btn-rub" class="cur-btn" onclick="setCurrency('rub')">₽&nbsp;RUB</button>
     </div>
 
-    <!-- Разовые аудиты -->
-    <div id="pricing-once">
-      <div class="price-grid">
-        <div class="price">
-          <div class="name">Базовый</div>
-          <div class="amt"><span class="cur">4 900</span><span class="cur cur-suf">₽</span></div>
-          <div class="desc">Быстрая проверка. Узнайте свой AI-рейтинг за 48 часов.</div>
-          <ul>
-            <li>15 запросов · 3 AI-платформы</li>
-            <li>Балл видимости и топ конкуренты</li>
-            <li>Слабые места и что исправить</li>
-          </ul>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
-            <a href="#cta" class="btn btn-ghost" onclick="selectPlan('Базовый')">Оставить заявку</a>
-          </div>
-        </div>
-
-        <div class="price feat">
-          <div class="badge">Выбор большинства</div>
-          <div class="name">Стандарт</div>
-          <div class="amt"><span class="cur">13 900</span><span class="cur cur-suf">₽</span></div>
-          <div class="desc">Полная картина: что AI говорит, кого рекомендует вместо вас и почему.</div>
-          <ul>
-            <li>30 запросов · 6 AI-платформ</li>
-            <li>Share of Voice vs конкуренты</li>
-            <li>PDF-отчёт + план действий</li>
-            <li>Чат с отчётом (10 вопросов)</li>
-          </ul>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
-            <a href="#cta" class="btn btn-accent" onclick="selectPlan('Стандарт')">Оставить заявку <span class="arrow">→</span></a>
-          </div>
-        </div>
-
-        <div class="price">
-          <div class="name">Продвинутый</div>
-          <div class="amt"><span class="cur">27 900</span><span class="cur cur-suf">₽</span></div>
-          <div class="desc">Максимальная глубина: AI-агенты, 9 платформ, фикс сайта под GEO.</div>
-          <ul>
-            <li>50 запросов · 9 AI-платформ (вкл. Grok)</li>
-            <li>AI-агенты: анализ пробелов и конкурентов</li>
-            <li>Competitive Positioning Score</li>
-            <li>Оптимизация страницы сайта</li>
-            <li>Безлимитный чат с отчётом</li>
-          </ul>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
-            <a href="#cta" class="btn btn-primary" onclick="selectPlan('Продвинутый')">Оставить заявку</a>
-          </div>
+    <div class="price-grid">
+      <div class="price">
+        <div class="name">Базовый</div>
+        <div class="amt" id="amt-0"><span class="cur">$</span>50</div>
+        <div class="desc">Быстрая проверка одной ниши. Пригодится до того, как вкладываться в SEO.</div>
+        <ul>
+          <li>15 запросов · 3 AI-платформы</li>
+          <li>Балл видимости и топ-3 конкурента</li>
+          <li>PDF-отчёт на 6 страниц</li>
+          <li>Без созвона и без плана</li>
+        </ul>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+          <a href="#cta" class="btn btn-ghost" onclick="selectPlan('Базовый')">Оставить заявку</a>
         </div>
       </div>
-    </div>
 
-    <!-- Мониторинг (подписка) — скрыт по умолчанию -->
-    <div id="pricing-sub" style="display:none">
-      <p style="text-align:center;color:var(--ink-2);font-size:14px;margin-bottom:32px">AI-видимость меняется каждые 2–4 недели. Мониторинг держит вас в курсе и присылает алерт при падении.</p>
-      <div class="price-grid">
-        <div class="price">
-          <div class="name">Мониторинг Старт</div>
-          <div class="amt"><span class="cur">4 990</span><span class="cur cur-suf">₽/мес</span></div>
-          <div class="desc">Автоматический ежемесячный аудит с дельтой к прошлому месяцу.</div>
-          <ul>
-            <li>3 AI-платформы · ежемесячно</li>
-            <li>Дельта: что улучшилось / ухудшилось</li>
-            <li>Алерт на email при падении видимости</li>
-          </ul>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
-            <a href="#cta" class="btn btn-ghost" onclick="selectPlan('Мониторинг Старт')">Подключить</a>
-          </div>
+      <div class="price feat">
+        <div class="badge">Выбор большинства</div>
+        <div class="name">Стандарт</div>
+        <div class="amt" id="amt-1"><span class="cur">$</span>150</div>
+        <div class="desc">Полная картина: что AI говорит, кого называет вместо и что с этим делать.</div>
+        <ul>
+          <li>50 запросов · 6 AI-платформ</li>
+          <li>Матрица из 10 конкурентов</li>
+          <li>PDF на 28 страниц + интерактив</li>
+          <li>Видеоразбор 15 минут</li>
+          <li>План роста на 30 дней</li>
+        </ul>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+          <a href="#cta" class="btn btn-accent" onclick="selectPlan('Стандарт')">Оставить заявку <span class="arrow">→</span></a>
         </div>
+      </div>
 
-        <div class="price feat">
-          <div class="badge">Лучше VisioBrand</div>
-          <div class="name">Мониторинг Про</div>
-          <div class="amt"><span class="cur">9 990</span><span class="cur cur-suf">₽/мес</span></div>
-          <div class="desc">Полный мониторинг 6 платформ с Share of Voice и PDF-отчётом.</div>
-          <ul>
-            <li>6 AI-платформ · ежемесячно</li>
-            <li>Share of Voice vs конкуренты</li>
-            <li>PDF-отчёт + план действий</li>
-            <li>Чат с отчётом (10 вопросов)</li>
-            <li>Алерт при падении видимости</li>
-          </ul>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
-            <a href="#cta" class="btn btn-accent" onclick="selectPlan('Мониторинг Про')">Подключить <span class="arrow">→</span></a>
-          </div>
-        </div>
-
-        <div class="price">
-          <div class="name">Мониторинг Агент</div>
-          <div class="amt"><span class="cur">19 990</span><span class="cur cur-suf">₽/мес</span></div>
-          <div class="desc">Еженедельный аудит с AI-агентами, фиксом сайта и приоритетной поддержкой.</div>
-          <ul>
-            <li>9 AI-платформ · еженедельно</li>
-            <li>AI-агенты: пробелы и конкуренты</li>
-            <li>Оптимизация страницы сайта</li>
-            <li>Безлимитный чат с отчётом</li>
-            <li>Приоритет 24ч</li>
-          </ul>
-          <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
-            <a href="#cta" class="btn btn-primary" onclick="selectPlan('Мониторинг Агент')">Подключить</a>
-          </div>
+      <div class="price">
+        <div class="name">Продвинутый</div>
+        <div class="amt" id="amt-2"><span class="cur">$</span>300<span class="amt-plus">+</span></div>
+        <div class="desc">Для команд, готовых выиграть категорию. Работаем вместе с вами, а не вместо.</div>
+        <ul>
+          <li>150+ запросов · все платформы</li>
+          <li>Мультирынок / несколько языков</li>
+          <li>Глубокий анализ сущностей и Schema</li>
+          <li>План на 90 дней + 30-мин стратсессия</li>
+          <li>Смета на внедрение (опция)</li>
+        </ul>
+        <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+          <a href="#cta" class="btn btn-primary" onclick="selectPlan('Продвинутый')">Оставить заявку</a>
         </div>
       </div>
     </div>
   </div>
 </section>
-
-<script>
-function setPricingMode(isSubscription) {
-  const once = document.getElementById('pricing-once');
-  const sub  = document.getElementById('pricing-sub');
-  const thumb = document.getElementById('toggle-thumb');
-  const track = document.getElementById('toggle-track');
-  const labelOnce = document.getElementById('toggle-label-once');
-  const labelSub  = document.getElementById('toggle-label-sub');
-  if (isSubscription) {
-    once.style.display = 'none';
-    sub.style.display  = 'block';
-    thumb.style.left   = '25px';
-    track.style.background = 'var(--ink)';
-    labelOnce.style.color = 'var(--ink-3)';
-    labelOnce.style.fontWeight = '400';
-    labelSub.style.color = 'var(--ink)';
-    labelSub.style.fontWeight = '600';
-  } else {
-    once.style.display = 'block';
-    sub.style.display  = 'none';
-    thumb.style.left   = '3px';
-    track.style.background = '#D0D3DA';
-    labelOnce.style.color = 'var(--ink)';
-    labelOnce.style.fontWeight = '600';
-    labelSub.style.color = 'var(--ink-3)';
-    labelSub.style.fontWeight = '400';
-  }
-}
-</script>
 
 <!-- PAYMENT LOGOS STRIP -->
 <div class="pay-strip">
@@ -1700,7 +1583,7 @@ function setPricingMode(isSubscription) {
             </div>
             <div class="form-field">
               <label for="f-site">Сайт</label>
-              <input type="url" id="f-site" name="website" placeholder="https://example.by" required>
+              <input type="text" id="f-site" name="website" placeholder="example.by или www.example.by" required autocomplete="url">
             </div>
           </div>
           <div class="form-row">
@@ -1824,6 +1707,10 @@ function setPricingMode(isSubscription) {
           <summary>А внедрить вы тоже можете? <span class="plus">+</span></summary>
           <div class="a">По желанию — да, сделаем смету с фиксированной ценой после аудита. Но никакого давления: большинство клиентов проходят план силами своей команды.</div>
         </details>
+        <details class="q">
+          <summary>Есть ли гарантия возврата? <span class="plus">+</span></summary>
+          <div class="a">Да. Если отчёт вас не устроил — вернём деньги в течение 7 дней без вопросов. Просто напишите на <a href="mailto:hello@kaligeo.ru" style="color:inherit;text-decoration:underline">hello@kaligeo.ru</a> с темой «Возврат». Единственное исключение: если аудит уже выдан и вы его прочитали — возврат рассматривается индивидуально.</div>
+        </details>
       </div>
     </div>
   </div>
@@ -1946,12 +1833,9 @@ function setPricingMode(isSubscription) {
 
   /* ---------- Alfa-Bank Acquiring ---------- */
   const PAY_PLANS = {
-    'Базовый':           { amount: 149,  amountKopecks: 14900  },
-    'Стандарт':          { amount: 449,  amountKopecks: 44900  },
-    'Продвинутый':       { amount: 899,  amountKopecks: 89900  },
-    'Мониторинг Старт':  { amount: 149,  amountKopecks: 14900  },
-    'Мониторинг Про':    { amount: 299,  amountKopecks: 29900  },
-    'Мониторинг Агент':  { amount: 599,  amountKopecks: 59900  },
+    'Базовый':  { amount: 149, amountKopecks: 14900 },
+    'Стандарт': { amount: 449, amountKopecks: 44900 },
+    'Продвинутый': { amount: 899, amountKopecks: 89900 }
   };
   let _activePlan = null;
 
@@ -2291,9 +2175,9 @@ const PRICES = {
   ]
 };
 const PLAN_LABELS = {
-  usd: ['Базовый ($50)', 'Стандарт ($150)', 'Продвинутый ($300+)', 'Мониторинг Старт', 'Мониторинг Про', 'Мониторинг Агент'],
-  byn: ['Базовый (149 BYN)','Стандарт (449 BYN)','Продвинутый (899 BYN+)', 'Мониторинг Старт', 'Мониторинг Про', 'Мониторинг Агент'],
-  rub: ['Базовый (4 900 ₽)', 'Стандарт (13 900 ₽)', 'Продвинутый (27 900 ₽)', 'Мониторинг Старт (4 990 ₽/мес)', 'Мониторинг Про (9 990 ₽/мес)', 'Мониторинг Агент (19 990 ₽/мес)']
+  usd: ['Базовый ($50)', 'Стандарт ($150)', 'Продвинутый ($300+)'],
+  byn: ['Базовый (149 BYN)','Стандарт (449 BYN)','Продвинутый (899 BYN+)'],
+  rub: ['Базовый (4 900 ₽)', 'Стандарт (14 900 ₽)', 'Продвинутый (29 900 ₽+)']
 };
 
 let currentCurrency = 'usd';
@@ -2328,9 +2212,8 @@ window.setCurrency = function(cur) {
 
 /* ── Plan selector ── */
 window.selectPlan = function(name) {
-  const allPlans = ['Базовый','Стандарт','Продвинутый','Мониторинг Старт','Мониторинг Про','Мониторинг Агент'];
-  const idx = allPlans.indexOf(name);
-  const label = idx !== -1 ? PLAN_LABELS[currentCurrency][idx] : name;
+  const idx = ['Базовый','Стандарт','Продвинутый'].indexOf(name);
+  const label = PLAN_LABELS[currentCurrency][idx];
   document.getElementById('cta-plan').value = label;
   document.getElementById('cta-subject').value = 'Заявка: ' + label + ' — KaliGEO';
   const badge = document.getElementById('plan-badge');
@@ -2343,6 +2226,16 @@ const ctaForm = document.getElementById('cta-form');
 if (ctaForm) {
   ctaForm.addEventListener('submit', async e => {
     e.preventDefault();
+    // Нормализация URL: принимаем любой формат
+    const siteField = ctaForm.querySelector('#f-site');
+    if (siteField && siteField.value) {
+      let url = siteField.value.trim();
+      // Убрать пробелы, добавить https:// если нет протокола
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url.replace(/^\/\//, '');
+      }
+      siteField.value = url;
+    }
     const btn = ctaForm.querySelector('button[type=submit]');
     const originalHTML = btn.innerHTML;
     btn.textContent = 'Отправляем…';

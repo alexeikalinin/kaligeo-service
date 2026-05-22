@@ -62,6 +62,35 @@ TypeScript check: `npx tsc --noEmit`
 
 ### Infrastructure
 
+#### Hosting — две независимые части
+
+| Что | Где | Деплой |
+|-----|-----|--------|
+| **Лендинги** `kaligeo.ru`, `kaligeo.by` | **hoster.by** — статический хостинг | Вручную: загрузить файл(ы) из `landing/` через FTP/панель hoster.by |
+| **Сервис** (API, аудит, отчёты, дашборд) | **Vercel** | Push в `main` → автодеплой |
+
+> ⚠️ Лендинги (`landing/ru/index.html`, `landing/by/index.html`) — это **отдельные статические HTML-файлы** на hoster.by. Они **не деплоятся через Vercel**. Изменения в этих файлах нужно вручную заливать на хостинг.
+>
+> `app/route.ts` (GET `/`) — служит preview/fallback версией лендинга на Vercel (читает `landing/index.html`), не является продакшн-лендингом.
+
+#### Лендинги — структура `landing/`
+
+```
+landing/
+  index.html       # базовый файл (используется app/route.ts для preview)
+  index-by.html    # ← устаревший? уточнить
+  ru/
+    index.html     # продакшн-лендинг kaligeo.ru  (hoster.by)
+    favicon.svg, logos/, …
+  by/
+    index.html     # продакшн-лендинг kaligeo.by  (hoster.by)
+    favicon.svg, logos/, …
+```
+
+SEO-теги в статических файлах уже захардкожены под свой домен (canonical, og:url, yandex-verification, google-site-verification). Менять напрямую в файле и заливать на хостинг.
+
+#### Прочий бэкенд
+
 - **Database**: Neon Postgres via `@prisma/adapter-pg`. `DATABASE_URL` (pooled) + `DIRECT_URL` (direct) required.
 - **Blob storage**: Vercel Blob (`BLOB_READ_WRITE_TOKEN`) — stores generated PDFs.
 - **Queue / background jobs**: Trigger.dev (`TRIGGER_SECRET_KEY`). The worker must be running locally (`npx trigger.dev@latest dev`) for pipeline to execute.

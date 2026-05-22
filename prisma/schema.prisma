@@ -38,6 +38,9 @@ model AuditJob {
   adminNotes       String?
   paidAt           DateTime?
   source              String?
+  // Подписка (мониторинг-тарифы)
+  subscriptionActiveUntil DateTime?  // null = разовый аудит
+  subscriptionTier        String?    // "MONITOR_START" | "MONITOR_PRO" | "MONITOR_AGENT"
   baselineJobId       String?
   baselineJob         AuditJob?     @relation("AuditComparison", fields: [baselineJobId], references: [id])
   followUpJobs        AuditJob[]    @relation("AuditComparison")
@@ -60,6 +63,8 @@ model QueryResult {
   sentiment        String   @default("absent")
   positionScore    Int      @default(0) // 0=absent 1=first 2=early 3=middle 4=late
   sourceCategories Json?                // Record<SourceCategory, string[]>
+  mentionContext   String?              // PRIMARY_RECOMMENDATION | COMPARISON | ALTERNATIVE | REFERENCE | WARNING
+  mentionQuality   Int?                 // 0–100 semantic quality score (Волна 3)
   createdAt        DateTime @default(now())
   job              AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
@@ -165,6 +170,9 @@ enum Tier {
   BASIC
   STANDARD
   ADVANCED
+  MONITOR_START
+  MONITOR_PRO
+  MONITOR_AGENT
 }
 
 enum Platform {

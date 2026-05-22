@@ -65,6 +65,55 @@ const TOOLS: Anthropic.Tool[] = [
       required: [],
     },
   },
+  {
+    name: "invoke_outreach_agent",
+    description: "Сгенерировать персонализированное письмо для холодного outreach конкретного лида. Использует данные FreemiumScan если есть.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        leadId: { type: "string", description: "ID лида из таблицы Lead" },
+        sequenceStep: { type: "number", description: "Шаг последовательности: 0=первое касание, 1=follow-up, 2=финальное" },
+        campaignBrief: { type: "string", description: "Опциональный контекст кампании" },
+      },
+      required: ["leadId"],
+    },
+  },
+  {
+    name: "invoke_monitoring_agent",
+    description: "Запустить spot-check AI-видимости для существующего аудита и сравнить с baseline.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        jobId: { type: "string", description: "ID оригинального аудита (AuditJob)" },
+      },
+      required: ["jobId"],
+    },
+  },
+  {
+    name: "invoke_benchmark_agent",
+    description: "Сравнить score компании с медианой по её нише на основе исторических данных.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        niche: { type: "string", description: "Ниша компании" },
+        overallScore: { type: "number", description: "Текущий overall score (0–100)" },
+      },
+      required: ["niche", "overallScore"],
+    },
+  },
+  {
+    name: "invoke_lead_scorer_agent",
+    description: "Оценить приоритет лида (hot/warm/cold) и получить рекомендацию по следующему действию.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        leadId: { type: "string", description: "ID конкретного лида (или пропусти для массовой оценки)" },
+        status: { type: "string", description: "Фильтр по статусу для массовой оценки" },
+        niche: { type: "string", description: "Фильтр по нише для массовой оценки" },
+      },
+      required: [],
+    },
+  },
 ]
 
 export async function runOrchestrator(

@@ -3,7 +3,9 @@ import { prisma } from "@/lib/prisma"
 import { ReportDashboard } from "@/components/report/ReportDashboard"
 import { ReportChatPanel } from "@/components/report/ReportChatPanel"
 import { compareAudits } from "@/lib/analysis/compare-audits"
-import { getTierConfig } from "@/lib/gates"
+import { getTierConfig, type Tier } from "@/lib/gates"
+import { calculateShareOfVoice } from "@/lib/analysis/share-of-voice"
+import { calculateCompetitivePosition } from "@/lib/analysis/competitive-positioning"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -38,6 +40,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           response: true,
           brandMentioned: true,
           sentiment: true,
+          mentionContext: true,   // Волна 3: семантическая классификация
+          mentionQuality: true,   // Волна 3: quality score 0–100
         },
       },
     },
@@ -64,7 +68,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     }
   }
 
-  const tierConfig = getTierConfig(job.tier)
+  const tierConfig = getTierConfig(job.tier as Tier)
   const comparison =
     tierConfig.hasComparison && job.baselineJob?.report
       ? compareAudits(
@@ -87,7 +91,20 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         )
       : null
 
-  const sourcesReport = (job.report as any).sourcesReport ?? null
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const sourcesReport = ((job.report as Record<string, unknown>).sourcesReport as any) ?? null
+
+  // SoV — вычисляем на сервере для STANDARD+
+  let shareOfVoice = null
+  let competitivePosition = null
+  if (tierConfig.hasShareOfVoice && job.competitors.length > 0) {
+    // queryResults уже загружены, но без sources — делаем отдельный запрос
+    const fullResults = await prisma.queryResult.findMany({ where: { jobId: id } })
+    if (fullResults.length > 0) {
+      shareOfVoice = calculateShareOfVoice(fullResults, job.companyName, job.competitors)
+      competitivePosition = calculateCompetitivePosition(fullResults, job.competitors)
+    }
+  }
 
   return (
     <>
@@ -107,6 +124,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         report={report}
         comparison={comparison}
         sourcesReport={sourcesReport}
+        shareOfVoice={shareOfVoice}
+        competitivePosition={competitivePosition}
       />
       {/* Chat panel — shown for all tiers, upgrade prompt for Basic */}
       <ReportChatPanel
