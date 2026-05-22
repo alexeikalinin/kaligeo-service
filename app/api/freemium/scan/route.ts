@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
 import { z } from "zod"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 const ScanSchema = z.object({
   websiteUrl: z.string().url(),
@@ -33,6 +34,15 @@ function estimatePreviewScore(
 }
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown"
+  const allowed = await checkRateLimit(`rl:freemium:${ip}`, 10, 3600) // 10/hour
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Слишком много запросов. Попробуйте через час." },
+      { status: 429 }
+    )
+  }
+
   try {
     const body = await req.json()
     const { websiteUrl, source } = ScanSchema.parse(body)

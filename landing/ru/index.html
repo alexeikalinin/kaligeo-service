@@ -1490,9 +1490,9 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <!-- Currency -->
       <div class="currency-switcher">
         <span class="currency-switcher-label">Валюта:</span>
-        <button id="btn-byn" class="cur-btn active" onclick="setCurrency('byn')">BYN</button>
+        <button id="btn-rub" class="cur-btn active" onclick="setCurrency('rub')">₽&nbsp;RUB</button>
         <button id="btn-usd" class="cur-btn" onclick="setCurrency('usd')">$&nbsp;USD</button>
-        <button id="btn-rub" class="cur-btn" onclick="setCurrency('rub')">₽&nbsp;RUB</button>
+        <button id="btn-byn" class="cur-btn" onclick="setCurrency('byn')">BYN</button>
       </div>
     </div>
 
@@ -1846,6 +1846,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="pay-currency">BYN</span>
     </div>
     <p class="pay-note">После оплаты вы получите подтверждение на email.<br>Срок выполнения — 48 часов с момента оплаты.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin:16px 0">
+      <input id="pm-email" type="email" placeholder="Email для отчёта*" required
+        style="padding:11px 14px;border:1px solid var(--rule-2);border-radius:10px;background:var(--bg-2);color:var(--ink);font-size:14px;outline:none;width:100%;box-sizing:border-box" />
+      <input id="pm-company" type="text" placeholder="Название компании*" required
+        style="padding:11px 14px;border:1px solid var(--rule-2);border-radius:10px;background:var(--bg-2);color:var(--ink);font-size:14px;outline:none;width:100%;box-sizing:border-box" />
+      <input id="pm-website" type="url" placeholder="Сайт (https://...)*" required
+        style="padding:11px 14px;border:1px solid var(--rule-2);border-radius:10px;background:var(--bg-2);color:var(--ink);font-size:14px;outline:none;width:100%;box-sizing:border-box" />
+    </div>
     <div class="pay-logos-mini">
       <svg class="pay-logo" viewBox="0 0 86 54" width="64" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="86" height="54" rx="6" fill="#1A1F71"/><text x="43" y="37" font-family="Arial" font-size="26" font-weight="700" font-style="italic" fill="#FFF" text-anchor="middle" letter-spacing="1.5">VISA</text></svg>
       <svg class="pay-logo" viewBox="0 0 86 54" width="64" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="86" height="54" rx="6" fill="#252525"/><circle cx="32" cy="27" r="16" fill="#EB001B"/><circle cx="54" cy="27" r="16" fill="#F79E1B"/><path d="M43 13.8a16 16 0 0 1 0 26.4A16 16 0 0 1 43 13.8z" fill="#FF5F00"/></svg>
@@ -1902,11 +1910,16 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   };
 
   /* ---------- Alfa-Bank Acquiring ---------- */
-  const PAY_PLANS = {
-    'Базовый':  { amount: 149, amountKopecks: 14900 },
-    'Стандарт': { amount: 449, amountKopecks: 44900 },
-    'Продвинутый': { amount: 899, amountKopecks: 89900 }
+  /* ── PLAN TIER MAP ── */
+  const PLAN_TIER = {
+    'Базовый':          'BASIC',
+    'Стандарт':         'STANDARD',
+    'Продвинутый':      'ADVANCED',
+    'Мониторинг Старт': 'MONITOR_START',
+    'Мониторинг Про':   'MONITOR_PRO',
+    'Мониторинг Агент': 'MONITOR_AGENT',
   };
+
   let _activePlan = null;
 
   window.openPayment = function(plan, amount) {
@@ -1915,6 +1928,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.getElementById('pm-amount').textContent = amount;
     document.getElementById('pm-error').style.display = 'none';
     document.getElementById('pm-loading').style.display = 'none';
+    // Reset form fields
+    document.getElementById('pm-email').value = '';
+    document.getElementById('pm-company').value = '';
+    document.getElementById('pm-website').value = '';
     document.getElementById('pay-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
   };
@@ -1928,34 +1945,71 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if(e.target === this) closePayment();
   });
 
+  const API = 'https://app.kaligeo.ru';
+
   window.processPayment = async function() {
     if(!_activePlan) return;
-    const info = PAY_PLANS[_activePlan];
-    const errEl  = document.getElementById('pm-error');
-    const loadEl = document.getElementById('pm-loading');
+    const tier = PLAN_TIER[_activePlan];
+    if(!tier) return;
+
+    const email   = document.getElementById('pm-email').value.trim();
+    const company = document.getElementById('pm-company').value.trim();
+    const website = document.getElementById('pm-website').value.trim();
+    const errEl   = document.getElementById('pm-error');
+    const loadEl  = document.getElementById('pm-loading');
+
+    // Validate
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errEl.textContent = '⚠ Введите корректный email';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(!company) {
+      errEl.textContent = '⚠ Введите название компании';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(!website) {
+      errEl.textContent = '⚠ Введите URL сайта (https://...)';
+      errEl.style.display = 'block';
+      return;
+    }
+
     errEl.style.display  = 'none';
     loadEl.style.display = 'flex';
 
     try {
-      /* POST /api/create-payment — Vercel serverless function (see api/create-payment.js)
-         В тестовой среде используется sandbox.alfabank.by */
-      const resp = await fetch('https://app.kaligeo.ru/api/create-payment', {
-        method:  'POST',
+      // Step 1: Submit audit to create a job
+      const submitResp = await fetch(API + '/api/audit/submit', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plan:        _activePlan,
-          amount:      info.amountKopecks,
-          orderNumber: 'KG-' + Date.now(),
-          description: 'KaliGEO — аудит видимости, тариф ' + _activePlan
+          clientEmail: email,
+          websiteUrl: website,
+          companyName: company,
+          niche: '',
+          tier: tier,
+          source: 'landing-ru',
         })
       });
+      if(!submitResp.ok) throw new Error('Ошибка при создании заявки. Попробуйте позже.');
+      const submitData = await submitResp.json();
+      if(!submitData.jobId) throw new Error(submitData.error || 'Не удалось создать заявку');
+      const jobId = submitData.jobId;
 
-      if(!resp.ok) throw new Error('Сервис временно недоступен. Попробуйте чуть позже.');
-      const data = await resp.json();
-      if(data.errorCode) throw new Error(data.errorMessage || 'Ошибка создания заказа');
+      // Step 2: Create bank payment order
+      const payResp = await fetch(API + '/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId })
+      });
+      if(!payResp.ok) throw new Error('Сервис оплаты временно недоступен.');
+      const payData = await payResp.json();
+      if(payData.errorCode) throw new Error(payData.errorMessage || 'Ошибка создания заказа');
+      if(!payData.formUrl) throw new Error('Не получен URL платёжной страницы');
 
-      /* Перенаправляем на платёжную страницу Альфа-Банка */
-      window.location.href = data.formUrl;
+      // Step 3: Redirect to bank
+      window.location.href = payData.formUrl;
 
     } catch(err) {
       loadEl.style.display = 'none';
@@ -1964,22 +2018,48 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
   };
 
-  /* Показываем баннер при возврате с платёжной страницы */
-  (function checkPaymentReturn(){
+  /* ── Handle return from Alfa-Bank ── */
+  (async function checkPaymentReturn(){
     const p = new URLSearchParams(location.search);
-    const orderId = p.get('orderId');
-    const status  = p.get('paymentStatus'); // success | fail
-    if(!orderId) return;
+    const jobId  = p.get('jobId');
+    const status = p.get('paymentStatus');
+    if(!jobId) return;
+
+    // Clean URL immediately
+    history.replaceState({}, '', location.pathname);
+
     const banner = document.getElementById('pay-banner');
-    if(status === 'success' || status === null){
-      banner.textContent = '✓ Оплата прошла успешно! Ждите письмо с подтверждением.';
-      banner.className = 'pay-banner ok';
-    } else {
+
+    if(status === 'fail') {
       banner.textContent = '✕ Оплата не прошла. Попробуйте ещё раз или напишите нам.';
       banner.className = 'pay-banner fail';
+      banner.style.opacity = '1';
+      setTimeout(() => { banner.style.opacity = '0'; }, 8000);
+      return;
     }
-    setTimeout(() => banner.style.opacity = '0', 5000);
-    history.replaceState({}, '', location.pathname);
+
+    // Verify payment server-side
+    try {
+      const r = await fetch(API + '/api/payment/status?jobId=' + jobId);
+      const d = await r.json();
+      if(d.paid) {
+        banner.textContent = '✓ Оплата прошла успешно! Перенаправляем на страницу прогресса…';
+        banner.className = 'pay-banner ok';
+        banner.style.opacity = '1';
+        setTimeout(() => {
+          window.location.href = API + '/audit/' + jobId;
+        }, 2000);
+      } else {
+        banner.textContent = '⏳ Ожидаем подтверждения оплаты… Мы пришлём письмо когда аудит начнётся.';
+        banner.className = 'pay-banner ok';
+        banner.style.opacity = '1';
+        setTimeout(() => { banner.style.opacity = '0'; }, 10000);
+      }
+    } catch {
+      banner.textContent = '✓ Оплата принята! Ожидайте письмо с подтверждением.';
+      banner.className = 'pay-banner ok';
+      banner.style.opacity = '1';
+    }
   })();
 
   /* ---------- Interactive AI chat ---------- */
@@ -2278,7 +2358,8 @@ const PLAN_LABELS_MONITOR = {
   rub: ['Мониторинг Старт (4 990 ₽/мес)', 'Мониторинг Про (9 990 ₽/мес)', 'Мониторинг Агент (19 990 ₽/мес)']
 };
 
-let currentCurrency = 'usd';
+/* kaligeo.ru — основная валюта рубли */
+let currentCurrency = 'rub';
 
 window.setCurrency = function(cur) {
   currentCurrency = cur;
@@ -2308,15 +2389,8 @@ window.setCurrency = function(cur) {
   }
 };
 
-(async () => {
-  try {
-    const res = await fetch('https://ipapi.co/country_code/', { signal: AbortSignal.timeout(3000) });
-    const code = (await res.text()).trim();
-    window.setCurrency(code === 'RU' ? 'rub' : code === 'US' ? 'usd' : 'byn');
-  } catch {
-    window.setCurrency('rub'); // kaligeo.ru — фолбэк всегда ₽
-  }
-})();
+/* kaligeo.ru — фиксированный RUB, без IP-детектора */
+window.setCurrency('rub');
 
 /* ── Plan type tab switcher ── */
 window.setPlanTab = function(tab) {

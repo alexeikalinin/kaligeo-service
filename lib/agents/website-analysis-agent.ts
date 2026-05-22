@@ -3,6 +3,27 @@ import { createGoogleGenerativeAI } from "@ai-sdk/google"
 
 const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_AI_API_KEY })
 
+/** Blocks SSRF — rejects private IPs, localhost, metadata endpoints */
+function isSafeExternalUrl(rawUrl: string): boolean {
+  try {
+    const { protocol, hostname } = new URL(rawUrl)
+    if (!["http:", "https:"].includes(protocol)) return false
+    // Block localhost / loopback
+    if (/^(localhost|127\.|0\.0\.0\.0)/.test(hostname)) return false
+    // Block private RFC 1918 ranges
+    if (/^10\./.test(hostname)) return false
+    if (/^192\.168\./.test(hostname)) return false
+    if (/^172\.(1[6-9]|2\d|3[01])\./.test(hostname)) return false
+    // Block link-local (AWS/GCP metadata)
+    if (/^169\.254\./.test(hostname)) return false
+    // Block IPv6 loopback
+    if (hostname === "::1" || hostname === "[::1]") return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 export interface WebsiteAnalysisResult {
   companyName: string
   niche: string
@@ -56,6 +77,10 @@ async function gatherPageContent(baseUrl: string): Promise<string> {
 export async function runWebsiteAnalysisAgent(
   websiteUrl: string
 ): Promise<WebsiteAnalysisResult> {
+  if (!isSafeExternalUrl(websiteUrl)) {
+    throw new Error("Invalid or unsafe URL")
+  }
+
   const pageContent = await gatherPageContent(websiteUrl)
 
   if (!pageContent) {

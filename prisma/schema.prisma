@@ -37,6 +37,7 @@ model AuditJob {
   completedAt      DateTime?
   adminNotes       String?
   paidAt           DateTime?
+  alfaBankOrderId  String?    // Alfa-Bank's orderId returned after order creation
   source              String?
   // Подписка (мониторинг-тарифы)
   subscriptionActiveUntil DateTime?  // null = разовый аудит

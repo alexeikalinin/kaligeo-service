@@ -37,6 +37,10 @@
 - [[07-API-Keys/Vercel Blob Setup]]
 - [[07-API-Keys/Upstash Redis Setup]]
 
+### Контент и публикации
+- [[08-Content/Content Strategy|🗺️ Content Strategy]] — **стратегия продвижения**, контент-план, KPI, площадки
+- [[08-Content/articles/README|📝 Статьи-сравнения]] — 6 готовых обзоров GEO-инструментов (vc.ru, Habr, dev.by, sostav.ru, TenChat, Spark)
+
 ### Клиенты и ниши
 - [[06-Clients/Clients Index]] — все аудиты по нишам
 - `/vault-add-audit <jobId>` — добавить аудит в vault
@@ -75,4 +79,4 @@
 - Live SSE вместо polling
 
 ---
-*Последнее обновление: 2026-05-02*
+*Последнее обновление: 2026-05-22*

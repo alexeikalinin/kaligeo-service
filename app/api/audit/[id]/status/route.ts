@@ -19,9 +19,8 @@ export async function GET(
       niche: true,
       createdAt: true,
       completedAt: true,
-      pdfUrl: true,
       errorMessage: true,
-      reportToken: true,
+      // reportToken intentionally excluded — exposed only via email link
     },
   })
 
@@ -29,9 +28,7 @@ export async function GET(
 
   return NextResponse.json({
     ...job,
-    reportUrl:
-      job.status === "COMPLETED"
-        ? `${process.env.NEXT_PUBLIC_APP_URL}/report/${job.id}?token=${job.reportToken}`
-        : null,
+    // Report URL is delivered via email; do not expose here
+    reportUrl: null,
   })
 }

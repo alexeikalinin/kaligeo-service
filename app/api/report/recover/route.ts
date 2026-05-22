@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
+import { checkRateLimit } from "@/lib/rate-limit"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown"
+  const ipAllowed = await checkRateLimit(`rl:recover:ip:${ip}`, 5, 3600)
+  if (!ipAllowed) {
+    return NextResponse.json({ success: true }) // Don't reveal rate limiting
+  }
+
   const { email } = await req.json()
   if (!email || typeof email !== "string") {
     return NextResponse.json({ error: "Email required" }, { status: 400 })

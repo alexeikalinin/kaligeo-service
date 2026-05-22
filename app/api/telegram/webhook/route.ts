@@ -137,8 +137,13 @@ async function runFreemiumScan(websiteUrl: string, source?: string): Promise<{ s
 // ── POST handler ──────────────────────────────────────────────────────────────
 
 export async function POST(req: NextRequest) {
+  const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (!webhookSecret) {
+    console.error("[telegram/webhook] TELEGRAM_WEBHOOK_SECRET is not set — rejecting all requests")
+    return NextResponse.json({ ok: false, error: "Webhook not configured" }, { status: 500 })
+  }
   const secret = req.headers.get("x-telegram-bot-api-secret-token")
-  if (secret !== process.env.TELEGRAM_WEBHOOK_SECRET) {
+  if (secret !== webhookSecret) {
     return NextResponse.json({ ok: false }, { status: 403 })
   }
 

@@ -211,20 +211,22 @@
   .case .big{font-family:'Instrument Serif',serif;font-size:48px;line-height:.9;margin-top:8px;letter-spacing:-0.02em}
   .case .col .delta{font-size:12px;color:var(--ink-2);margin-top:8px}
 
-  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:56px}
+  .price-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
   .price{background:var(--card);border:1px solid var(--rule);border-radius:20px;padding:32px;display:flex;flex-direction:column;position:relative}
   .price.feat{background:var(--ink);color:var(--bg);border-color:var(--ink)}
   .price .name{font-size:13px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-3)}
   .price.feat .name{color:#A0A3AB}
-  .price .amt{font-family:'Instrument Serif',serif;font-size:72px;line-height:1;margin:16px 0 8px;letter-spacing:-0.03em}
+  .price .amt{font-family:'Instrument Serif',serif;font-size:72px;line-height:1;margin:16px 0 0;letter-spacing:-0.03em}
   .price .amt .cur{font-size:28px;vertical-align:top;margin-right:2px;color:var(--ink-3)}
   .price .amt .cur.cur-suf{vertical-align:top;margin-right:0;margin-left:6px}
   .price .amt .amt-plus{font-size:24px;color:var(--ink-3)}
   .price.feat .amt .cur{color:#8A8D95}
+  .price .per{font-size:13px;color:var(--ink-3);margin:6px 0 16px;font-family:'JetBrains Mono',monospace;letter-spacing:.04em}
+  .price.feat .per{color:#8A8D95}
   .currency-toggle{display:inline-flex;align-items:center;gap:2px;background:var(--bg-2);border:1px solid var(--rule);border-radius:999px;padding:3px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;margin-left:12px;vertical-align:middle}
   .currency-toggle button{background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:999px;color:var(--ink-3);transition:all .15s ease;letter-spacing:.04em}
   .currency-toggle button.active{background:var(--accent);color:var(--ink)}
-  .currency-switcher{display:flex;align-items:center;gap:8px;margin-top:28px;flex-wrap:wrap}
+  .currency-switcher{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
   .currency-switcher-label{font-size:12px;color:var(--ink-3);font-weight:500;margin-right:4px;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.08em}
   .cur-btn{padding:10px 24px;border-radius:999px;border:2px solid var(--rule-2);background:var(--card);font-size:16px;font-weight:700;cursor:pointer;color:var(--ink-2);transition:all .15s ease;font-family:'JetBrains Mono',monospace;letter-spacing:.03em;box-shadow:0 1px 3px rgba(15,17,21,.06)}
   .cur-btn.active{background:var(--accent);color:var(--ink);border-color:var(--accent);box-shadow:0 4px 14px color-mix(in oklab,var(--accent) 40%,transparent)}
@@ -238,6 +240,14 @@
   .price.feat ul li::before{color:var(--accent)}
   .price .btn{width:100%;justify-content:center;margin-top:auto}
   .price .badge{position:absolute;top:-12px;left:32px;background:var(--accent);color:var(--accent-ink);padding:5px 12px;border-radius:999px;font-size:11px;font-weight:600;font-family:'JetBrains Mono',monospace;text-transform:uppercase;letter-spacing:.06em}
+  /* Plan type toggle */
+  .pricing-controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:28px}
+  .plan-toggle{display:flex;align-items:center;gap:4px;background:var(--bg-2);border:1px solid var(--rule);border-radius:999px;padding:4px}
+  .plan-tab{padding:9px 22px;border-radius:999px;font-size:11px;font-weight:600;cursor:pointer;border:none;background:transparent;color:var(--ink-2);transition:all .2s ease;font-family:'JetBrains Mono',monospace;letter-spacing:.06em;text-transform:uppercase}
+  .plan-tab.active{background:var(--card);color:var(--ink);box-shadow:0 1px 4px rgba(15,17,21,.12)}
+  .tab-pane{display:none}.tab-pane.active{display:block}
+  .plan-note{margin-top:20px;padding:13px 18px;background:var(--bg-2);border:1px solid var(--rule);border-radius:12px;font-size:13px;color:var(--ink-2);display:flex;align-items:flex-start;gap:10px;line-height:1.5}
+  .plan-note-icon{flex-shrink:0;font-weight:700;color:var(--ink)}
 
   .cta-block{padding:120px 0;background:var(--ink);color:var(--bg);position:relative;overflow:hidden}
   .cta-inner{display:grid;grid-template-columns:1.3fr 1fr;gap:72px;align-items:end}
@@ -303,6 +313,9 @@
     .nav-links{display:none}
     .hamburger{display:flex}
     .method-grid,.glossary-grid{grid-template-columns:1fr}
+    .pricing-controls{flex-direction:column;align-items:flex-start;gap:12px}
+    .plan-toggle{width:100%}
+    .plan-tab{flex:1;text-align:center}
   }
 
   @media (max-width: 600px){
@@ -1473,63 +1486,127 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 <section id="pricing">
   <div class="wrap">
     <div class="eyebrow"><span class="num">08</span> Тарифы</div>
-    <h2 class="section-title serif">Разовые аудиты, <em>без подписки и абонементов.</em></h2>
-    <p class="lede">Выбирайте глубину под ставку. Любой тариф — результат за 48 часов.</p>
-    <div class="currency-switcher">
-      <span class="currency-switcher-label">Валюта:</span>
-      <button id="btn-byn" class="cur-btn active" onclick="setCurrency('byn')">BYN</button>
-      <button id="btn-usd" class="cur-btn" onclick="setCurrency('usd')">$&nbsp;USD</button>
-      <button id="btn-rub" class="cur-btn" onclick="setCurrency('rub')">₽&nbsp;RUB</button>
+    <h2 class="section-title serif">Выберите глубину <em>и формат работы.</em></h2>
+    <p class="lede">Разовый аудит или постоянный мониторинг — оба варианта дают результат за 48 часов.</p>
+
+    <div class="pricing-controls">
+      <div class="plan-toggle">
+        <button class="plan-tab active" id="tab-onetime" onclick="setPlanTab('onetime')">Разовый аудит</button>
+        <button class="plan-tab" id="tab-monitor" onclick="setPlanTab('monitor')">Мониторинг&nbsp;—&nbsp;подписка</button>
+      </div>
+      <div class="currency-switcher">
+        <span class="currency-switcher-label">Валюта:</span>
+        <button id="btn-usd" class="cur-btn active" onclick="setCurrency('usd')">$&nbsp;USD</button>
+        <button id="btn-byn" class="cur-btn" onclick="setCurrency('byn')">BYN</button>
+        <button id="btn-rub" class="cur-btn" onclick="setCurrency('rub')">₽&nbsp;RUB</button>
+      </div>
     </div>
 
-    <div class="price-grid">
-      <div class="price">
-        <div class="name">Базовый</div>
-        <div class="amt" id="amt-0"><span class="cur">$</span>50</div>
-        <div class="desc">Быстрая проверка одной ниши. Пригодится до того, как вкладываться в SEO.</div>
-        <ul>
-          <li>15 запросов · 3 AI-платформы</li>
-          <li>Балл видимости и топ-3 конкурента</li>
-          <li>PDF-отчёт на 6 страниц</li>
-          <li>Без созвона и без плана</li>
-        </ul>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+    <!-- ── ONE-TIME ── -->
+    <div class="tab-pane active" id="pane-onetime">
+      <div class="price-grid">
+        <div class="price">
+          <div class="name">Базовый</div>
+          <div class="amt" id="amt-0"><span class="cur">$</span>50</div>
+          <div class="per">разовый аудит</div>
+          <div class="desc">Быстрая проверка одной ниши. Пригодится до того, как вкладываться в SEO.</div>
+          <ul>
+            <li>15 запросов · 3 AI-платформы</li>
+            <li>Балл видимости и топ-3 конкурента</li>
+            <li>PDF-отчёт на 6 страниц</li>
+            <li>Email-алерт при падении видимости</li>
+          </ul>
           <a href="#cta" class="btn btn-ghost" onclick="selectPlan('Базовый')">Оставить заявку</a>
         </div>
-      </div>
 
-      <div class="price feat">
-        <div class="badge">Выбор большинства</div>
-        <div class="name">Стандарт</div>
-        <div class="amt" id="amt-1"><span class="cur">$</span>150</div>
-        <div class="desc">Полная картина: что AI говорит, кого называет вместо и что с этим делать.</div>
-        <ul>
-          <li>50 запросов · 6 AI-платформ</li>
-          <li>Матрица из 10 конкурентов</li>
-          <li>PDF на 28 страниц + интерактив</li>
-          <li>Видеоразбор 15 минут</li>
-          <li>План роста на 30 дней</li>
-        </ul>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+        <div class="price feat">
+          <div class="badge">Выбор большинства</div>
+          <div class="name">Стандарт</div>
+          <div class="amt" id="amt-1"><span class="cur">$</span>150</div>
+          <div class="per">разовый аудит</div>
+          <div class="desc">Полная картина: что AI говорит, кого называет вместо и что с этим делать.</div>
+          <ul>
+            <li>30 запросов · 6 AI-платформ</li>
+            <li>Матрица конкурентов + PDF + план роста</li>
+            <li>Бенчмарк: ваш score vs медиана ниши</li>
+            <li>Email-алерт при падении видимости</li>
+          </ul>
           <a href="#cta" class="btn btn-accent" onclick="selectPlan('Стандарт')">Оставить заявку <span class="arrow">→</span></a>
         </div>
-      </div>
 
-      <div class="price">
-        <div class="name">Продвинутый</div>
-        <div class="amt" id="amt-2"><span class="cur">$</span>300<span class="amt-plus">+</span></div>
-        <div class="desc">Для команд, готовых выиграть категорию. Работаем вместе с вами, а не вместо.</div>
-        <ul>
-          <li>150+ запросов · все платформы</li>
-          <li>Мультирынок / несколько языков</li>
-          <li>Глубокий анализ сущностей и Schema</li>
-          <li>План на 90 дней + 30-мин стратсессия</li>
-          <li>Смета на внедрение (опция)</li>
-        </ul>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-top:auto">
+        <div class="price">
+          <div class="name">Продвинутый</div>
+          <div class="amt" id="amt-2"><span class="cur">$</span>300<span class="amt-plus">+</span></div>
+          <div class="per">разовый аудит</div>
+          <div class="desc">Для команд, готовых выиграть категорию. AI-агенты работают вместе с вами.</div>
+          <ul>
+            <li>50 запросов · все 9 платформ</li>
+            <li>AI-анализ: конкуренты + пробелы + тональность</li>
+            <li>Бенчмарк + план на 90 дней + Website Fix</li>
+            <li>Email-алерт при падении видимости</li>
+          </ul>
           <a href="#cta" class="btn btn-primary" onclick="selectPlan('Продвинутый')">Оставить заявку</a>
         </div>
       </div>
+    </div>
+
+    <!-- ── MONITOR ── -->
+    <div class="tab-pane" id="pane-monitor">
+      <div class="price-grid">
+        <div class="price">
+          <div class="name">Старт</div>
+          <div class="amt" id="amt-m0"><span class="cur">$</span>55</div>
+          <div class="per">в месяц · автоматически</div>
+          <div class="desc">Ежемесячный автоаудит 3 платформ. Вы видите динамику, не занимаясь этим вручную.</div>
+          <ul>
+            <li>15 запросов · 3 AI-платформы</li>
+            <li>Дельта к прошлому месяцу</li>
+            <li>График динамики score</li>
+            <li>Email-алерт при падении видимости</li>
+          </ul>
+          <a href="#cta" class="btn btn-ghost" onclick="selectPlan('Мониторинг Старт')">Оставить заявку</a>
+        </div>
+
+        <div class="price feat">
+          <div class="badge">Лучшее соотношение</div>
+          <div class="name">Про</div>
+          <div class="amt" id="amt-m1"><span class="cur">$</span>110</div>
+          <div class="per">в месяц · автоматически</div>
+          <div class="desc">Полный аудит каждый месяц: 6 платформ, PDF, план и бенчмарк vs конкурентов по нише.</div>
+          <ul>
+            <li>30 запросов · 6 AI-платформ</li>
+            <li>PDF + план роста каждый месяц</li>
+            <li>Бенчмарк: ваш score vs медиана ниши</li>
+            <li>Email-алерт при падении видимости</li>
+          </ul>
+          <a href="#cta" class="btn btn-accent" onclick="selectPlan('Мониторинг Про')">Оставить заявку <span class="arrow">→</span></a>
+        </div>
+
+        <div class="price">
+          <div class="name">Агент</div>
+          <div class="amt" id="amt-m2"><span class="cur">$</span>220</div>
+          <div class="per">в месяц · еженедельно</div>
+          <div class="desc">Максимальное покрытие: все 9 платформ, AI-агенты и еженедельные проверки.</div>
+          <ul>
+            <li>50 запросов · все 9 платформ · еженедельно</li>
+            <li>AI-агенты: конкуренты + пробелы + тональность</li>
+            <li>Бенчмарк + Website Fix + чат без лимитов</li>
+            <li>Email-алерт при падении видимости</li>
+          </ul>
+          <a href="#cta" class="btn btn-primary" onclick="selectPlan('Мониторинг Агент')">Оставить заявку</a>
+        </div>
+      </div>
+
+      <div class="plan-note">
+        <span class="plan-note-icon">↻</span>
+        <span>Мониторинг — это те же самые аудиты, только автоматические. Каждый цикл создаёт новый отчёт с дельтой к предыдущему. Отменить можно в любое время.</span>
+      </div>
+    </div>
+
+    <div class="plan-note" id="pricing-note-alert" style="margin-top:20px">
+      <span class="plan-note-icon">✓</span>
+      <span><strong>Email-алерты при падении видимости</strong> — включены во все тарифы. Если AI перестаёт вас упоминать, вы узнаете об этом автоматически.</span>
+    </div>
     </div>
   </div>
 </section>
@@ -1775,6 +1852,14 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <span class="pay-currency">BYN</span>
     </div>
     <p class="pay-note">После оплаты вы получите подтверждение на email.<br>Срок выполнения — 48 часов с момента оплаты.</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin:16px 0">
+      <input id="pm-email" type="email" placeholder="Email для отчёта*" required
+        style="padding:11px 14px;border:1px solid var(--rule-2);border-radius:10px;background:var(--bg-2);color:var(--ink);font-size:14px;outline:none;width:100%;box-sizing:border-box" />
+      <input id="pm-company" type="text" placeholder="Название компании*" required
+        style="padding:11px 14px;border:1px solid var(--rule-2);border-radius:10px;background:var(--bg-2);color:var(--ink);font-size:14px;outline:none;width:100%;box-sizing:border-box" />
+      <input id="pm-website" type="url" placeholder="Сайт (https://...)*" required
+        style="padding:11px 14px;border:1px solid var(--rule-2);border-radius:10px;background:var(--bg-2);color:var(--ink);font-size:14px;outline:none;width:100%;box-sizing:border-box" />
+    </div>
     <div class="pay-logos-mini">
       <svg class="pay-logo" viewBox="0 0 86 54" width="64" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="86" height="54" rx="6" fill="#1A1F71"/><text x="43" y="37" font-family="Arial" font-size="26" font-weight="700" font-style="italic" fill="#FFF" text-anchor="middle" letter-spacing="1.5">VISA</text></svg>
       <svg class="pay-logo" viewBox="0 0 86 54" width="64" height="40" xmlns="http://www.w3.org/2000/svg"><rect width="86" height="54" rx="6" fill="#252525"/><circle cx="32" cy="27" r="16" fill="#EB001B"/><circle cx="54" cy="27" r="16" fill="#F79E1B"/><path d="M43 13.8a16 16 0 0 1 0 26.4A16 16 0 0 1 43 13.8z" fill="#FF5F00"/></svg>
@@ -1831,11 +1916,17 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   };
 
   /* ---------- Alfa-Bank Acquiring ---------- */
-  const PAY_PLANS = {
-    'Базовый':  { amount: 149, amountKopecks: 14900 },
-    'Стандарт': { amount: 449, amountKopecks: 44900 },
-    'Продвинутый': { amount: 899, amountKopecks: 89900 }
+
+  /* ── PLAN TIER MAP ── */
+  const PLAN_TIER = {
+    'Базовый':          'BASIC',
+    'Стандарт':         'STANDARD',
+    'Продвинутый':      'ADVANCED',
+    'Мониторинг Старт': 'MONITOR_START',
+    'Мониторинг Про':   'MONITOR_PRO',
+    'Мониторинг Агент': 'MONITOR_AGENT',
   };
+
   let _activePlan = null;
 
   window.openPayment = function(plan, amount) {
@@ -1844,6 +1935,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     document.getElementById('pm-amount').textContent = amount;
     document.getElementById('pm-error').style.display = 'none';
     document.getElementById('pm-loading').style.display = 'none';
+    // Reset form fields
+    document.getElementById('pm-email').value = '';
+    document.getElementById('pm-company').value = '';
+    document.getElementById('pm-website').value = '';
     document.getElementById('pay-overlay').classList.add('open');
     document.body.style.overflow = 'hidden';
   };
@@ -1857,34 +1952,71 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     if(e.target === this) closePayment();
   });
 
+  const API = 'https://app.kaligeo.ru';
+
   window.processPayment = async function() {
     if(!_activePlan) return;
-    const info = PAY_PLANS[_activePlan];
-    const errEl  = document.getElementById('pm-error');
-    const loadEl = document.getElementById('pm-loading');
+    const tier = PLAN_TIER[_activePlan];
+    if(!tier) return;
+
+    const email   = document.getElementById('pm-email').value.trim();
+    const company = document.getElementById('pm-company').value.trim();
+    const website = document.getElementById('pm-website').value.trim();
+    const errEl   = document.getElementById('pm-error');
+    const loadEl  = document.getElementById('pm-loading');
+
+    // Validate
+    if(!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errEl.textContent = '⚠ Введите корректный email';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(!company) {
+      errEl.textContent = '⚠ Введите название компании';
+      errEl.style.display = 'block';
+      return;
+    }
+    if(!website) {
+      errEl.textContent = '⚠ Введите URL сайта (https://...)';
+      errEl.style.display = 'block';
+      return;
+    }
+
     errEl.style.display  = 'none';
     loadEl.style.display = 'flex';
 
     try {
-      /* POST /api/create-payment — Vercel serverless function (see api/create-payment.js)
-         В тестовой среде используется sandbox.alfabank.by */
-      const resp = await fetch('https://app.kaligeo.ru/api/create-payment', {
-        method:  'POST',
+      // Step 1: Submit audit to create a job
+      const submitResp = await fetch(API + '/api/audit/submit', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plan:        _activePlan,
-          amount:      info.amountKopecks,
-          orderNumber: 'KG-' + Date.now(),
-          description: 'KaliGEO — аудит видимости, тариф ' + _activePlan
+          clientEmail: email,
+          websiteUrl: website,
+          companyName: company,
+          niche: '',
+          tier: tier,
+          source: 'landing-by',
         })
       });
+      if(!submitResp.ok) throw new Error('Ошибка при создании заявки. Попробуйте позже.');
+      const submitData = await submitResp.json();
+      if(!submitData.jobId) throw new Error(submitData.error || 'Не удалось создать заявку');
+      const jobId = submitData.jobId;
 
-      if(!resp.ok) throw new Error('Сервис временно недоступен. Попробуйте чуть позже.');
-      const data = await resp.json();
-      if(data.errorCode) throw new Error(data.errorMessage || 'Ошибка создания заказа');
+      // Step 2: Create bank payment order
+      const payResp = await fetch(API + '/api/payment/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId })
+      });
+      if(!payResp.ok) throw new Error('Сервис оплаты временно недоступен.');
+      const payData = await payResp.json();
+      if(payData.errorCode) throw new Error(payData.errorMessage || 'Ошибка создания заказа');
+      if(!payData.formUrl) throw new Error('Не получен URL платёжной страницы');
 
-      /* Перенаправляем на платёжную страницу Альфа-Банка */
-      window.location.href = data.formUrl;
+      // Step 3: Redirect to bank
+      window.location.href = payData.formUrl;
 
     } catch(err) {
       loadEl.style.display = 'none';
@@ -1893,22 +2025,48 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     }
   };
 
-  /* Показываем баннер при возврате с платёжной страницы */
-  (function checkPaymentReturn(){
+  /* ── Handle return from Alfa-Bank ── */
+  (async function checkPaymentReturn(){
     const p = new URLSearchParams(location.search);
-    const orderId = p.get('orderId');
-    const status  = p.get('paymentStatus'); // success | fail
-    if(!orderId) return;
+    const jobId  = p.get('jobId');
+    const status = p.get('paymentStatus');
+    if(!jobId) return;
+
+    // Clean URL immediately
+    history.replaceState({}, '', location.pathname);
+
     const banner = document.getElementById('pay-banner');
-    if(status === 'success' || status === null){
-      banner.textContent = '✓ Оплата прошла успешно! Ждите письмо с подтверждением.';
-      banner.className = 'pay-banner ok';
-    } else {
+
+    if(status === 'fail') {
       banner.textContent = '✕ Оплата не прошла. Попробуйте ещё раз или напишите нам.';
       banner.className = 'pay-banner fail';
+      banner.style.opacity = '1';
+      setTimeout(() => { banner.style.opacity = '0'; }, 8000);
+      return;
     }
-    setTimeout(() => banner.style.opacity = '0', 5000);
-    history.replaceState({}, '', location.pathname);
+
+    // Verify payment server-side
+    try {
+      const r = await fetch(API + '/api/payment/status?jobId=' + jobId);
+      const d = await r.json();
+      if(d.paid) {
+        banner.textContent = '✓ Оплата прошла успешно! Перенаправляем на страницу прогресса…';
+        banner.className = 'pay-banner ok';
+        banner.style.opacity = '1';
+        setTimeout(() => {
+          window.location.href = API + '/audit/' + jobId;
+        }, 2000);
+      } else {
+        banner.textContent = '⏳ Ожидаем подтверждения оплаты… Мы пришлём письмо когда аудит начнётся.';
+        banner.className = 'pay-banner ok';
+        banner.style.opacity = '1';
+        setTimeout(() => { banner.style.opacity = '0'; }, 10000);
+      }
+    } catch {
+      banner.textContent = '✓ Оплата принята! Ожидайте письмо с подтверждением.';
+      banner.className = 'pay-banner ok';
+      banner.style.opacity = '1';
+    }
   })();
 
   /* ---------- Interactive AI chat ---------- */
@@ -2102,7 +2260,9 @@ if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   staggerReveal('.t-grid', '.t-card, .case', 0.12);
 
   /* ── Pricing ── */
-  staggerReveal('.price-grid', '.price', 0.1);
+  staggerReveal('#pane-onetime .price-grid', '.price', 0.1);
+  staggerReveal('#pane-monitor .price-grid', '.price', 0.1);
+  reveal('.plan-note');
 
   /* ── CTA block ── */
   reveal('.cta-block h2, .urgency, .cta-form');
@@ -2173,46 +2333,83 @@ const PRICES = {
     '27&nbsp;900<span class="cur cur-suf">₽</span>'
   ]
 };
+const PRICES_MONITOR = {
+  usd: [
+    '<span class="cur">$</span>55',
+    '<span class="cur">$</span>110',
+    '<span class="cur">$</span>220'
+  ],
+  byn: [
+    '159<span class="cur cur-suf">BYN</span>',
+    '299<span class="cur cur-suf">BYN</span>',
+    '599<span class="cur cur-suf">BYN</span>'
+  ],
+  rub: [
+    '4&nbsp;990<span class="cur cur-suf">₽</span>',
+    '9&nbsp;990<span class="cur cur-suf">₽</span>',
+    '19&nbsp;990<span class="cur cur-suf">₽</span>'
+  ]
+};
 const PLAN_LABELS = {
   usd: ['Базовый ($50)', 'Стандарт ($150)', 'Продвинутый ($300+)'],
   byn: ['Базовый (149 BYN)','Стандарт (449 BYN)','Продвинутый (899 BYN+)'],
   rub: ['Базовый (4 900 ₽)', 'Стандарт (13 900 ₽)', 'Продвинутый (27 900 ₽)']
 };
+const PLAN_LABELS_MONITOR = {
+  usd: ['Мониторинг Старт ($55/мес)', 'Мониторинг Про ($110/мес)', 'Мониторинг Агент ($220/мес)'],
+  byn: ['Мониторинг Старт (159 BYN/мес)', 'Мониторинг Про (299 BYN/мес)', 'Мониторинг Агент (599 BYN/мес)'],
+  rub: ['Мониторинг Старт (4 990 ₽/мес)', 'Мониторинг Про (9 990 ₽/мес)', 'Мониторинг Агент (19 990 ₽/мес)']
+};
 
+/* kaligeo.by — по умолчанию USD */
 let currentCurrency = 'usd';
 
 window.setCurrency = function(cur) {
   currentCurrency = cur;
   PRICES[cur].forEach((html, i) => {
-    document.getElementById('amt-' + i).innerHTML = html;
+    const el = document.getElementById('amt-' + i);
+    if (el) el.innerHTML = html;
+  });
+  PRICES_MONITOR[cur].forEach((html, i) => {
+    const el = document.getElementById('amt-m' + i);
+    if (el) el.innerHTML = html;
   });
   document.getElementById('btn-usd').classList.toggle('active', cur === 'usd');
   document.getElementById('btn-byn').classList.toggle('active', cur === 'byn');
   document.getElementById('btn-rub').classList.toggle('active', cur === 'rub');
   const badge = document.getElementById('plan-badge');
-  if (badge && badge.style.display !== 'none' && badge.textContent) {
+  if (badge && badge.style.display !== 'none') {
     const planField = document.getElementById('cta-plan').value;
     if (planField && planField !== 'не выбран') {
-      const idx = ['Базовый','Стандарт','Продвинутый'].findIndex(n => planField.startsWith(n));
-      if (idx !== -1) badge.textContent = '✓ Выбран тариф: ' + PLAN_LABELS[cur][idx];
+      const idxO = ['Базовый','Стандарт','Продвинутый'].findIndex(n => planField.startsWith(n));
+      if (idxO !== -1) { badge.textContent = '✓ Выбран тариф: ' + PLAN_LABELS[cur][idxO]; return; }
+      const idxM = ['Мониторинг Старт','Мониторинг Про','Мониторинг Агент'].findIndex(n => planField.startsWith(n));
+      if (idxM !== -1) badge.textContent = '✓ Выбран тариф: ' + PLAN_LABELS_MONITOR[cur][idxM];
     }
   }
 };
 
-(async () => {
-  try {
-    const res = await fetch('https://ipapi.co/country_code/', { signal: AbortSignal.timeout(3000) });
-    const code = (await res.text()).trim();
-    window.setCurrency(code === 'RU' ? 'rub' : code === 'US' ? 'usd' : 'byn');
-  } catch {
-    window.setCurrency('byn');
-  }
-})();
+/* kaligeo.by — фиксированный USD, без IP-детектора */
+window.setCurrency('usd');
+
+/* ── Plan type tab switcher ── */
+window.setPlanTab = function(tab) {
+  ['onetime','monitor'].forEach(t => {
+    document.getElementById('pane-' + t).classList.toggle('active', t === tab);
+    document.getElementById('tab-' + t).classList.toggle('active', t === tab);
+  });
+  const alertNote = document.getElementById('pricing-note-alert');
+  if (alertNote) alertNote.style.display = tab === 'monitor' ? 'none' : 'flex';
+};
 
 /* ── Plan selector ── */
 window.selectPlan = function(name) {
-  const idx = ['Базовый','Стандарт','Продвинутый'].indexOf(name);
-  const label = PLAN_LABELS[currentCurrency][idx];
+  const idxO = ['Базовый','Стандарт','Продвинутый'].indexOf(name);
+  const idxM = ['Мониторинг Старт','Мониторинг Про','Мониторинг Агент'].indexOf(name);
+  let label;
+  if (idxO !== -1) label = PLAN_LABELS[currentCurrency][idxO];
+  else if (idxM !== -1) label = PLAN_LABELS_MONITOR[currentCurrency][idxM];
+  else label = name;
   document.getElementById('cta-plan').value = label;
   document.getElementById('cta-subject').value = 'Заявка: ' + label + ' — KaliGEO';
   const badge = document.getElementById('plan-badge');

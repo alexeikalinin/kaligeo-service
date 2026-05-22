@@ -1,70 +1,110 @@
 /**
- * GET /api/payment/status?orderId=<id>
+ * GET /api/payment/status?jobId=<id>
  *
- * Проверяет статус заказа в Альфа-Банке (Беларусь).
- * Вызывается после редиректа от банка для серверной верификации.
- *
- * orderStatus значения:
- *   0 — зарегистрирован, не оплачен
- *   1 — предавторизован
- *   2 — ОПЛАЧЕН (полная авторизация)
- *   3 — отменён
- *   4 — возврат
- *   5 — авторизация через ACS банка-эмитента
- *   6 — отклонён
+ * Verifies payment status for a given audit job via Alfa-Bank.
+ * If payment is confirmed, sets paidAt and triggers the audit pipeline.
  */
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { tasks } from "@trigger.dev/sdk/v3"
+import { auditPipeline } from "@/trigger/audit-pipeline"
+import { notifyAuditStarted } from "@/lib/notify"
+import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 
-const SANDBOX_URL = 'https://sandbox.alfabank.by/payment/rest'
-const PROD_URL    = 'https://ecom.alfabank.by/payment/rest'
+const SANDBOX_URL = "https://sandbox.alfabank.by/payment/rest"
+const PROD_URL = "https://ecom.alfabank.by/payment/rest"
+
+export async function OPTIONS(req: NextRequest) {
+  return corsOptionsResponse(req.headers.get("origin"))
+}
 
 export async function GET(req: NextRequest) {
-  const { searchParams } = new URL(req.url)
-  const orderId = searchParams.get('orderId')
+  const origin = req.headers.get("origin")
+  const corsHeaders = getCorsHeaders(origin)
 
-  if (!orderId) {
-    return NextResponse.json({ error: 'orderId is required' }, { status: 400 })
+  const { searchParams } = new URL(req.url)
+  const jobId = searchParams.get("jobId")
+
+  if (!jobId) {
+    return NextResponse.json({ error: "jobId is required" }, { status: 400, headers: corsHeaders })
   }
 
-  const isSandbox = process.env.ALFABANK_SANDBOX === 'true'
-  const baseUrl   = isSandbox ? SANDBOX_URL : PROD_URL
+  const job = await prisma.auditJob.findUnique({
+    where: { id: jobId },
+    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true },
+  })
+
+  if (!job) {
+    return NextResponse.json({ error: "Job not found" }, { status: 404, headers: corsHeaders })
+  }
+
+  // Already paid — no need to call bank again
+  if (job.paidAt) {
+    return NextResponse.json({ jobId, paid: true, alreadyPaid: true }, { headers: corsHeaders })
+  }
+
+  if (!job.alfaBankOrderId) {
+    return NextResponse.json(
+      { error: "Заказ ещё не создан. Сначала вызовите /api/payment/create." },
+      { status: 400, headers: corsHeaders }
+    )
+  }
+
+  const isSandbox = process.env.ALFABANK_SANDBOX === "true"
+  const baseUrl = isSandbox ? SANDBOX_URL : PROD_URL
 
   const params = new URLSearchParams({
-    userName: process.env.ALFABANK_USER || '',
-    password: process.env.ALFABANK_PASS || '',
-    orderId,
-    language: 'ru',
+    userName: process.env.ALFABANK_USER ?? "",
+    password: process.env.ALFABANK_PASS ?? "",
+    orderId: job.alfaBankOrderId,
+    language: "ru",
   })
 
   try {
     const bankResp = await fetch(`${baseUrl}/getOrderStatusExtended.do`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body:    params.toString(),
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: params.toString(),
     })
 
     const data = await bankResp.json() as {
       orderStatus?: number
-      actionCode?: number
-      amount?: number
-      currency?: string
       errorCode?: number
       errorMessage?: string
+      amount?: number
     }
 
-    return NextResponse.json({
-      orderId,
-      orderStatus:  data.orderStatus,
-      paid:         data.orderStatus === 2,
-      actionCode:   data.actionCode,
-      amount:       data.amount,
-      currency:     data.currency,
-      errorCode:    data.errorCode,
-      errorMessage: data.errorMessage,
-    })
+    const paid = data.orderStatus === 2
 
+    if (paid) {
+      // Mark as paid and trigger audit pipeline (idempotent — check paidAt again)
+      const updated = await prisma.auditJob.updateMany({
+        where: { id: job.id, paidAt: null }, // only if not yet paid
+        data: { paidAt: new Date(), status: "PENDING" },
+      })
+
+      if (updated.count > 0) {
+        await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: job.id })
+        notifyAuditStarted({
+          companyName: job.companyName,
+          tier: job.tier,
+          jobId: job.id,
+        }).catch(console.error)
+      }
+    }
+
+    return NextResponse.json(
+      {
+        jobId,
+        paid,
+        orderStatus: data.orderStatus,
+        errorCode: data.errorCode,
+        errorMessage: data.errorMessage,
+      },
+      { headers: corsHeaders }
+    )
   } catch (err) {
-    console.error('[payment/status]', err)
-    return NextResponse.json({ error: 'Bank API unavailable' }, { status: 502 })
+    console.error("[payment/status]", err)
+    return NextResponse.json({ error: "Bank API unavailable" }, { status: 502, headers: corsHeaders })
   }
 }
