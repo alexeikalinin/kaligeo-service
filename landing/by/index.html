@@ -1571,7 +1571,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         </div>
         <div id="plan-badge" style="display:none;font-size:13px;font-weight:600;color:var(--accent);background:rgba(255,204,0,0.12);border:1px solid rgba(255,204,0,0.25);border-radius:999px;padding:6px 14px;margin-bottom:8px;width:fit-content"></div>
         <form class="cta-form" id="cta-form">
-          <input type="hidden" name="access_key" value="7d391c44-88d5-4049-bf2b-70cdadff9629">
           <input type="hidden" name="subject" value="Новая заявка на аудит KaliGEO">
           <input type="hidden" name="from_name" value="KaliGEO Landing">
           <input type="hidden" name="redirect" value="false">
@@ -2241,10 +2240,19 @@ if (ctaForm) {
     btn.textContent = 'Отправляем…';
     btn.disabled = true;
     try {
-      const res = await fetch('https://api.web3forms.com/submit', {
+      const formData = new FormData(ctaForm);
+      const payload = {
+        name: formData.get('name') || '',
+        email: formData.get('email') || '',
+        website: formData.get('website') || '',
+        phone: formData.get('phone') || '',
+        plan: formData.get('plan') || '',
+        origin: 'https://kaligeo.by'
+      };
+      const res = await fetch('https://app.kaligeo.ru/api/contact', {
         method: 'POST',
-        body: new FormData(ctaForm),
-        headers: { Accept: 'application/json' }
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload)
       });
       const data = await res.json();
       if (data.success) {
