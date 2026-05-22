@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSearchParams } from "next/navigation"
 import { ReportDashboard } from "@/components/report/ReportDashboard"
 import type { HallucinationItem } from "@/components/report/HallucinationAudit"
 import type { SourceEntry } from "@/components/report/SourceAuthority"
@@ -442,6 +443,31 @@ function buildJob(tier: Tier) {
   }
 }
 
+// ── Domain-aware CTA config ───────────────────────────────────────────────────
+
+const DOMAIN_CONFIG = {
+  ru: {
+    telegram: "https://t.me/kaligeo_bot",
+    ctaLabel: "Проверить свой бизнес →",
+    ctaSub: "Бесплатный предварительный скан + полный аудит от 4 900 ₽",
+    landingUrl: "https://kaligeo.ru",
+    landingLabel: "kaligeo.ru",
+    freeCta: "Бесплатный скан сайта",
+    freeCtaUrl: "https://t.me/kaligeo_bot",
+  },
+  by: {
+    telegram: "https://t.me/kaligeo_bot",
+    ctaLabel: "Заказать аудит →",
+    ctaSub: "Предоплата через Альфа-Банк · Результат за 48 часов",
+    landingUrl: "https://kaligeo.by/#cta",
+    landingLabel: "kaligeo.by",
+    freeCta: "Бесплатный скан сайта",
+    freeCtaUrl: "https://t.me/kaligeo_bot",
+  },
+} as const
+
+type DomainKey = keyof typeof DOMAIN_CONFIG
+
 // ── Tier selector config ──────────────────────────────────────────────────────
 
 const TIERS: { key: Tier; label: string; price: string; accent: boolean; description: string }[] = [
@@ -454,24 +480,40 @@ const TIERS: { key: Tier; label: string; price: string; accent: boolean; descrip
 
 export function DemoReportClient() {
   const [tier, setTier] = useState<Tier>("ADVANCED")
+  const searchParams = useSearchParams()
+
+  // Определяем домен источника: ru (default) или by
+  const from = (searchParams.get("from") ?? "ru") as DomainKey
+  const domain = DOMAIN_CONFIG[from] ?? DOMAIN_CONFIG.ru
 
   const isStandardPlus = tier !== "BASIC"
 
   return (
-    <div>
-      {/* Demo banner */}
-      <div
-        className="text-center py-2 text-xs font-medium"
-        style={{ background: "var(--ink)", color: "var(--bone)" }}
-      >
-        Демо-отчёт · Данные примерные · Реальные результаты индивидуальны
-      </div>
+    <div style={{ paddingBottom: 80 /* место под плавающую кнопку */ }}>
 
-      {/* Tier selector */}
+      {/* ── Шапка: тариф + призыв к действию ── */}
       <div
         className="sticky top-0 z-50 border-b"
         style={{ background: "var(--bone)", borderColor: "var(--rule)" }}
       >
+        {/* Верхняя полоска-призыв */}
+        <div
+          className="text-center py-1.5 text-xs font-medium flex items-center justify-center gap-3"
+          style={{ background: "var(--ink)", color: "var(--bone)" }}
+        >
+          <span>Демо-данные для бухгалтерской компании. Ваш результат будет другим.</span>
+          <a
+            href={domain.freeCtaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline font-semibold"
+            style={{ color: "var(--accent)" }}
+          >
+            {domain.freeCta} →
+          </a>
+        </div>
+
+        {/* Тир-селектор */}
         <div className="max-w-3xl mx-auto px-4 py-4">
           <p className="t-eyebrow text-center mb-3">Выберите тариф — сравните глубину аудита</p>
           <div className="grid grid-cols-3 gap-3">
@@ -497,6 +539,7 @@ export function DemoReportClient() {
         </div>
       </div>
 
+      {/* ── Отчёт ── */}
       <ReportDashboard
         job={buildJob(tier)}
         report={buildReport(tier)}
@@ -512,6 +555,158 @@ export function DemoReportClient() {
         shareOfVoice={isStandardPlus ? DEMO_SOV : null}
         competitivePosition={isStandardPlus ? DEMO_POSITIONING : null}
       />
+
+      {/* ── Блок конверсии внизу страницы ── */}
+      <DemoConversionSection domain={domain} tier={tier} />
+
+      {/* ── Плавающая CTA-кнопка ── */}
+      <FloatingCTA domain={domain} />
     </div>
+  )
+}
+
+// ── Конверсионный блок внизу отчёта ─────────────────────────────────────────
+
+function DemoConversionSection({ domain, tier }: { domain: typeof DOMAIN_CONFIG[DomainKey]; tier: Tier }) {
+  const tierLabel = TIERS.find(t => t.key === tier)?.label ?? tier
+
+  return (
+    <div className="max-w-5xl mx-auto px-4 py-12">
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: "var(--ink)", color: "var(--bone)" }}
+      >
+        {/* Основной контент */}
+        <div className="px-8 py-10 flex flex-col md:flex-row items-start md:items-center gap-8">
+          <div className="flex-1">
+            <p className="text-xs font-mono uppercase tracking-wider mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
+              Что дальше?
+            </p>
+            <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: "var(--font-serif)", lineHeight: 1.2 }}>
+              Узнайте, как AI видит<br />именно ваш бизнес
+            </h2>
+            <p className="text-sm leading-relaxed mb-5" style={{ color: "rgba(255,255,255,0.65)" }}>
+              Вы смотрели демо на примере бухгалтерской компании.
+              Ваш реальный аудит займёт 15–30 минут и покажет точные данные
+              по вашей нише, конкурентам и платформам.
+            </p>
+
+            {/* Два варианта действия */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Первичный — Telegram */}
+              <a
+                href={domain.telegram}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-90"
+                style={{ background: "var(--accent)", color: "var(--accent-ink)", whiteSpace: "nowrap" }}
+              >
+                <TelegramIcon />
+                {domain.ctaLabel}
+              </a>
+
+              {/* Вторичный — для BY: форма на сайте */}
+              {domain.landingUrl.includes("kaligeo.by") && (
+                <a
+                  href={domain.landingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-80"
+                  style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", whiteSpace: "nowrap" }}
+                >
+                  Форма на сайте →
+                </a>
+              )}
+            </div>
+
+            <p className="text-xs mt-3" style={{ color: "rgba(255,255,255,0.35)" }}>
+              {domain.ctaSub}
+            </p>
+          </div>
+
+          {/* Правая колонка — что получите */}
+          <div
+            className="rounded-xl p-5 shrink-0 w-full md:w-64"
+            style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}
+          >
+            <p className="text-xs font-semibold mb-3" style={{ color: "rgba(255,255,255,0.5)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Тариф «{tierLabel}» включает
+            </p>
+            <ul className="space-y-2 text-sm" style={{ color: "rgba(255,255,255,0.8)" }}>
+              {tier === "BASIC" && <>
+                <li>→ Score видимости по 3 AI</li>
+                <li>→ Топ-3 проблемы с описанием</li>
+                <li>→ Сравнение с конкурентами</li>
+                <li style={{ color: "rgba(255,255,255,0.4)" }}>— PDF и план (от Стандарта)</li>
+              </>}
+              {tier === "STANDARD" && <>
+                <li>→ Score по 6 AI-платформам</li>
+                <li>→ Share of Voice vs конкуренты</li>
+                <li>→ PDF + план действий 30/60/90д</li>
+                <li>→ Чат с отчётом (10 вопросов)</li>
+              </>}
+              {tier === "ADVANCED" && <>
+                <li>→ 9 AI-платформ включая Grok</li>
+                <li>→ AI-агенты: пробелы и конкуренты</li>
+                <li>→ Семантика каждого упоминания</li>
+                <li>→ Фикс страницы сайта под GEO</li>
+                <li>→ Безлимитный чат с отчётом</li>
+              </>}
+            </ul>
+          </div>
+        </div>
+
+        {/* Подвал блока */}
+        <div
+          className="px-8 py-4 flex flex-wrap items-center gap-6 text-xs"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" }}
+        >
+          <span>⏱ Результат за 15–30 минут</span>
+          <span>🔒 Конфиденциально</span>
+          <span>📄 PDF-отчёт в архиве</span>
+          <a
+            href={domain.landingUrl.split("#")[0]}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="ml-auto hover:opacity-80 transition-opacity"
+            style={{ color: "rgba(255,255,255,0.4)", textDecoration: "underline" }}
+          >
+            {domain.landingLabel}
+          </a>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Плавающая CTA-кнопка ─────────────────────────────────────────────────────
+
+function FloatingCTA({ domain }: { domain: typeof DOMAIN_CONFIG[DomainKey] }) {
+  return (
+    <div
+      className="fixed bottom-6 right-6 z-40 flex items-center gap-3"
+      style={{ filter: "drop-shadow(0 4px 16px rgba(0,0,0,0.18))" }}
+    >
+      <a
+        href={domain.telegram}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 px-5 py-3 rounded-full font-semibold text-sm transition-all hover:scale-105 active:scale-95"
+        style={{ background: "var(--ink)", color: "#fff", whiteSpace: "nowrap" }}
+      >
+        <TelegramIcon />
+        Проверить свой бизнес
+      </a>
+    </div>
+  )
+}
+
+// ── Telegram icon ─────────────────────────────────────────────────────────────
+
+function TelegramIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+    </svg>
   )
 }
