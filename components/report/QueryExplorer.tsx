@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { MENTION_CONTEXT_LABELS } from "@/lib/agents/semantic-analysis-agent"
-import type { MentionContext } from "@/lib/agents/semantic-analysis-agent"
+import { MENTION_CONTEXT_LABELS } from "@/lib/agents/semantic-analysis-types"
+import type { MentionContext } from "@/lib/agents/semantic-analysis-types"
 
 interface QueryResult {
   id: string

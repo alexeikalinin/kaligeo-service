@@ -10,24 +10,15 @@
 
 import Anthropic from "@anthropic-ai/sdk"
 import { prisma } from "../prisma"
+import type { MentionContext, MentionClassification } from "./semantic-analysis-types"
+
+// Re-export типы и константы для обратной совместимости.
+// Client Components должны импортировать напрямую из semantic-analysis-types
+// чтобы не тянуть pg/prisma в браузерный бандл.
+export type { MentionContext, MentionClassification } from "./semantic-analysis-types"
+export { MENTION_CONTEXT_LABELS } from "./semantic-analysis-types"
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-// ── Типы ──────────────────────────────────────────────────────────────────────
-
-export type MentionContext =
-  | "PRIMARY_RECOMMENDATION"  // «Лучший выбор», «Я рекомендую X», первое место в списке
-  | "COMPARISON"              // X vs Y, включён в сравнительный список
-  | "ALTERNATIVE"             // «Ещё можно рассмотреть X», вторичный вариант
-  | "REFERENCE"               // Упомянут вскользь, без явной оценки
-  | "WARNING"                 // «X имеет проблемы», «осторожно с X»
-
-export interface MentionClassification {
-  queryResultId: string
-  mentionContext: MentionContext
-  mentionQuality: number  // 0–100
-  rationale: string       // краткое объяснение (для отладки)
-}
 
 // Quality scores по типу упоминания (базовые)
 const BASE_QUALITY: Record<MentionContext, number> = {
@@ -223,14 +214,4 @@ function emptyByContext(): Record<MentionContext, number> {
     REFERENCE: 0,
     WARNING: 0,
   }
-}
-
-// ── Вспомогательная функция: метка для UI ────────────────────────────────────
-
-export const MENTION_CONTEXT_LABELS: Record<MentionContext, { label: string; color: string; bg: string }> = {
-  PRIMARY_RECOMMENDATION: { label: "Топ-рекомендация", color: "#166534", bg: "#dcfce7" },
-  COMPARISON:             { label: "Сравнение",         color: "#1e40af", bg: "#dbeafe" },
-  ALTERNATIVE:            { label: "Альтернатива",      color: "#854d0e", bg: "#fef9c3" },
-  REFERENCE:              { label: "Упоминание",        color: "#374151", bg: "#f3f4f6" },
-  WARNING:                { label: "Предостережение",   color: "#991b1b", bg: "#fee2e2" },
 }
