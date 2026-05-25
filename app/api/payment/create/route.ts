@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 import type { Tier } from "@/lib/gates"
 
-const SANDBOX_URL = "https://sandbox.alfabank.by/payment/rest"
+const SANDBOX_URL = "https://sandbox.alfabank.by/sandbox/payment/rest"
 const PROD_URL    = "https://ecom.alfabank.by/payment/rest"
 
 /** Prices in BYN kopecks (1 BYN = 100 kopecks) */

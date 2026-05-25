@@ -11,7 +11,7 @@ import { auditPipeline } from "@/trigger/audit-pipeline"
 import { notifyAuditStarted } from "@/lib/notify"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 
-const SANDBOX_URL = "https://sandbox.alfabank.by/payment/rest"
+const SANDBOX_URL = "https://sandbox.alfabank.by/sandbox/payment/rest"
 const PROD_URL = "https://ecom.alfabank.by/payment/rest"
 
 export async function OPTIONS(req: NextRequest) {
