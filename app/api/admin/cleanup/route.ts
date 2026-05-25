@@ -22,10 +22,12 @@ export async function DELETE(req: NextRequest) {
     where: {
       OR: [
         { companyName: "KaliGEO Test" },
-        { clientEmail: { contains: "test@" } },
-        { clientEmail: { contains: "hack@" } },
+        { companyName: "Andersen" },
+        { companyName: "GamePark" },
         { companyName: "Test Co" },
         { companyName: "Hacker" },
+        { clientEmail: { contains: "test@" } },
+        { clientEmail: { contains: "hack@" } },
       ],
     },
     select: { id: true, companyName: true, clientEmail: true },
