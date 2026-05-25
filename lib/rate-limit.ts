@@ -3,12 +3,17 @@ import { Redis } from "@upstash/redis"
 let _redis: Redis | null = null
 
 function getRedis(): Redis | null {
-  if (!process.env.UPSTASH_REDIS_REST_URL) return null
+  const url = process.env.UPSTASH_REDIS_REST_URL
+  if (!url || !url.startsWith("https")) return null
   if (!_redis) {
-    _redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN ?? "",
-    })
+    try {
+      _redis = new Redis({
+        url,
+        token: process.env.UPSTASH_REDIS_REST_TOKEN ?? "",
+      })
+    } catch {
+      return null
+    }
   }
   return _redis
 }
