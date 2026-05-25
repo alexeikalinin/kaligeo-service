@@ -1,10 +1,11 @@
 /**
  * POST /api/payment/create
  *
- * Creates an Alfa-Bank (Belarus) order for a given audit job.
+ * Creates an Alfa-Bank order for a given audit job.
+ * Supports both kaligeo.by (BYN) and kaligeo.ru (RUB) via separate merchant accounts.
  * Amount is determined SERVER-SIDE from the job's tier — never trusted from the client.
  *
- * Request body: { jobId: string }
+ * Request body: { jobId: string, locale?: "by" | "ru" }
  * Response: { orderId: string, formUrl: string }
  */
 import { NextRequest, NextResponse } from "next/server"
@@ -13,16 +14,34 @@ import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 import type { Tier } from "@/lib/gates"
 
 const SANDBOX_URL = "https://sandbox.alfabank.by/payment/rest"
-const PROD_URL = "https://ecom.alfabank.by/payment/rest"
+const PROD_URL    = "https://ecom.alfabank.by/payment/rest"
 
-/** Prices in BYN kopecks (1 BYN = 100 kopecks) — authoritative server-side table */
+/** Prices in BYN kopecks (1 BYN = 100 kopecks) */
 const TIER_PRICE_BYN_KOPECKS: Record<string, number> = {
-  BASIC: 14900,          // 149 BYN
-  STANDARD: 44900,       // 449 BYN
-  ADVANCED: 89900,       // 899 BYN
-  MONITOR_START: 14900,  // 149 BYN/мес
-  MONITOR_PRO: 39900,    // 399 BYN/мес
-  MONITOR_AGENT: 69900,  // 699 BYN/мес
+  BASIC:         14900,   // 149 BYN
+  STANDARD:      44900,   // 449 BYN
+  ADVANCED:      89900,   // 899 BYN
+  MONITOR_START: 14900,   // 149 BYN/мес
+  MONITOR_PRO:   39900,   // 399 BYN/мес
+  MONITOR_AGENT: 69900,   // 699 BYN/мес
+}
+
+/** Prices in RUB kopecks (1 RUB = 100 kopecks) */
+const TIER_PRICE_RUB_KOPECKS: Record<string, number> = {
+  BASIC:         490000,  // 4 900 RUB
+  STANDARD:     1390000,  // 13 900 RUB
+  ADVANCED:     2790000,  // 27 900 RUB
+  MONITOR_START: 499000,  // 4 990 RUB/мес
+  MONITOR_PRO:   999000,  // 9 990 RUB/мес
+  MONITOR_AGENT:1999000,  // 19 990 RUB/мес
+}
+
+/** Detect locale from request origin or explicit body param */
+function detectLocale(origin: string | null, bodyLocale?: string): "by" | "ru" {
+  if (bodyLocale === "ru") return "ru"
+  if (bodyLocale === "by") return "by"
+  if (origin?.includes("kaligeo.ru")) return "ru"
+  return "by" // default to BY
 }
 
 export async function OPTIONS(req: NextRequest) {
@@ -34,7 +53,7 @@ export async function POST(req: NextRequest) {
   const corsHeaders = getCorsHeaders(origin)
 
   const body = await req.json().catch(() => null)
-  const { jobId } = body ?? {}
+  const { jobId, locale: bodyLocale } = body ?? {}
 
   if (!jobId || typeof jobId !== "string") {
     return NextResponse.json(
@@ -42,6 +61,8 @@ export async function POST(req: NextRequest) {
       { status: 400, headers: corsHeaders }
     )
   }
+
+  const locale = detectLocale(origin, bodyLocale)
 
   // Look up job to get authoritative tier and validate it exists
   const job = await prisma.auditJob.findUnique({
@@ -72,7 +93,11 @@ export async function POST(req: NextRequest) {
   }
 
   const tier = job.tier as Tier
-  const amount = TIER_PRICE_BYN_KOPECKS[tier]
+  const isRu = locale === "ru"
+
+  const amount = isRu
+    ? TIER_PRICE_RUB_KOPECKS[tier]
+    : TIER_PRICE_BYN_KOPECKS[tier]
 
   if (!amount) {
     return NextResponse.json(
@@ -83,16 +108,25 @@ export async function POST(req: NextRequest) {
 
   const isSandbox = process.env.ALFABANK_SANDBOX === "true"
   const baseUrl = isSandbox ? SANDBOX_URL : PROD_URL
-  const byUrl = "https://kaligeo.by"
+
+  // Merchant credentials & return domain per locale
+  const userName = isRu
+    ? (process.env.ALFABANK_USER_RU ?? "")
+    : (process.env.ALFABANK_USER    ?? "")
+  const password = isRu
+    ? (process.env.ALFABANK_PASS_RU ?? "")
+    : (process.env.ALFABANK_PASS    ?? "")
+  const siteUrl = isRu ? "https://kaligeo.ru" : "https://kaligeo.by"
+  const currency = isRu ? "643" : "933"        // 643 = RUB, 933 = BYN (ISO 4217)
 
   const params = new URLSearchParams({
-    userName: process.env.ALFABANK_USER ?? "",
-    password: process.env.ALFABANK_PASS ?? "",
-    orderNumber: job.id,                         // Use jobId as orderNumber (unique, traceable)
+    userName,
+    password,
+    orderNumber: job.id,
     amount: String(amount),
-    currency: "933",                             // 933 = BYN (ISO 4217)
-    returnUrl: `${byUrl}/?paymentStatus=success&jobId=${job.id}`,
-    failUrl: `${byUrl}/?paymentStatus=fail&jobId=${job.id}`,
+    currency,
+    returnUrl: `${siteUrl}/?paymentStatus=success&jobId=${job.id}`,
+    failUrl:   `${siteUrl}/?paymentStatus=fail&jobId=${job.id}`,
     description: `KaliGEO — аудит видимости ${job.companyName}, тариф ${tier}`,
     language: "ru",
     pageView: "DESKTOP",
@@ -103,6 +137,7 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
+      redirect: "follow",
     })
 
     if (!bankResp.ok) throw new Error(`Bank API HTTP ${bankResp.status}`)

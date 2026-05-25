@@ -65,6 +65,7 @@ export async function GET(req: NextRequest) {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: params.toString(),
+      redirect: "follow",
     })
 
     const data = await bankResp.json() as {
