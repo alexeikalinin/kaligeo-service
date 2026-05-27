@@ -1,5 +1,14 @@
 "use client"
 
+import { ScoreRing } from "./ScoreRing"
+
+interface WeakPoint {
+  id: string
+  title: string
+  description: string
+  severity: "high" | "medium" | "low"
+}
+
 interface Props {
   companyName: string
   websiteUrl: string
@@ -8,12 +17,8 @@ interface Props {
   completedAt?: Date | null
   totalMentions?: number
   totalQueries?: number
-}
-
-function scoreAccent(score: number): string {
-  if (score >= 60) return "var(--accent)"
-  if (score >= 30) return "#f59e0b"
-  return "#ef4444"
+  weakPoints?: WeakPoint[]
+  onGrowthPlanClick?: () => void
 }
 
 function scoreLabel(score: number) {
@@ -22,39 +27,23 @@ function scoreLabel(score: number) {
   return "Низкая видимость"
 }
 
-function ScoreRing({ score }: { score: number }) {
-  const r = 56
-  const circ = 2 * Math.PI * r
-  const dash = (score / 100) * circ
-  const color = scoreAccent(score)
-
-  return (
-    <svg width="136" height="136" viewBox="0 0 136 136">
-      <circle cx="68" cy="68" r={r} fill="none" stroke="var(--rule)" strokeWidth="10" />
-      <circle
-        cx="68"
-        cy="68"
-        r={r}
-        fill="none"
-        stroke={color}
-        strokeWidth="10"
-        strokeDasharray={`${dash} ${circ - dash}`}
-        strokeLinecap="round"
-        transform="rotate(-90 68 68)"
-      />
-      <text
-        x="68"
-        y="76"
-        textAnchor="middle"
-        style={{ fontFamily: "var(--font-mono)", fontSize: "30px", fontWeight: "bold", fill: color }}
-      >
-        {score}
-      </text>
-    </svg>
-  )
+function scoreAccent(score: number): string {
+  if (score >= 60) return "var(--accent)"
+  if (score >= 30) return "#f59e0b"
+  return "#ef4444"
 }
 
-export function ScoreHero({ companyName, websiteUrl, overallScore, pdfUrl, completedAt, totalMentions, totalQueries }: Props) {
+export function ScoreHero({
+  companyName,
+  websiteUrl,
+  overallScore,
+  pdfUrl,
+  completedAt,
+  totalMentions,
+  totalQueries,
+  weakPoints,
+  onGrowthPlanClick,
+}: Props) {
   const date = completedAt
     ? new Date(completedAt).toLocaleDateString("ru-RU", {
         day: "numeric",
@@ -63,57 +52,151 @@ export function ScoreHero({ companyName, websiteUrl, overallScore, pdfUrl, compl
       })
     : null
 
+  const topWeakPoint = weakPoints?.[0]
+
+  const narrative = topWeakPoint
+    ? `Главная точка роста: ${topWeakPoint.title.toLowerCase()}. ${topWeakPoint.description}`
+    : overallScore >= 60
+      ? `Бренд хорошо виден AI-ассистентам. Продолжайте поддерживать контент-стратегию.`
+      : overallScore >= 30
+        ? `Базовое присутствие есть, но есть серьёзные пробелы. Смотрите план роста.`
+        : `Бренд почти не упоминается в AI. В плане роста — приоритетные шаги.`
+
   return (
     <div
-      className="flex flex-col items-center py-14 px-6 text-center border-b"
-      style={{ borderColor: "var(--rule)", background: "var(--bone)" }}
+      style={{
+        borderBottom: "1px solid var(--rule)",
+        background: "var(--bone)",
+      }}
     >
-      <p className="t-eyebrow mb-6">KaliGEO AI Audit</p>
-      <h1
-        className="text-4xl font-bold mb-1"
-        style={{ fontFamily: "var(--font-serif)", color: "var(--ink)" }}
+      <div
+        className="score-hero-grid max-w-5xl mx-auto px-6 py-10"
+        style={{
+          display: "grid",
+          gridTemplateColumns: "auto 1fr",
+          gap: "40px",
+          alignItems: "center",
+        }}
       >
-        {companyName}
-      </h1>
-      <p className="text-sm mb-10" style={{ color: "var(--ink-3)" }}>
-        {websiteUrl}
-      </p>
+        {/* Left — score */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px" }}>
+          <p className="t-eyebrow" style={{ marginBottom: "4px" }}>
+            KaliGEO AI Audit
+          </p>
 
-      <ScoreRing score={overallScore} />
+          <ScoreRing score={overallScore} size={136} strokeWidth={10} animated />
 
-      <p className="text-sm font-semibold mt-4 mb-1" style={{ color: scoreAccent(overallScore) }}>
-        {scoreLabel(overallScore)}
-      </p>
-      {totalMentions !== undefined && totalQueries !== undefined && totalQueries > 0 && (
-        <p className="text-xs mt-1 mb-1" style={{ color: "var(--ink-2)" }}>
-          Упоминаетесь в{" "}
-          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700, color: scoreAccent(overallScore) }}>
-            {totalMentions}
-          </span>{" "}
-          из{" "}
-          <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
-            {totalQueries}
-          </span>{" "}
-          запросов
-        </p>
-      )}
-      {date && (
-        <p className="text-xs" style={{ color: "var(--ink-3)" }}>
-          {date}
-        </p>
-      )}
+          <p
+            style={{
+              fontSize: "13px",
+              fontWeight: 600,
+              color: scoreAccent(overallScore),
+              margin: 0,
+            }}
+          >
+            {scoreLabel(overallScore)}
+          </p>
 
-      {pdfUrl && (
-        <a
-          href={pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="mt-6 px-5 py-2.5 rounded text-sm font-medium transition-opacity hover:opacity-70"
-          style={{ background: "var(--ink)", color: "var(--bone)" }}
-        >
-          Скачать PDF
-        </a>
-      )}
+          {totalMentions !== undefined && totalQueries !== undefined && totalQueries > 0 && (
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--ink-3)",
+                fontFamily: "var(--font-mono)",
+                margin: 0,
+              }}
+            >
+              {totalMentions} / {totalQueries} запросов
+            </p>
+          )}
+
+          {date && (
+            <p style={{ fontSize: "11px", color: "var(--ink-3)", margin: 0 }}>{date}</p>
+          )}
+        </div>
+
+        {/* Right — narrative */}
+        <div>
+          <h1
+            style={{
+              fontFamily: "var(--font-serif)",
+              fontSize: "clamp(22px, 3vw, 30px)",
+              fontWeight: 400,
+              margin: "0 0 4px",
+              lineHeight: 1.2,
+              color: "var(--ink)",
+            }}
+          >
+            {companyName}
+          </h1>
+          <p style={{ fontSize: "13px", color: "var(--ink-3)", margin: "0 0 16px" }}>
+            {websiteUrl}
+          </p>
+
+          <p
+            style={{
+              fontSize: "14px",
+              color: "var(--ink-2)",
+              lineHeight: 1.65,
+              margin: "0 0 20px",
+              maxWidth: "480px",
+            }}
+          >
+            {narrative}
+          </p>
+
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            {onGrowthPlanClick && (
+              <button
+                onClick={onGrowthPlanClick}
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--accent)",
+                  color: "var(--accent-ink)",
+                  border: "none",
+                  fontSize: "13px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "var(--font-sans)",
+                }}
+              >
+                К плану роста →
+              </button>
+            )}
+            {pdfUrl && (
+              <a
+                href={pdfUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--bone-2)",
+                  color: "var(--ink-2)",
+                  border: "1px solid var(--rule)",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                }}
+              >
+                Скачать PDF
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile: stack columns */}
+      <style>{`
+        @media (max-width: 640px) {
+          .score-hero-grid {
+            grid-template-columns: 1fr !important;
+            justify-items: center;
+            text-align: center;
+          }
+        }
+      `}</style>
     </div>
   )
 }

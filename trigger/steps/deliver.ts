@@ -125,6 +125,12 @@ export async function sendReportEmail(opts: DeliveryOptions): Promise<void> {
     <a href="${pdfUrl}" style="color: #666; font-size: 14px;">Скачать PDF-версию</a>
   </p>` : ""}
 
+  <p style="text-align: center; margin: 16px 0 0;">
+    <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"}/my/dashboard" style="color: #999; font-size: 13px;">
+      Все ваши аудиты → Личный кабинет
+    </a>
+  </p>
+
   <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
 
   <p style="color: #666; font-size: 12px; text-align: center;">

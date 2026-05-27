@@ -9,9 +9,14 @@ export async function generateQueries(
   companyName: string,
   niche: string,
   competitors: string[],
-  tier: "BASIC" | "STANDARD" | "ADVANCED"
+  tier: "BASIC" | "STANDARD" | "ADVANCED",
+  customPrompts: string[] = []
 ): Promise<string[]> {
   const count = getQueryCountForTier(tier as Tier)
+
+  // Reserve slots for custom prompts (max 20% of total, capped at 10)
+  const customEnabled = customPrompts.filter(Boolean).slice(0, Math.min(10, Math.floor(count * 0.2)))
+  const aiCount = count - customEnabled.length
 
   const competitorsList = competitors.length > 0 ? competitors.join(", ") : "нет данных"
 
@@ -21,9 +26,9 @@ export async function generateQueries(
 Ниша / отрасль: ${niche}
 Конкуренты: ${competitorsList}
 
-Сгенерируй ровно ${count} запросов, которые потенциальный клиент реалистично напишет в ChatGPT, Perplexity, YandexGPT, Claude или Gemini, когда ищет товар/услугу в данной нише.
+Сгенерируй ровно ${aiCount} запросов, которые потенциальный клиент реалистично напишет в ChatGPT, Perplexity, YandexGPT, Claude или Gemini, когда ищет товар/услугу в данной нише.
 
-ВАЖНО — распредели запросы равномерно по 7 категориям (по ~${Math.round(count / 7)} запросов каждой):
+ВАЖНО — распредели запросы равномерно по 7 категориям (по ~${Math.round(aiCount / 7)} запросов каждой):
 
 1. **recommendation** — запросы на рекомендацию:
    «Посоветуй [услугу] для [ситуации]», «Какую [нишу] выбрать для малого бизнеса?», «Что лучше использовать для [задача]?»
@@ -65,6 +70,9 @@ export async function generateQueries(
 
   const text = response.choices[0]?.message?.content ?? "{}"
   const parsed = JSON.parse(text)
-  const queries: string[] = Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
-  return queries.slice(0, count)
+  const aiQueries: string[] = Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
+
+  // Merge: custom prompts first (they're the client's priority), then AI-generated
+  const merged = [...customEnabled, ...aiQueries].slice(0, count)
+  return merged
 }

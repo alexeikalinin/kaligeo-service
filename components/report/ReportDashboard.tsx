@@ -165,6 +165,16 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
   const totalMentions = Object.values(report.visibilityScores).reduce((a, s) => a + s.mentionCount, 0)
   const totalQueries = Object.values(report.visibilityScores).reduce((a, s) => a + s.totalQueries, 0)
 
+  // Build sparkline history: [prevScore, currScore] per platform from comparison platformDeltas
+  const platformHistory: Record<string, number[]> | undefined = comparison
+    ? Object.fromEntries(
+        Object.entries(comparison.platformDeltas).map(([platform, delta]) => [
+          platform,
+          [delta.prevScore, delta.currScore],
+        ])
+      )
+    : undefined
+
   return (
     <div className="min-h-screen" style={{ background: "var(--bone)", color: "var(--ink)" }}>
       <ScoreHero
@@ -175,6 +185,8 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
         completedAt={job.completedAt}
         totalMentions={totalMentions}
         totalQueries={totalQueries}
+        weakPoints={report.weakPoints}
+        onGrowthPlanClick={!isTabLocked("STANDARD", job.tier) ? () => setTab("plan") : undefined}
       />
 
       {/* Tab nav */}
@@ -269,7 +281,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
               <h2 className="text-lg font-bold mb-4" style={{ color: "var(--ink)" }}>
                 Видимость по платформам
               </h2>
-              <PlatformScoresGrid scores={report.visibilityScores} />
+              <PlatformScoresGrid scores={report.visibilityScores} weakPoints={report.weakPoints} benchmarkScore={benchmarkScore} platformHistory={platformHistory} />
             </section>
             <section>
               <h2 className="text-lg font-bold mb-4" style={{ color: "var(--ink)" }}>
@@ -344,7 +356,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
               <h2 className="text-lg font-bold mb-6" style={{ color: "var(--ink)" }}>
                 Видимость по платформам
               </h2>
-              <PlatformScoresGrid scores={report.visibilityScores} />
+              <PlatformScoresGrid scores={report.visibilityScores} weakPoints={report.weakPoints} benchmarkScore={benchmarkScore} platformHistory={platformHistory} />
             </div>
             {platformInsights && platformInsights.length > 0 && (
               <PlatformIntelligence insights={platformInsights} />
@@ -387,7 +399,12 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                   <h2 className="text-lg font-bold mb-6" style={{ color: "var(--ink)" }}>
                     Матрица конкурентов
                   </h2>
-                  <CompetitorMatrixTable matrix={report.competitorMatrix} companyName={job.companyName} />
+                  <CompetitorMatrixTable
+                    matrix={report.competitorMatrix}
+                    companyName={job.companyName}
+                    brandMentionCount={totalMentions}
+                    brandPlatformCount={Object.keys(report.visibilityScores).length}
+                  />
                 </div>
                 {competitorGaps && competitorGaps.length > 0 && (
                   <CompetitorGapAnalysis

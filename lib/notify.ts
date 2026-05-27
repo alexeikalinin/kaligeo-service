@@ -139,6 +139,37 @@ export async function notifyAuditCompleted(opts: {
   await sendAdminEmail(`${emoji} ${label}: ${companyName} — ${overallScore}/100`, html)
 }
 
+// ── Magic link ───────────────────────────────────────────────────────────────
+
+export async function sendMagicLinkEmail(opts: {
+  to: string
+  magicLinkUrl: string
+}): Promise<void> {
+  const { to, magicLinkUrl } = opts
+  await getResend().emails.send({
+    from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    to,
+    subject: "Ссылка для входа в KaliGEO",
+    html: `
+<!DOCTYPE html>
+<html>
+<body style="font-family:-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:20px;color:#1a1a1a;">
+  <div style="text-align:center;padding:24px 0;">
+    <h1 style="font-size:24px;font-weight:700;margin:0;letter-spacing:-0.5px;">KaliGEO</h1>
+    <p style="color:#666;margin:6px 0 0;font-size:14px;">AI Search Visibility</p>
+  </div>
+  <div style="background:#f9fafb;border-radius:12px;padding:28px;margin:20px 0;text-align:center;">
+    <p style="margin:0 0 20px;color:#444;font-size:15px;">Нажмите кнопку, чтобы войти в личный кабинет.<br>Ссылка действительна 15 минут.</p>
+    <a href="${magicLinkUrl}" style="display:inline-block;background:#C8F24A;color:#0F1115;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:700;font-size:15px;">
+      Войти в кабинет →
+    </a>
+  </div>
+  <p style="color:#999;font-size:11px;text-align:center;margin:0;">Если вы не запрашивали вход — просто проигнорируйте это письмо.</p>
+</body>
+</html>`,
+  })
+}
+
 // ── Audit failed ──────────────────────────────────────────────────────────────
 
 export async function notifyAuditFailed(opts: {

@@ -70,20 +70,32 @@ export async function POST(req: NextRequest) {
       create: { email, companyName: data.companyName, websiteUrl: data.websiteUrl },
     })
 
+    // Если у клиента есть BrandProfile для этого домена — берём конкурентов и нишу из него
+    const brandProfile = await prisma.brandProfile.findFirst({
+      where: { clientId: client.id, websiteUrl: { contains: new URL(data.websiteUrl).hostname } },
+      orderBy: { updatedAt: "desc" },
+    })
+
+    const effectiveCompetitors = brandProfile?.competitors.length
+      ? brandProfile.competitors
+      : data.competitors
+    const effectiveNiche = brandProfile?.niche || data.niche
+
     const job = await prisma.auditJob.create({
       data: {
         clientEmail: email,
         clientId: client.id,
         websiteUrl: data.websiteUrl,
         companyName: data.companyName,
-        niche: data.niche,
-        competitors: data.competitors,
+        niche: effectiveNiche,
+        competitors: effectiveCompetitors,
         tier: "BASIC", // always starts as BASIC; admin sets real tier at confirm
         status: "PENDING_PAYMENT",
         ...(data.selectedPlatforms?.length ? { selectedPlatforms: data.selectedPlatforms } : {}),
         ...(data.baselineJobId ? { baselineJobId: data.baselineJobId } : {}),
         ...(data.followUpScheduledAt ? { followUpScheduledAt: new Date(data.followUpScheduledAt) } : {}),
         ...(data.source ? { source: data.source } : {}),
+        ...(brandProfile ? { brandProfileId: brandProfile.id } : {}),
       },
     })
 

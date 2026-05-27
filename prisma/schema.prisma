@@ -7,13 +7,44 @@ datasource db {
 }
 
 model Client {
-  id           String     @id @default(cuid())
-  clientNumber Int        @unique @default(autoincrement())
-  email        String     @unique
-  companyName  String
-  websiteUrl   String?
-  createdAt    DateTime   @default(now())
-  auditJobs    AuditJob[]
+  id              String            @id @default(cuid())
+  clientNumber    Int               @unique @default(autoincrement())
+  email           String            @unique
+  companyName     String
+  websiteUrl      String?
+  createdAt       DateTime          @default(now())
+  auditJobs       AuditJob[]
+  magicLinkTokens MagicLinkToken[]
+  brandProfiles   BrandProfile[]
+}
+
+model BrandProfile {
+  id               String   @id @default(cuid())
+  clientId         String
+  client           Client   @relation(fields: [clientId], references: [id])
+  companyName      String
+  websiteUrl       String
+  niche            String   @default("")
+  alternativeNames String[]
+  customPrompts    Json     @default("[]")
+  competitors      String[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([clientId])
+}
+
+model MagicLinkToken {
+  id        String    @id @default(cuid())
+  email     String
+  token     String    @unique @default(cuid())
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  client    Client?   @relation(fields: [email], references: [email])
+
+  @@index([email])
+  @@index([token])
 }
 
 model AuditJob {
@@ -48,6 +79,7 @@ model AuditJob {
   followUpScheduledAt DateTime?
   followUpSentAt      DateTime?
   recurringFrequency  String?       // "weekly" | "monthly" | "quarterly" | null
+  brandProfileId      String?       // linked BrandProfile for custom prompts
   queryResults        QueryResult[]
   report              Report?
 }
@@ -101,6 +133,8 @@ model FreemiumScan {
   keywords             Json
   suggestedCompetitors String[]
   previewScore         Int
+  platformScores       Json?    // { CHATGPT: { score, mentionCount, totalQueries }, ... }
+  quickCheckDone       Boolean  @default(false)
   emailCaptured        String?
   source               String?
   createdAt            DateTime @default(now())

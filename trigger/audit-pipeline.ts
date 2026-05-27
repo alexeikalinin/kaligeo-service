@@ -61,14 +61,30 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     // ── Step 1: Generate queries ──────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_QUERIES" } })
 
-    const queries = await generateQueries(job.companyName, job.niche, job.competitors, baseTier)
+    // Load custom prompts from BrandProfile if linked
+    let customPrompts: string[] = []
+    if (job.brandProfileId) {
+      const bp = await prisma.brandProfile.findUnique({
+        where: { id: job.brandProfileId },
+        select: { customPrompts: true },
+      })
+      if (bp?.customPrompts) {
+        const prompts = bp.customPrompts as { text: string; enabled: boolean }[]
+        customPrompts = prompts.filter((p) => p.enabled).map((p) => p.text)
+      }
+    }
+
+    const queries = await generateQueries(job.companyName, job.niche, job.competitors, baseTier, customPrompts)
 
     // ── Step 2: Execute queries — only platforms for this tier ────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "EXECUTING_QUERIES" } })
 
     // Пересекаем тарифные платформы с теми у которых есть ключи
     const activePlatforms = getActivePlatforms()
-    const basePlatforms = job.selectedPlatforms.length > 0 ? job.selectedPlatforms : config.platforms
+    // Выбранные платформы ограничиваем тарифными (защита от API-обхода лимитов)
+    const basePlatforms = job.selectedPlatforms.length > 0
+      ? job.selectedPlatforms.filter((p) => config.platforms.includes(p))
+      : config.platforms
     const tierPlatforms = basePlatforms.filter((p) => activePlatforms.includes(p))
     const suspendedByKey = config.platforms.filter((p) => !activePlatforms.includes(p))
     if (suspendedByKey.length > 0) {
@@ -96,7 +112,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     const competitorMatrix = config.hasCompetitorMatrix
       ? buildCompetitorMatrix(allResults, job.competitors)
       : []
-    const weakPoints = detectWeakPoints(allResults, job.websiteUrl, overallScore, job.competitors)
+    const weakPoints = detectWeakPoints(allResults, job.websiteUrl, overallScore, job.competitors, platformScores)
     const sourcesReport = aggregateSources(allResults, job.websiteUrl, job.competitors)
 
     // ── Step 4: Advanced — параллельный запуск агентов анализа ───────────

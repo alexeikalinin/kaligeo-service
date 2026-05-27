@@ -15,6 +15,37 @@ function CopyCodeButton({ code }: { code: string }) {
   )
 }
 
+function CopyTaskButton({ item }: { item: ActionItem }) {
+  const [copied, setCopied] = useState(false)
+
+  function copyAsTask() {
+    const text = [
+      `## ${item.title}`,
+      ``,
+      item.description,
+      ``,
+      `Усилия: ${EFFORT_LABEL[item.effort]} | Эффект: ${IMPACT_LABEL[item.impact]}`,
+      item.owner ? `Владелец: ${item.owner}` : null,
+      item.expectedResult ? `\nОжидаемый результат: ${item.expectedResult}` : null,
+      item.steps?.length ? `\nШаги:\n${item.steps.map((s, i) => `${i + 1}. ${s}`).join("\n")}` : null,
+    ].filter(Boolean).join("\n")
+
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <button
+      onClick={copyAsTask}
+      className="monotag text-xs transition-colors"
+      style={copied ? { background: "var(--accent)", borderColor: "var(--accent)", color: "var(--accent-ink)" } : { color: "var(--ink-3)", borderColor: "var(--ink-3)" }}
+    >
+      {copied ? "✓ скопировано" : "скопировать задачу"}
+    </button>
+  )
+}
+
 interface ActionItem {
   title: string
   description: string
@@ -234,8 +265,214 @@ const COLUMNS = [
   { key: "90d" as const, label: "90 дней",  sublabel: "Стратегия" },
 ]
 
+// Eisenhower quadrant: effort (low=0,else=1) x impact (high/medium=0,else=1)
+const QUADRANTS = [
+  {
+    id: "quick",
+    label: "Быстрые победы",
+    star: "★",
+    desc: "Низкое усилие · Высокий эффект",
+    effort: ["low"],
+    impact: ["high", "medium"],
+    accent: true,
+  },
+  {
+    id: "strategic",
+    label: "Стратегические проекты",
+    star: "",
+    desc: "Высокое усилие · Высокий эффект",
+    effort: ["medium", "high"],
+    impact: ["high", "medium"],
+    accent: false,
+  },
+  {
+    id: "filler",
+    label: "Заполнить паузу",
+    star: "",
+    desc: "Низкое усилие · Низкий эффект",
+    effort: ["low"],
+    impact: ["low"],
+    accent: false,
+  },
+  {
+    id: "skip",
+    label: "Не делать сейчас",
+    star: "",
+    desc: "Высокое усилие · Низкий эффект",
+    effort: ["medium", "high"],
+    impact: ["low"],
+    accent: false,
+  },
+]
+
+function EisenhowerMatrix({ plan }: { plan: ActionPlan }) {
+  const allItems = [
+    ...(plan["30d"] ?? []),
+    ...(plan["60d"] ?? []),
+    ...(plan["90d"] ?? []),
+  ]
+
+  return (
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {QUADRANTS.map((q) => {
+          const items = allItems.filter(
+            (item) => q.effort.includes(item.effort) && q.impact.includes(item.impact)
+          )
+          return (
+            <div
+              key={q.id}
+              className="rounded-lg p-4"
+              style={{
+                border: `1px solid ${q.accent ? "var(--accent)" : "var(--rule)"}`,
+                background: q.accent ? "rgba(200,242,74,0.07)" : "var(--bone)",
+              }}
+            >
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="text-sm font-bold" style={{ color: q.accent ? "var(--accent)" : "var(--ink)" }}>
+                  {q.label} {q.star}
+                </span>
+                <span className="text-xs" style={{ color: "var(--ink-3)" }}>{q.desc}</span>
+              </div>
+              {items.length === 0 ? (
+                <p className="text-xs" style={{ color: "var(--ink-3)" }}>Нет задач</p>
+              ) : (
+                <div className="space-y-2">
+                  {items.map((item, i) => (
+                    <div
+                      key={i}
+                      className="rounded px-3 py-2 space-y-1"
+                      style={{ background: "var(--bone-2)", border: "1px solid var(--rule)" }}
+                    >
+                      <p className="text-xs font-semibold" style={{ color: "var(--ink)" }}>{item.title}</p>
+                      <p className="text-xs leading-relaxed" style={{ color: "var(--ink-3)" }}>{item.description}</p>
+                      <div className="flex items-center justify-between pt-1">
+                        <div className="flex gap-2 text-xs" style={{ color: "var(--ink-3)" }}>
+                          <span>Усилие: <span className="font-medium" style={{ color: EFFORT_COLOR[item.effort] }}>{EFFORT_LABEL[item.effort]}</span></span>
+                          <span>Эффект: <span className="font-medium" style={{ color: "var(--ink-2)" }}>{IMPACT_LABEL[item.impact]}</span></span>
+                        </div>
+                        <CopyTaskButton item={item} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+type ViewMode = "list" | "matrix" | "kanban"
+
+type KanbanState = {
+  "30d": ActionItem[]
+  "60d": ActionItem[]
+  "90d": ActionItem[]
+}
+
+function KanbanBoard({ plan }: { plan: ActionPlan }) {
+  const [columns, setColumns] = useState<KanbanState>({
+    "30d": plan["30d"] ?? [],
+    "60d": plan["60d"] ?? [],
+    "90d": plan["90d"] ?? [],
+  })
+  const dragging = useState<{ colKey: string; idx: number } | null>(null)
+  const [drag, setDrag] = dragging
+
+  function handleDragStart(colKey: string, idx: number) {
+    setDrag({ colKey, idx })
+  }
+
+  function handleDrop(targetCol: string) {
+    if (!drag || drag.colKey === targetCol) { setDrag(null); return }
+    const srcKey = drag.colKey as keyof KanbanState
+    const dstKey = targetCol as keyof KanbanState
+    const item = columns[srcKey][drag.idx]
+    setColumns((prev) => ({
+      ...prev,
+      [srcKey]: prev[srcKey].filter((_, i) => i !== drag.idx),
+      [dstKey]: [...prev[dstKey], item],
+    }))
+    setDrag(null)
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {COLUMNS.map((col) => (
+        <div
+          key={col.key}
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={() => handleDrop(col.key)}
+          style={{
+            minHeight: "200px",
+            padding: "12px",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--rule)",
+            background: "var(--bone-2)",
+          }}
+        >
+          <div className="flex items-baseline gap-2 mb-3">
+            <h3 className="text-sm font-bold" style={{ color: "var(--ink)" }}>{col.label}</h3>
+            <span className="text-xs" style={{ color: "var(--ink-3)" }}>{col.sublabel}</span>
+            <span
+              style={{
+                marginLeft: "auto",
+                background: "var(--bone)",
+                border: "1px solid var(--rule)",
+                borderRadius: "3px",
+                padding: "0 6px",
+                fontSize: "10px",
+                fontFamily: "var(--font-mono)",
+                color: "var(--ink-3)",
+              }}
+            >
+              {columns[col.key].length}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {columns[col.key].map((item, i) => (
+              <div
+                key={i}
+                draggable
+                onDragStart={() => handleDragStart(col.key, i)}
+                style={{
+                  padding: "10px 12px",
+                  borderRadius: "var(--radius-md)",
+                  border: "1px solid var(--rule)",
+                  background: "var(--bone)",
+                  cursor: "grab",
+                  opacity: drag?.colKey === col.key && drag?.idx === i ? 0.4 : 1,
+                }}
+              >
+                <p className="text-xs font-semibold mb-1" style={{ color: "var(--ink)" }}>{item.title}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex gap-2 text-xs" style={{ color: "var(--ink-3)" }}>
+                    <span style={{ color: EFFORT_COLOR[item.effort] }}>{EFFORT_LABEL[item.effort]}</span>
+                    <span>·</span>
+                    <span>{IMPACT_LABEL[item.impact]}</span>
+                  </div>
+                  <CopyTaskButton item={item} />
+                </div>
+              </div>
+            ))}
+            {columns[col.key].length === 0 && (
+              <p className="text-xs text-center py-4" style={{ color: "var(--ink-3)" }}>
+                Перетащите сюда задачу
+              </p>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function ActionPlanTimeline({ plan }: Props) {
   const isAdvanced = !!plan.strategy
+  const [view, setView] = useState<ViewMode>("list")
 
   return (
     <div>
@@ -257,39 +494,43 @@ export function ActionPlanTimeline({ plan }: Props) {
         <QuickWinsBlock wins={plan.quickWins} />
       )}
 
-      {/* 30/60/90 */}
-      <div className={`grid grid-cols-1 gap-6 ${isAdvanced ? "" : "md:grid-cols-3"}`}>
-        {isAdvanced ? (
-          // Advanced: вертикальный список с раскрытыми шагами
-          COLUMNS.map((col) => (
-            <div key={col.key}>
-              <div className="flex items-baseline gap-3 mb-4">
-                <h3 className="text-base font-bold" style={{ color: "var(--ink)" }}>
-                  {col.label}
-                </h3>
-                <span className="text-xs" style={{ color: "var(--ink-3)" }}>
-                  {col.sublabel}
-                </span>
-              </div>
-              <div className="space-y-3">
-                {(plan[col.key] ?? []).map((item, i) => (
-                  <ActionCard key={i} item={item} />
-                ))}
-              </div>
-            </div>
-          ))
-        ) : (
-          // Standard: компактные карточки в 3 колонки
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 col-span-full">
-            {COLUMNS.map((col) => (
+      {/* View toggle */}
+      <div className="flex items-center gap-2 mb-6">
+        {(["list", "kanban", "matrix"] as ViewMode[]).map((mode) => (
+          <button
+            key={mode}
+            onClick={() => setView(mode)}
+            className="monotag text-xs transition-colors"
+            style={
+              view === mode
+                ? { background: "var(--accent)", borderColor: "var(--accent)", color: "var(--accent-ink)" }
+                : { color: "var(--ink-3)", borderColor: "var(--rule)" }
+            }
+          >
+            {mode === "list" ? "Список" : mode === "kanban" ? "Доска" : "Матрица"}
+          </button>
+        ))}
+      </div>
+
+      {/* Matrix view */}
+      {view === "matrix" ? (
+        <EisenhowerMatrix plan={plan} />
+      ) : view === "kanban" ? (
+        <KanbanBoard plan={plan} />
+      ) : (
+        /* List view — 30/60/90 */
+        <div className={`grid grid-cols-1 gap-6 ${isAdvanced ? "" : "md:grid-cols-3"}`}>
+          {isAdvanced ? (
+            // Advanced: вертикальный список с раскрытыми шагами
+            COLUMNS.map((col) => (
               <div key={col.key}>
-                <div className="mb-4">
+                <div className="flex items-baseline gap-3 mb-4">
                   <h3 className="text-base font-bold" style={{ color: "var(--ink)" }}>
                     {col.label}
                   </h3>
-                  <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                  <span className="text-xs" style={{ color: "var(--ink-3)" }}>
                     {col.sublabel}
-                  </p>
+                  </span>
                 </div>
                 <div className="space-y-3">
                   {(plan[col.key] ?? []).map((item, i) => (
@@ -297,10 +538,31 @@ export function ActionPlanTimeline({ plan }: Props) {
                   ))}
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            ))
+          ) : (
+            // Standard: компактные карточки в 3 колонки
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 col-span-full">
+              {COLUMNS.map((col) => (
+                <div key={col.key}>
+                  <div className="mb-4">
+                    <h3 className="text-base font-bold" style={{ color: "var(--ink)" }}>
+                      {col.label}
+                    </h3>
+                    <p className="text-xs" style={{ color: "var(--ink-3)" }}>
+                      {col.sublabel}
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {(plan[col.key] ?? []).map((item, i) => (
+                      <ActionCard key={i} item={item} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Контент-план — только Advanced */}
       {plan.contentCalendar && plan.contentCalendar.length > 0 && (

@@ -4,6 +4,8 @@ export type Tier = "BASIC" | "STANDARD" | "ADVANCED"
 export type RecurringFrequency = "weekly" | "monthly" | "quarterly"
 
 export interface TierConfig {
+  displayName: string // Старт / Профи / Агентский / …
+  positioning: string // Разовый аудит / Подписка
   queryCount: number
   platforms: string[]
   hasPdf: boolean
@@ -30,6 +32,8 @@ export interface TierConfig {
 
 export const TIER_CONFIG: Record<Tier, TierConfig> = {
   BASIC: {
+    displayName: "Старт",
+    positioning: "Разовый аудит",
     queryCount: 15,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT"],
     hasPdf: false,
@@ -46,7 +50,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasRagSources: false,
     hasShareOfVoice: false,
     hasBenchmark: false,          // нет истории для сравнения на базовом
-    hasMonitoringAlerts: true,    // алерты доступны всем разовым
+    hasMonitoringAlerts: false,   // алерты — только в подписке
     recurringFrequencies: [],
     priorityHours: 48,
     isSubscription: false,
@@ -54,6 +58,8 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     priceLabel: "4 900 ₽",
   },
   STANDARD: {
+    displayName: "Профи",
+    positioning: "Разовый аудит",
     queryCount: 30,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK"],
     hasPdf: true,
@@ -70,7 +76,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasRagSources: true,
     hasShareOfVoice: true,
     hasBenchmark: true,           // STANDARD+ получают перцентиль по нише
-    hasMonitoringAlerts: true,
+    hasMonitoringAlerts: false,   // алерты — только в подписке
     recurringFrequencies: ["monthly", "quarterly"],
     priorityHours: 48,
     isSubscription: false,
@@ -78,6 +84,8 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     priceLabel: "13 900 ₽",
   },
   ADVANCED: {
+    displayName: "Агентский",
+    positioning: "Разовый аудит",
     queryCount: 50,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK", "GIGACHAT", "ALISA", "GROK"],
     hasPdf: true,
@@ -94,7 +102,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasRagSources: true,
     hasShareOfVoice: true,
     hasBenchmark: true,
-    hasMonitoringAlerts: true,
+    hasMonitoringAlerts: false,   // алерты — только в подписке
     recurringFrequencies: ["weekly", "monthly", "quarterly"],
     priorityHours: 24,
     isSubscription: false,
@@ -103,6 +111,8 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
   },
   // ── Подписочные тарифы (мониторинг) ──────────────────────────────────────────
   MONITOR_START: {
+    displayName: "Мониторинг Старт",
+    positioning: "Подписка",
     // = BASIC-уровень, но периодический. Те же 3 платформы, без PDF.
     queryCount: 15,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT"],
@@ -124,10 +134,12 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     recurringFrequencies: ["monthly"],
     priorityHours: 48,
     isSubscription: true,
-    priceRub: 4990,
-    priceLabel: "4 990 ₽/мес",
+    priceRub: 2990,
+    priceLabel: "2 990 ₽/мес",
   },
   MONITOR_PRO: {
+    displayName: "Мониторинг Профи",
+    positioning: "Подписка",
     // = STANDARD-уровень, но периодический. 6 платформ, PDF, план.
     queryCount: 30,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK"],
@@ -153,6 +165,8 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     priceLabel: "9 990 ₽/мес",
   },
   MONITOR_AGENT: {
+    displayName: "Мониторинг Агент",
+    positioning: "Подписка",
     // = ADVANCED-уровень, но периодический. Все 9 платформ + все AI-агенты.
     queryCount: 50,
     platforms: ["CHATGPT", "GEMINI", "YANDEXGPT", "CLAUDE", "PERPLEXITY", "DEEPSEEK", "GIGACHAT", "ALISA", "GROK"],
@@ -171,7 +185,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     hasShareOfVoice: true,
     hasBenchmark: true,
     hasMonitoringAlerts: true,
-    recurringFrequencies: ["weekly", "monthly"],
+    recurringFrequencies: ["monthly"],   // еженедельно убрано — иначе дешевле разового
     priorityHours: 24,
     isSubscription: true,
     priceRub: 19990,
