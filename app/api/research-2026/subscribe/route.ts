@@ -6,7 +6,7 @@ import { z } from "zod"
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const PDF_URL = process.env.RESEARCH_PDF_URL ?? ""
-const FROM = process.env.FROM_EMAIL ?? "KaliGEO <hello@kaligeo.ru>"
+const FROM = process.env.FROM_EMAIL || "KaliGEO <hello@kaligeo.ru>"
 
 const Schema = z.object({
   email: z.string().email(),
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         PDF-версия будет доступна в ближайшее время. Мы пришлём ссылку отдельным письмом.
       </p>`
 
-  await resend.emails.send({
+  const { error: emailError } = await resend.emails.send({
     from: FROM,
     to: email,
     subject: "Ваш PDF: Состояние GEO в России 2026 — KaliGEO",
@@ -86,6 +86,11 @@ export async function POST(req: NextRequest) {
 </body>
 </html>`,
   })
+
+  if (emailError) {
+    console.error("Resend error:", emailError)
+    return NextResponse.json({ error: "Не удалось отправить письмо. Попробуйте позже." }, { status: 500 })
+  }
 
   return NextResponse.json({ success: true })
 }
