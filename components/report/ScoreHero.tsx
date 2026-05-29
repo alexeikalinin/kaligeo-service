@@ -9,15 +9,25 @@ interface WeakPoint {
   severity: "high" | "medium" | "low"
 }
 
+interface BrandRoleStats {
+  primaryPct: number
+  alternativePct: number
+  mentionPct: number
+  total: number
+}
+
 interface Props {
   companyName: string
   websiteUrl: string
   overallScore: number
   pdfUrl?: string | null
+  reportToken?: string | null
+  jobId?: string | null
   completedAt?: Date | null
   totalMentions?: number
   totalQueries?: number
   weakPoints?: WeakPoint[]
+  brandRoleStats?: BrandRoleStats | null
   onGrowthPlanClick?: () => void
 }
 
@@ -38,10 +48,13 @@ export function ScoreHero({
   websiteUrl,
   overallScore,
   pdfUrl,
+  reportToken,
+  jobId,
   completedAt,
   totalMentions,
   totalQueries,
   weakPoints,
+  brandRoleStats,
   onGrowthPlanClick,
 }: Props) {
   const date = completedAt
@@ -145,6 +158,43 @@ export function ScoreHero({
             {narrative}
           </p>
 
+          {/* Brand role stats */}
+          {brandRoleStats && brandRoleStats.total > 0 && (
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginBottom: "16px",
+              }}
+            >
+              {brandRoleStats.primaryPct > 0 && (
+                <RoleBadge
+                  label="Топ-рекомендация"
+                  pct={brandRoleStats.primaryPct}
+                  color="#166534"
+                  bg="#dcfce7"
+                />
+              )}
+              {brandRoleStats.alternativePct > 0 && (
+                <RoleBadge
+                  label="Альтернатива"
+                  pct={brandRoleStats.alternativePct}
+                  color="#854d0e"
+                  bg="#fef9c3"
+                />
+              )}
+              {brandRoleStats.mentionPct > 0 && (
+                <RoleBadge
+                  label="Упоминание"
+                  pct={brandRoleStats.mentionPct}
+                  color="#374151"
+                  bg="#f3f4f6"
+                />
+              )}
+            </div>
+          )}
+
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
             {onGrowthPlanClick && (
               <button
@@ -183,6 +233,42 @@ export function ScoreHero({
                 Скачать PDF
               </a>
             )}
+            {jobId && reportToken && (
+              <a
+                href={`/api/report/${jobId}/download-html?token=${reportToken}`}
+                download
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--bone-2)",
+                  color: "var(--ink-2)",
+                  border: "1px solid var(--rule)",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                }}
+              >
+                Скачать HTML
+              </a>
+            )}
+            {jobId && reportToken && (
+              <a
+                href={`/api/report/${jobId}/download-pptx?token=${reportToken}`}
+                download
+                style={{
+                  padding: "10px 18px",
+                  borderRadius: "var(--radius-md)",
+                  background: "var(--bone-2)",
+                  color: "var(--ink-2)",
+                  border: "1px solid var(--rule)",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  textDecoration: "none",
+                }}
+              >
+                Скачать PPTX
+              </a>
+            )}
           </div>
         </div>
       </div>
@@ -198,5 +284,30 @@ export function ScoreHero({
         }
       `}</style>
     </div>
+  )
+}
+
+function RoleBadge({ label, pct, color, bg }: { label: string; pct: number; color: string; bg: string }) {
+  if (!label) return null
+  return (
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        fontFamily: "var(--font-mono)",
+        fontSize: "11px",
+        fontWeight: 600,
+        color,
+        background: bg,
+        border: `1px solid ${color}22`,
+        borderRadius: "4px",
+        padding: "3px 8px",
+        letterSpacing: "0.02em",
+      }}
+    >
+      {label}
+      <span style={{ opacity: 0.7, fontWeight: 400 }}>{pct}%</span>
+    </span>
   )
 }

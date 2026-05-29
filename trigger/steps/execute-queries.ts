@@ -1,5 +1,6 @@
 import { AI_CLIENTS, ACTIVE_PLATFORMS } from "../../lib/ai-clients"
 import { extractMentions } from "../../lib/analysis/extract-mentions"
+import { classifyMentionContext } from "../../lib/analysis/mention-extraction"
 import { prisma } from "../../lib/prisma"
 
 export interface QueryExecutionResult {
@@ -42,6 +43,13 @@ export async function executeQueriesOnPlatform(
 
       const mentions = extractMentions(response, companyName, websiteUrl, competitors, citationsFromApi)
 
+      const mentionContext = classifyMentionContext(
+        response,
+        companyName,
+        mentions.positionScore,
+        mentions.sentiment
+      )
+
       const result: QueryExecutionResult = {
         platform,
         query,
@@ -66,6 +74,7 @@ export async function executeQueriesOnPlatform(
           sentiment: mentions.sentiment,
           positionScore: mentions.positionScore,
           sourceCategories: mentions.sourceCategories as any,
+          mentionContext: mentionContext ?? undefined,
         },
       })
 

@@ -65,14 +65,20 @@ export default function PortalTopNav({ client }: Props) {
           <NavLink href="/my/dashboard" active={isActive("/my/dashboard")}>
             Обзор
           </NavLink>
-          <NavLink href="/my/sources" active={isActive("/my/sources")}>
-            Источники
+          <NavLink href="/my/history" active={isActive("/my/history")}>
+            История
           </NavLink>
           <NavLink href="/my/brands" active={isActive("/my/brands")}>
             Бренды
           </NavLink>
-          <NavLink href="/tools/domain-check" active={isActive("/tools/domain-check")}>
-            Инструменты
+          <NavLink href="/my/sources" active={isActive("/my/sources")}>
+            Источники
+          </NavLink>
+          <NavLink href="/my/billing" active={isActive("/my/billing")}>
+            Биллинг
+          </NavLink>
+          <NavLink href="/my/settings" active={isActive("/my/settings")}>
+            Настройки
           </NavLink>
         </nav>
 

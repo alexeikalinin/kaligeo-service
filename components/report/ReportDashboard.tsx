@@ -30,6 +30,9 @@ import { RecurringPanel } from "./RecurringPanel"
 import { ShareOfVoiceTab } from "./ShareOfVoiceTab"
 import type { ShareOfVoiceResult } from "@/lib/analysis/share-of-voice"
 import type { CompetitivePosition } from "@/lib/analysis/competitive-positioning"
+import { CitationReadinessCard } from "./CitationReadinessCard"
+import { calculateCitationReadiness } from "@/lib/analysis/citation-readiness"
+import { aggregateBrandRoles } from "@/lib/analysis/mention-extraction"
 
 interface PlatformScore {
   platform: string
@@ -164,6 +167,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
 
   const totalMentions = Object.values(report.visibilityScores).reduce((a, s) => a + s.mentionCount, 0)
   const totalQueries = Object.values(report.visibilityScores).reduce((a, s) => a + s.totalQueries, 0)
+  const brandRoleStats = aggregateBrandRoles(job.queryResults)
 
   // Build sparkline history: [prevScore, currScore] per platform from comparison platformDeltas
   const platformHistory: Record<string, number[]> | undefined = comparison
@@ -182,10 +186,13 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
         websiteUrl={job.websiteUrl}
         overallScore={report.overallScore}
         pdfUrl={hasPdf ? job.pdfUrl : null}
+        jobId={job.id}
+        reportToken={job.reportToken}
         completedAt={job.completedAt}
         totalMentions={totalMentions}
         totalQueries={totalQueries}
         weakPoints={report.weakPoints}
+        brandRoleStats={brandRoleStats}
         onGrowthPlanClick={!isTabLocked("STANDARD", job.tier) ? () => setTab("plan") : undefined}
       />
 
@@ -289,6 +296,19 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
               </h2>
               <WeakPointsList weakPoints={report.weakPoints.slice(0, 3)} />
             </section>
+            {(() => {
+              const crs = calculateCitationReadiness(report.weakPoints, report.visibilityScores)
+              return (
+                <CitationReadinessCard
+                  score={crs.score}
+                  contextual={crs.contextual}
+                  structural={crs.structural}
+                  referential={crs.referential}
+                  signals={crs.signals}
+                  capApplied={crs.capApplied}
+                />
+              )
+            })()}
             {job.tier === "BASIC" && (
               <section>
                 <p className="t-eyebrow mb-2">⚡ С чего начать</p>

@@ -7,6 +7,7 @@ import MetricPill from "@/components/portal/MetricPill"
 import AuditCard from "@/components/portal/AuditCard"
 import PlatformCoverageGrid from "@/components/portal/PlatformCoverageGrid"
 import QuickActions from "@/components/portal/QuickActions"
+import TrialForm from "@/components/portal/TrialForm"
 
 export const metadata: Metadata = {
   title: "Личный кабинет — KaliGEO",
@@ -201,37 +202,66 @@ function EmptyHero() {
         padding: "52px 32px",
         textAlign: "center",
         border: "1px dashed var(--rule)",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: "24px",
       }}
     >
-      <p
-        style={{
-          fontFamily: "var(--font-serif)",
-          fontSize: "22px",
-          fontWeight: 400,
-          margin: "0 0 8px",
-          color: "var(--ink)",
-        }}
-      >
-        Аудитов ещё нет
-      </p>
-      <p style={{ fontSize: "14px", color: "var(--ink-3)", margin: "0 0 24px" }}>
-        После первого аудита здесь появится ваш AI-скор и рекомендации.
-      </p>
-      <a
-        href="/tools/domain-check"
-        style={{
-          display: "inline-block",
-          background: "var(--accent)",
-          color: "var(--accent-ink)",
-          borderRadius: "var(--radius-md)",
-          padding: "11px 22px",
-          fontSize: "14px",
-          fontWeight: 700,
-          textDecoration: "none",
-        }}
-      >
-        Проверить домен бесплатно →
-      </a>
+      <div>
+        <p
+          style={{
+            fontFamily: "var(--font-serif)",
+            fontSize: "22px",
+            fontWeight: 400,
+            margin: "0 0 8px",
+            color: "var(--ink)",
+          }}
+        >
+          Аудитов ещё нет
+        </p>
+        <p style={{ fontSize: "14px", color: "var(--ink-3)", margin: 0 }}>
+          Запустите первый бесплатный аудит или выберите тариф — результат за 8–10 минут.
+        </p>
+      </div>
+
+      {/* Trial form */}
+      <TrialForm />
+
+      <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
+        <a
+          href="/pricing"
+          style={{
+            display: "inline-block",
+            background: "transparent",
+            color: "var(--ink-2)",
+            borderRadius: "var(--radius-md)",
+            padding: "10px 20px",
+            fontSize: "14px",
+            fontWeight: 500,
+            textDecoration: "none",
+            border: "1px solid var(--rule)",
+          }}
+        >
+          Выбрать тариф
+        </a>
+        <a
+          href="/tools/domain-check"
+          style={{
+            display: "inline-block",
+            background: "transparent",
+            color: "var(--ink-2)",
+            borderRadius: "var(--radius-md)",
+            padding: "10px 20px",
+            fontSize: "14px",
+            fontWeight: 500,
+            textDecoration: "none",
+            border: "1px solid var(--rule)",
+          }}
+        >
+          Бесплатная проверка домена
+        </a>
+      </div>
     </div>
   )
 }
