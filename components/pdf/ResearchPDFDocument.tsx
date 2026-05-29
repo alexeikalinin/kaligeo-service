@@ -1,12 +1,16 @@
 import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer"
-import path from "path"
 
-// Register PT Sans — Cyrillic support
+// Register PT Sans with Cyrillic support via Google Fonts CDN
+// Falls back to public/fonts if running locally with file access
+const FONT_BASE = process.env.NEXT_PUBLIC_APP_URL
+  ? `${process.env.NEXT_PUBLIC_APP_URL}/fonts`
+  : "https://app.kaligeo.ru/fonts"
+
 Font.register({
   family: "PTSans",
   fonts: [
-    { src: path.join(process.cwd(), "public/fonts/PTSans-Regular.ttf"), fontWeight: 400 },
-    { src: path.join(process.cwd(), "public/fonts/PTSans-Bold.ttf"),    fontWeight: 700 },
+    { src: `${FONT_BASE}/PTSans-Regular.ttf`, fontWeight: 400 },
+    { src: `${FONT_BASE}/PTSans-Bold.ttf`,    fontWeight: 700 },
   ],
 })
 
