@@ -19,11 +19,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Некорректный email" }, { status: 400 })
   }
 
-  // Find client by email — only allow existing clients (clients who have audits)
-  const client = await prisma.client.findUnique({ where: { email } })
+  // Find or create client — anyone can log in, account is created on first login
+  let client = await prisma.client.findUnique({ where: { email } })
   if (!client) {
-    // Return success anyway to avoid email enumeration
-    return NextResponse.json({ success: true })
+    client = await prisma.client.create({
+      data: {
+        email,
+        companyName: email.split("@")[0], // placeholder, can be updated later
+      },
+    })
   }
 
   // Invalidate old unused tokens for this email

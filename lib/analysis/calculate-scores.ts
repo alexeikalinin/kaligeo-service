@@ -3,6 +3,7 @@ import type { QueryResult } from "@prisma/client"
 export interface PlatformScore {
   platform: string
   score: number
+  rawScore: number          // score до применения veto-правил
   totalQueries: number
   mentionCount: number
   positiveCount: number
@@ -10,6 +11,7 @@ export interface PlatformScore {
   avgPosition: number       // 0–4 (0=не упомянут, 1=первый, 4=поздно)
   positionScore100: number  // 0–100 (нормализованный для отображения)
   sourceQualityScore: number // 0–100 (доля media/expert/catalog источников среди всех)
+  capApplied?: boolean      // true если veto-правило ограничило score
 }
 
 /**
@@ -49,8 +51,9 @@ export function calculateVisibilityScores(results: QueryResult[]): Record<string
     const avgPosition = positionScores.length > 0
       ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
       : 0
-    // Нормализуем: position 1 = 100, position 4 = 25, position 0 (нет данных) = 50 нейтрально
-    const positionNorm = avgPosition > 0 ? Math.max(0, 100 - (avgPosition - 1) * 25) : 50
+    // Нормализуем: position 1 = 100, position 4 = 25
+    // Veto: если нет ни одного упоминания — positionNorm = 0 (нет нейтрального fallback 50)
+    const positionNorm = mentions === 0 ? 0 : avgPosition > 0 ? Math.max(0, 100 - (avgPosition - 1) * 25) : 50
 
     // Source quality: доля media+expert+catalog среди всех источников (не только упоминания)
     let qualitySourceCount = 0
@@ -68,16 +71,22 @@ export function calculateVisibilityScores(results: QueryResult[]): Record<string
       ? Math.round((qualitySourceCount / totalSourceCount) * 100)
       : 0
 
-    const score = Math.round(
+    const rawScore = Math.round(
       citationRate * 40 +
       positiveRate * 25 +
       (positionNorm / 100) * 20 +
       sourceRate * 15
     )
 
+    // Veto/Cap: если нет упоминаний — score не может быть выше 10
+    const capApplied = mentions === 0 && rawScore > 10
+    const score = capApplied ? Math.min(rawScore, 10) : rawScore
+
     scores[platform] = {
       platform,
       score,
+      rawScore,
+      capApplied,
       totalQueries: total,
       mentionCount: mentions,
       positiveCount: positives,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
+import { runFreemiumQuickCheck } from "@/lib/freemium/quick-check"
 import { z } from "zod"
 import { checkRateLimit } from "@/lib/rate-limit"
 
@@ -8,30 +9,6 @@ const ScanSchema = z.object({
   websiteUrl: z.string().url(),
   source: z.string().max(64).optional(),
 })
-
-// Estimate an AI-visibility preview score (deliberately low to show room for improvement)
-function estimatePreviewScore(
-  niche: string,
-  services: string[],
-  keywords: string[]
-): number {
-  let score = 10
-
-  // More content signals → marginally higher base
-  if (services.length >= 3) score += 5
-  if (keywords.length >= 5) score += 5
-  if (niche.length > 100) score += 3
-
-  // Check if niche mentions AI-friendly terms
-  const aiTerms = ["ai", "chatgpt", "llm", "нейро", "искусственный", "автомат"]
-  const hasAiTerms = aiTerms.some(
-    (t) => niche.toLowerCase().includes(t) || services.join(" ").toLowerCase().includes(t)
-  )
-  if (hasAiTerms) score += 7
-
-  // Cap at 42 — freemium always shows there's room to grow
-  return Math.min(score, 42)
-}
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown"
@@ -51,6 +28,7 @@ export async function POST(req: NextRequest) {
     const existing = await prisma.freemiumScan.findFirst({
       where: {
         websiteUrl,
+        quickCheckDone: true,
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
       orderBy: { createdAt: "desc" },
@@ -60,6 +38,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ scanId: existing.id })
     }
 
+    // ── Step 1: Website analysis ──────────────────────────────────────────
     let analysis
     try {
       analysis = await runWebsiteAnalysisAgent(websiteUrl)
@@ -76,20 +55,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const previewScore = estimatePreviewScore(
-      analysis.niche,
-      analysis.services,
-      analysis.keywords
-    )
+    const companyName = analysis.companyName || new URL(websiteUrl).hostname
+    const niche = analysis.niche || "Общее"
+    const keywords = analysis.keywords as string[]
 
+    // ── Step 2: Real AI quick check (3 platforms × 3 queries) ────────────
+    let quickCheck
+    let previewScore: number
+    let platformScoresJson: object | null = null
+    let quickCheckDone = false
+
+    try {
+      quickCheck = await runFreemiumQuickCheck(companyName, niche, websiteUrl, keywords)
+      previewScore = quickCheck.overallScore
+      platformScoresJson = quickCheck.platformScores
+      quickCheckDone = quickCheck.queriesRun > 0
+    } catch (quickCheckError) {
+      console.error("Quick check failed, falling back to estimate:", quickCheckError)
+      // Fallback to honest low estimate
+      previewScore = 12 + Math.min(keywords.length * 2, 10)
+    }
+
+    // ── Step 3: Persist ────────────────────────────────────────────────────
     const scan = await prisma.freemiumScan.create({
       data: {
         websiteUrl,
-        companyName: analysis.companyName || new URL(websiteUrl).hostname,
-        niche: analysis.niche || "Не определено",
+        companyName,
+        niche,
         services: analysis.services,
         keywords: analysis.keywords,
+        suggestedCompetitors: analysis.suggestedCompetitors ?? [],
         previewScore,
+        platformScores: platformScoresJson ?? undefined,
+        quickCheckDone,
         ...(source ? { source } : {}),
       },
     })

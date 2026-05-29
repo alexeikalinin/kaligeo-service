@@ -30,13 +30,13 @@ const openai    = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
 // ── Конкретные модели ───────────────────────────────────────────────────────
 
 /** Диалог с клиентом (сбор URL, ниши, email). Все тарифы. */
-export const CHAT_MODEL: LanguageModel = google("gemini-2.0-flash")
+export const CHAT_MODEL: LanguageModel = google("gemini-2.5-flash")
 
 /** Генерация аудит-запросов. Все тарифы. */
 export const QUERY_GEN_MODEL = "gpt-4o-mini"  // используется через openai SDK напрямую
 
 /** Анализ сайта перед чатом (website-analysis-agent). Все тарифы. */
-export const WEBSITE_ANALYSIS_MODEL = "gemini-2.0-flash"
+export const WEBSITE_ANALYSIS_MODEL = "gemini-2.5-flash"
 
 /**
  * Модель для генерации Action Plan по тарифу.
@@ -71,24 +71,24 @@ export function getOrchestratorModel(): LanguageModel {
  */
 export const MODEL_MATRIX = {
   BASIC: {
-    chat:         "gemini-2.0-flash  ($0.075/1M)",
+    chat:         "gemini-2.5-flash  ($0.075/1M)",
     queryGen:     "gpt-4o-mini       ($0.15/1M)",
     actionPlan:   "— (нет)",
     analysis:     "— (нет)",
-    websiteAnalysis: "gemini-2.0-flash ($0.075/1M)",
+    websiteAnalysis: "gemini-2.5-flash ($0.075/1M)",
   },
   STANDARD: {
-    chat:         "gemini-2.0-flash  ($0.075/1M)",
+    chat:         "gemini-2.5-flash  ($0.075/1M)",
     queryGen:     "gpt-4o-mini       ($0.15/1M)",
     actionPlan:   "gpt-4o-mini       ($0.15/1M)",
     analysis:     "— (нет)",
-    websiteAnalysis: "gemini-2.0-flash ($0.075/1M)",
+    websiteAnalysis: "gemini-2.5-flash ($0.075/1M)",
   },
   ADVANCED: {
-    chat:         "gemini-2.0-flash  ($0.075/1M)",
+    chat:         "gemini-2.5-flash  ($0.075/1M)",
     queryGen:     "gpt-4o-mini       ($0.15/1M)",
     actionPlan:   "claude-sonnet-4-6 ($3/1M)",
     analysis:     "claude-sonnet-4-6 ($3/1M)",
-    websiteAnalysis: "gemini-2.0-flash ($0.075/1M)",
+    websiteAnalysis: "gemini-2.5-flash ($0.075/1M)",
   },
 } as const

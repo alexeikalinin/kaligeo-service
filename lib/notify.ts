@@ -205,3 +205,19 @@ export async function notifyAuditFailed(opts: {
   `)
   await sendAdminEmail(`🔴 Аудит упал: ${companyName}`, html)
 }
+
+export async function notifyScoreDrop(opts: {
+  companyName: string
+  email: string
+  currentScore: number
+  prevScore: number
+  delta: number
+}) {
+  const { companyName, email, currentScore, prevScore, delta } = opts
+  const tg = [
+    `⚠️ <b>Падение AI-видимости</b>`,
+    `${companyName} (${email})`,
+    `${prevScore} → ${currentScore} (${delta})`,
+  ].join("\n")
+  await sendTelegram(tg)
+}

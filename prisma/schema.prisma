@@ -12,6 +12,7 @@ model Client {
   email           String            @unique
   companyName     String
   websiteUrl      String?
+  trialUsed       Boolean           @default(false)
   createdAt       DateTime          @default(now())
   auditJobs       AuditJob[]
   magicLinkTokens MagicLinkToken[]
@@ -80,6 +81,7 @@ model AuditJob {
   followUpSentAt      DateTime?
   recurringFrequency  String?       // "weekly" | "monthly" | "quarterly" | null
   brandProfileId      String?       // linked BrandProfile for custom prompts
+  renewalReminderSentAt DateTime?   // когда отправлен renewal reminder (чтобы не слать дважды)
   queryResults        QueryResult[]
   report              Report?
 }

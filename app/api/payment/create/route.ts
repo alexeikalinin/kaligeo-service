@@ -21,7 +21,7 @@ const TIER_PRICE_BYN_KOPECKS: Record<string, number> = {
   BASIC:         14900,   // 149 BYN
   STANDARD:      44900,   // 449 BYN
   ADVANCED:      89900,   // 899 BYN
-  MONITOR_START: 14900,   // 149 BYN/мес
+  MONITOR_START:  9900,   // 99 BYN/мес
   MONITOR_PRO:   39900,   // 399 BYN/мес
   MONITOR_AGENT: 69900,   // 699 BYN/мес
 }
@@ -31,7 +31,7 @@ const TIER_PRICE_RUB_KOPECKS: Record<string, number> = {
   BASIC:         490000,  // 4 900 RUB
   STANDARD:     1390000,  // 13 900 RUB
   ADVANCED:     2790000,  // 27 900 RUB
-  MONITOR_START: 499000,  // 4 990 RUB/мес
+  MONITOR_START: 299000,  // 2 990 RUB/мес
   MONITOR_PRO:   999000,  // 9 990 RUB/мес
   MONITOR_AGENT:1999000,  // 19 990 RUB/мес
 }

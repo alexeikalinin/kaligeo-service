@@ -11,6 +11,8 @@ export interface DeliveryOptions {
   overallScore: number
   reportUrl: string
   pdfUrl?: string
+  hasActionPlan?: boolean  // true for STANDARD/ADVANCED — меняет subject
+  quickWins?: string[]     // top-3 шага из action plan для тела письма
 }
 
 export interface FollowUpDeliveryOptions {
@@ -83,14 +85,24 @@ export async function sendFollowUpEmail(opts: FollowUpDeliveryOptions): Promise<
 }
 
 export async function sendReportEmail(opts: DeliveryOptions): Promise<void> {
-  const { to, companyName, overallScore, reportUrl, pdfUrl } = opts
+  const { to, companyName, overallScore, reportUrl, pdfUrl, hasActionPlan, quickWins } = opts
 
   const scoreEmoji = overallScore >= 60 ? "🟢" : overallScore >= 30 ? "🟡" : "🔴"
+  const subject = hasActionPlan
+    ? `Ваш аудит и план по улучшению видимости готов — ${companyName} | Score: ${overallScore}/100`
+    : `Ваш AI-аудит готов — ${companyName} | Score: ${overallScore}/100`
+
+  const quickWinsBlock = hasActionPlan && quickWins && quickWins.length > 0
+    ? `<p style="margin: 24px 0 8px; font-weight: 600; color: #0f172a;">Три первых шага на этой неделе:</p>
+       <ol style="line-height: 1.9; color: #444; padding-left: 20px;">
+         ${quickWins.slice(0, 3).map((w) => `<li>${w}</li>`).join("")}
+       </ol>`
+    : ""
 
   await getResend().emails.send({
     from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
     to,
-    subject: `Ваш AI-аудит готов — ${companyName} | Score: ${overallScore}/100`,
+    subject,
     html: `
 <!DOCTYPE html>
 <html>
@@ -107,13 +119,15 @@ export async function sendReportEmail(opts: DeliveryOptions): Promise<void> {
     <p style="margin: 16px 0 0; color: #666; font-size: 14px;">для компании <strong>${companyName}</strong></p>
   </div>
 
-  <p>Ваш аудит AI-видимости готов. В отчёте вы найдёте:</p>
+  <p>Ваш ${hasActionPlan ? "аудит и план по улучшению AI-видимости" : "аудит AI-видимости"} готов. В отчёте вы найдёте:</p>
   <ul style="line-height: 1.8; color: #444;">
     <li>Детальные scores по каждой AI-платформе</li>
     <li>Матрицу конкурентов — кого AI рекомендует вместо вас</li>
     <li>Список слабых мест с конкретными рекомендациями</li>
-    <li>30/60/90-дневный план роста видимости</li>
+    ${hasActionPlan ? "<li>30/60/90-дневный план роста с конкретными шагами для команды</li>" : ""}
   </ul>
+
+  ${quickWinsBlock}
 
   <div style="text-align: center; margin: 32px 0;">
     <a href="${reportUrl}" style="display: inline-block; background: #0f172a; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 16px;">

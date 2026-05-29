@@ -1,4 +1,5 @@
-import { task } from "@trigger.dev/sdk/v3"
+import { task, tasks } from "@trigger.dev/sdk/v3"
+import { postAuditSequence } from "./post-audit-sequence"
 import { prisma } from "../lib/prisma"
 import { executeQueriesOnPlatform } from "./steps/execute-queries"
 import { generateQueries } from "./steps/generate-queries"
@@ -213,12 +214,28 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
         pdfUrl,
       })
     } else {
+      // Извлекаем quickWins из action plan для тела письма (STANDARD/ADVANCED)
+      const ap = actionPlan as { quickWins?: { action: string }[] }
+      const quickWinsForEmail = ap.quickWins?.slice(0, 3).map((w) => w.action) ?? []
+
       await sendReportEmail({
         to: job.clientEmail,
         companyName: job.companyName,
         overallScore,
         reportUrl,
         pdfUrl: pdfUrl ?? "",
+        hasActionPlan: config.hasActionPlan,
+        quickWins: quickWinsForEmail,
+      })
+
+      // Запускаем post-audit email sequence (Trial / Basic / Standard / Advanced)
+      // Не запускаем для follow-up аудитов (baselineJobId уже проверен выше)
+      await tasks.trigger<typeof postAuditSequence>("post-audit-sequence", {
+        jobId: job.id,
+        tier: job.tier,
+        isTrial: job.source === "trial",
+      }).catch((err) => {
+        console.warn("[audit-pipeline] post-audit-sequence trigger failed (non-critical):", err)
       })
     }
 

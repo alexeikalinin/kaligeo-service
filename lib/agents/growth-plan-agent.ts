@@ -2,6 +2,7 @@ import { generateText } from "ai"
 import { getAdvancedAnalysisModel } from "../models"
 import type { WeakPoint } from "../analysis/weak-points-checker"
 import type { PlatformScore } from "../analysis/calculate-scores"
+import { runGeoResearchAgent } from "./geo-research-agent"
 
 // Расширяет базовый ActionItem — опциональные поля, совместим со Standard
 export interface GrowthActionItem {
@@ -65,7 +66,32 @@ export async function runGrowthPlanAgent(input: GrowthPlanInput): Promise<Growth
     .map((s) => `${s.platform}: ${s.score}/100 (citation ${s.citationRate}%, mentions ${s.mentionCount}/${s.totalQueries})`)
     .join("\n")
 
+  // Живой поиск актуальных GEO-советов через Perplexity sonar-pro
+  // Тихая деградация если API key не задан — plan всё равно генерируется
+  const geoResearch = await runGeoResearchAgent(input.platformScores).catch((err) => {
+    console.warn("[growth-plan] geo-research failed, continuing without live tips:", err)
+    return null
+  })
+
+  // Алиса-специфичный контекст — подключаем когда скор низкий
+  const alisaScore = input.platformScores["Alisa"]?.score ?? input.platformScores["alisa"]?.score ?? null
+  const alisaBlock = alisaScore !== null && alisaScore < 40
+    ? `=== АЛИСА-СПЕЦИФИЧНЫЕ ПРИОРИТЕТЫ ===
+Алиса работает иначе, чем ChatGPT/Perplexity — она опирается на экосистему Яндекса.
+Текущий скор Алисы: ${alisaScore}/100. Обязательные Алиса-рекомендации:
+
+1. Яндекс Бизнес (business.yandex.ru): зарегистрировать/полностью заполнить карточку — это primary source для голосовых рекомендаций Алисы.
+2. Speakable Schema.org: разметить ключевые абзацы (H1, первый параграф описания, FAQ-ответы) через speakableSpecification — единственная разметка специально под голос.
+3. FAQ-страница: 10–15 вопросов с ответами ≤60 слов + разметка FAQPage — именно такой контент Алиса цитирует дословно.
+4. Отзывы на Яндекс Картах: минимум 10 свежих отзывов с рейтингом 4.5+. Алиса учитывает тональность отзывов при рекомендациях.
+5. YandexAdditionalBot в robots.txt: убедиться, что краулер Алисы не заблокирован.
+6. llms.txt: добавить в корень сайта файл разрешений для AI-краулеров (аналог robots.txt для LLM).
+7. Яндекс Вебмастер: подключить инструмент "AI-видимость с Алисой" для мониторинга по каким запросам Алиса вас цитирует.`
+    : null
+
   const contextBlocks = [
+    alisaBlock,
+    geoResearch?.summary && `=== АКТУАЛЬНЫЕ GEO-ДАННЫЕ (живой поиск Perplexity) ===\n${geoResearch.summary}`,
     input.competitorAnalysis  && `=== АНАЛИЗ КОНКУРЕНТОВ ===\n${input.competitorAnalysis}`,
     input.gapsAnalysis        && `=== ПРОБЕЛЫ ВИДИМОСТИ ===\n${input.gapsAnalysis}`,
     input.sentimentAnalysis   && `=== ТОНАЛЬНОСТЬ УПОМИНАНИЙ ===\n${input.sentimentAnalysis}`,
@@ -74,9 +100,34 @@ export async function runGrowthPlanAgent(input: GrowthPlanInput): Promise<Growth
     .filter(Boolean)
     .join("\n\n")
 
-  const prompt = `Ты — старший консультант по GEO (Generative Engine Optimization) 2026. Твоя задача — создать детальный план роста AI-видимости, который команда клиента сможет выполнить самостоятельно.
+  // Risk gate: data_insufficient — не даём агенту домысливать при нехватке данных
+  const totalResults = Object.values(input.platformScores).reduce((sum, s) => sum + s.totalQueries, 0)
+  const totalMentions = Object.values(input.platformScores).reduce((sum, s) => sum + s.mentionCount, 0)
+  const platformsWithResults = Object.keys(input.platformScores).length
+  const dataWarning = totalResults < 5
+    ? `\n⚠️ ВНИМАНИЕ: данных аудита мало (${totalResults} запросов). Если для какого-либо вывода не хватает данных — явно напиши INSUFFICIENT_DATA:[причина] вместо домысла.\n`
+    : ""
 
+  // Risk gate: geo_visibility_claim — оговорка при неполном покрытии платформ
+  const selectedPlatformsCount = Object.keys(input.platformScores).length
+  const coverageWarning = selectedPlatformsCount > 0 && platformsWithResults < selectedPlatformsCount / 2
+    ? `\n⚠️ ЧАСТИЧНЫЙ АНАЛИЗ: данные получены только по ${platformsWithResults} из ${selectedPlatformsCount} платформ. В стратегии обязательно укажи: «Анализ частичный — данные по ${platformsWithResults} платформам из ${selectedPlatformsCount} выбранных». Не используй формулировки «вы видны на всех платформах» или аналогичные.\n`
+    : ""
+
+  const prompt = `Ты — старший консультант по GEO (Generative Engine Optimization) 2026. Твоя задача — создать детальный план роста AI-видимости, который команда клиента сможет выполнить самостоятельно.
+${dataWarning}${coverageWarning}
 Контекст GEO 2026: ChatGPT, Perplexity, Gemini, Claude, Яндекс Алиса используют RAG-системы — они извлекают информацию из авторитетных источников и ранжируют бренды на основе Entity Recognition, E-E-A-T сигналов и частоты цитирования в авторитетных источниках. Бренд, упоминаемый первым в ответе ИИ, имеет в 3-5 раз больше кликов, чем упомянутый вторым.
+
+МАТРИЦА ЦИТИРУЮЩИХ СИГНАЛОВ ПО ПЛАТФОРМАМ (для каждой платформы с низким score — рекомендации КОНКРЕТНО под её сигналы):
+- ChatGPT    → прямой ответ в первом абзаце + плотность ссылок + конкретные цифры (статистика, даты)
+- Perplexity → оригинальные данные + методология исследования + Reddit-присутствие (46.7% источников)
+- Claude     → прозрачность рассуждений + evidence-to-claim маппинг + Brave Search видимость (86.7% источников)
+- Gemini     → YouTube-контент + Google Business Profile + Article schema с dateModified
+- Алиса      → Яндекс Бизнес + Speakable Schema + FAQPage ≤60 слов + отзывы Яндекс Карты 4.5+
+- GigaChat   → публикации в деловых СМИ (РБК, Ведомости, Коммерсантъ) + GigaSearch
+- YandexGPT  → Яндекс Дзен + Q&A (Яндекс Кью) + Яндекс Вебмастер
+- Grok       → X/Twitter-присутствие + разрешение xAI-краулера в robots.txt
+- DeepSeek   → техническая глубина + GitHub/Stack Overflow + академические источники
 
 ДАННЫЕ АУДИТА:
 Компания: ${input.companyName}
@@ -129,7 +180,7 @@ ${contextBlocks}
         "Шаг 3: ..."
       ],
       "expectedResult": "Что изменится в AI-видимости через 30 дней",
-      "tools": ["Schema.org", "Google Search Console"],
+      "tools": ["Schema.org", "Google Search Console", "Яндекс Вебмастер", "llms.txt"],
       "owner": "разработчик"
     }
   ],

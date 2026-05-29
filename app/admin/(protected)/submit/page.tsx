@@ -155,9 +155,9 @@ export default function SubmitPage() {
               setSelectedPlatforms([])
             }}
           >
-            <option value="BASIC">Basic (15 запросов)</option>
-            <option value="STANDARD">Standard (50 запросов)</option>
-            <option value="ADVANCED">Advanced (150 запросов)</option>
+            <option value="BASIC">Basic (15 запросов, 3 платформы)</option>
+            <option value="STANDARD">Standard (30 запросов, 6 платформ)</option>
+            <option value="ADVANCED">Advanced (50 запросов, 9 платформ)</option>
           </select>
         </div>
 
