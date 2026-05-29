@@ -22,17 +22,15 @@ export async function POST(req: NextRequest) {
 
   const { email, company } = parsed.data
 
-  // Сохранить лид (upsert чтобы не дублировать)
-  await prisma.lead.upsert({
-    where: { email } as any,
-    update: { updatedAt: new Date() },
-    create: {
+  // Сохранить лид (некритично — email уйдёт даже если запись не создастся)
+  await prisma.lead.create({
+    data: {
       email,
       companyName: company ?? email.split("@")[0],
       source: "research-2026",
       status: "NEW",
     },
-  }).catch(() => null) // не блокируем если лид уже есть
+  }).catch(() => null)
 
   // Отправить email с PDF
   const downloadSection = PDF_URL
