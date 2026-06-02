@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import { useRouter } from "next/navigation"
 
 export type LeadRow = {
   id: string
@@ -29,9 +30,11 @@ const SCORE_BG = (s: number) =>
   s >= 60 ? "bg-emerald-900/30" : s >= 40 ? "bg-amber-900/20" : "bg-red-900/20"
 
 export function LeadsTable({ leads }: { leads: LeadRow[] }) {
+  const router = useRouter()
   const [tab, setTab] = useState<Tab>("unconverted")
   const [search, setSearch] = useState("")
   const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [deleting, setDeleting] = useState(false)
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
@@ -65,6 +68,32 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
 
   function copyEmails() {
     navigator.clipboard.writeText(selectedEmails.join("\n"))
+  }
+
+  async function deleteSelected() {
+    if (!confirm(`Удалить ${selected.size} записей? Это действие необратимо.`)) return
+    setDeleting(true)
+    try {
+      await fetch("/api/admin/leads", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [...selected] }),
+      })
+      setSelected(new Set())
+      router.refresh()
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  async function deleteOne(id: string) {
+    if (!confirm("Удалить эту запись?")) return
+    await fetch("/api/admin/leads", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids: [id] }),
+    })
+    router.refresh()
   }
 
   const tabs: { key: Tab; label: string; count: number }[] = [
@@ -119,7 +148,8 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
               <th className="pb-3 pr-4 font-medium">Score</th>
               <th className="pb-3 pr-4 font-medium">Письма</th>
               <th className="pb-3 pr-4 font-medium">Статус</th>
-              <th className="pb-3 font-medium">Дата</th>
+              <th className="pb-3 pr-4 font-medium">Дата</th>
+              <th className="pb-3 w-8" />
             </tr>
           </thead>
           <tbody>
@@ -127,7 +157,7 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
               const isSelected = selected.has(lead.id)
               const domain = (() => { try { return new URL(lead.websiteUrl).hostname.replace(/^www\./, "") } catch { return lead.websiteUrl } })()
               return (
-                <tr key={lead.id} className={`border-b border-zinc-800/40 transition-colors ${isSelected ? "bg-zinc-700/25" : "hover:bg-zinc-800/20"}`}>
+                <tr key={lead.id} className={`group border-b border-zinc-800/40 transition-colors ${isSelected ? "bg-zinc-700/25" : "hover:bg-zinc-800/20"}`}>
                   <td className="py-3 pr-3">
                     <input type="checkbox" checked={isSelected} onChange={() => toggleOne(lead.id)}
                       className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-400 cursor-pointer" />
@@ -181,8 +211,17 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
                       </span>
                     )}
                   </td>
-                  <td className="py-3 text-zinc-600 text-xs">
+                  <td className="py-3 pr-4 text-zinc-600 text-xs">
                     {new Date(lead.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
+                  </td>
+                  <td className="py-3">
+                    <button
+                      onClick={() => deleteOne(lead.id)}
+                      className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-400 transition-all text-base leading-none px-1"
+                      title="Удалить"
+                    >
+                      ×
+                    </button>
                   </td>
                 </tr>
               )
@@ -215,6 +254,13 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
           >
             ↓ CSV для ретаргетинга
           </a>
+          <button
+            onClick={deleteSelected}
+            disabled={deleting}
+            className="px-4 py-1.5 bg-red-900/60 hover:bg-red-800 disabled:opacity-50 text-red-300 text-sm font-semibold rounded-lg transition-colors"
+          >
+            {deleting ? "Удаляем…" : "Удалить"}
+          </button>
         </div>
       )}
     </div>
