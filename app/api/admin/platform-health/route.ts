@@ -77,12 +77,20 @@ async function checkGemini(): Promise<Omit<PlatformHealthResult, "key" | "name" 
 async function checkPerplexity(): Promise<Omit<PlatformHealthResult, "key" | "name" | "dashboardUrl" | "hasBalanceApi" | "checkedAt">> {
   const key = process.env.PERPLEXITY_API_KEY
   if (!key) return { status: "unconfigured" }
+  // Perplexity не имеет /models — делаем минимальный chat completion
   try {
-    const res = await withTimeout(fetch("https://api.perplexity.ai/models", {
-      headers: { Authorization: `Bearer ${key}` },
+    const res = await withTimeout(fetch("https://api.perplexity.ai/chat/completions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "sonar",
+        messages: [{ role: "user", content: "ping" }],
+        max_tokens: 1,
+      }),
     }))
     if (res.ok) return { status: "ok" }
-    return { status: "error", error: `HTTP ${res.status}` }
+    const data = await res.json().catch(() => ({}))
+    return { status: "error", error: data?.error?.message ?? `HTTP ${res.status}` }
   } catch (e) {
     return { status: "error", error: String(e) }
   }
