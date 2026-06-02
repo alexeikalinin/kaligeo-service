@@ -1,8 +1,21 @@
 import OpenAI from "openai"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 import { getQueryCountForTier, type Tier } from "../../lib/gates"
 
 function getClient() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+}
+
+async function generateWithGemini(prompt: string): Promise<string[]> {
+  const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "")
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+  const result = await model.generateContent(
+    prompt + '\n\nВерни ТОЛЬКО валидный JSON объект {"queries": [...]} без markdown-блоков.'
+  )
+  const text = result.response.text().trim()
+  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")
+  const parsed = JSON.parse(cleaned)
+  return Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
 }
 
 export async function generateQueries(
@@ -61,16 +74,21 @@ export async function generateQueries(
 Верни JSON-объект с единственным полем "queries" — массив строк (без меток категорий в тексте):
 {"queries": ["запрос 1", "запрос 2", ...]}`
 
-  const response = await getClient().chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [{ role: "user", content: prompt }],
-    response_format: { type: "json_object" },
-    max_tokens: 4000,
-  })
-
-  const text = response.choices[0]?.message?.content ?? "{}"
-  const parsed = JSON.parse(text)
-  const aiQueries: string[] = Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
+  let aiQueries: string[]
+  try {
+    const response = await getClient().chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [{ role: "user", content: prompt }],
+      response_format: { type: "json_object" },
+      max_tokens: 4000,
+    })
+    const text = response.choices[0]?.message?.content ?? "{}"
+    const parsed = JSON.parse(text)
+    aiQueries = Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
+  } catch (openaiErr) {
+    console.warn("OpenAI generateQueries failed, falling back to Gemini:", openaiErr)
+    aiQueries = await generateWithGemini(prompt)
+  }
 
   // Merge: custom prompts first (they're the client's priority), then AI-generated
   const merged = [...customEnabled, ...aiQueries].slice(0, count)
