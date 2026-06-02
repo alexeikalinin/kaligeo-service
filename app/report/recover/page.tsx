@@ -23,7 +23,7 @@ export default function RecoverPage() {
   return (
     <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
       <div className="max-w-sm w-full text-center">
-        <Link href="/chat" className="text-xs font-bold tracking-widest text-zinc-500 uppercase mb-8 inline-block">
+        <Link href="/" className="text-xs font-bold tracking-widest text-zinc-500 uppercase mb-8 inline-block">
           KALIGEO
         </Link>
 
@@ -35,7 +35,7 @@ export default function RecoverPage() {
               Если на этот email есть завершённые аудиты — вы получите ссылки в течение минуты.
             </p>
             <Link
-              href="/chat"
+              href="/"
               className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors"
             >
               ← Назад
@@ -65,7 +65,7 @@ export default function RecoverPage() {
               </button>
             </form>
             <Link
-              href="/chat"
+              href="/"
               className="block mt-6 text-sm text-zinc-600 hover:text-zinc-400 transition-colors"
             >
               ← Назад

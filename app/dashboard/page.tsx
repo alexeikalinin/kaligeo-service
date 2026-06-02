@@ -98,7 +98,7 @@ async function DashboardContent({ nicheFilter }: { nicheFilter: string }) {
           >
             <p className="text-sm">Аудитов пока нет</p>
             <Link
-              href="/chat"
+              href="/pricing"
               className="mt-4 inline-block text-sm font-medium transition-colors"
               style={{ color: "var(--ink)" }}
             >

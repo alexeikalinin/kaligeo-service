@@ -9,6 +9,14 @@ function getResend() {
 const FROM = () => process.env.FROM_EMAIL ?? "noreply@kaligeo.com"
 const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://kaligeo.ru"
 
+function auditLink(appUrl: string, emailNum: number) {
+  return `${appUrl}/pricing?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email${emailNum}`
+}
+
+function unsubLink(appUrl: string, scanId: string) {
+  return `${appUrl}/api/freemium/unsubscribe?scanId=${scanId}`
+}
+
 export interface FreemiumSequencePayload {
   scanId: string
   email: string
@@ -24,76 +32,71 @@ export const freemiumSequence = task({
     if (!scan) return
 
     const { companyName, previewScore, niche } = scan
-    const previewUrl = `${APP_URL()}/preview/${scanId}`
-    const auditUrl = `${APP_URL()}/chat?url=${encodeURIComponent(scan.websiteUrl)}`
+    const appUrl = APP_URL()
+    const previewUrl = `${appUrl}/preview/${scanId}?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email1`
+    const unsub = unsubLink(appUrl, scanId)
     const scoreEmoji = previewScore >= 60 ? "🟢" : previewScore >= 30 ? "🟡" : "🔴"
 
-    // Реальные данные платформ и конкурентов из FreemiumScan
     type PS = { score: number; mentionCount: number; totalQueries: number }
     const platformScores = (scan.platformScores ?? {}) as Record<string, PS>
-    const suggestedCompetitors = (scan as { suggestedCompetitors?: string[] }).suggestedCompetitors ?? []
 
-    // Email 1 — immediate: score result с данными платформ
+    // Email 1 — сразу: результат скана
     await getResend().emails.send({
       from: FROM(),
       to: email,
       subject: `${scoreEmoji} KaliGEO: ${companyName} — score ${previewScore}/100 · ${previewScore < 30 ? "AI вас почти не видит" : "есть потенциал роста"}`,
-      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl, platformScores }),
+      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(appUrl, 1), unsub, platformScores }),
     })
 
-    // Email 2 — +24h: educational
+    // Email 2 — +24ч: образовательный
     await wait.for({ hours: 24 })
-    const scan2 = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
-    if (!scan2?.emailCaptured) return // unsubscribed or deleted
+    if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
       from: FROM(),
       to: email,
       subject: `3 причины, почему ChatGPT не знает про ${companyName}`,
-      html: emailTemplate2({ companyName, niche, auditUrl }),
+      html: emailTemplate2({ companyName, niche, auditUrl: auditLink(appUrl, 2), unsub }),
     })
 
-    // Email 3 — +72h: competitor angle с реальными конкурентами
+    // Email 3 — +72ч: конкуренты
     await wait.for({ hours: 72 })
     const scan3 = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
     if (!scan3?.emailCaptured) return
     const competitors3 = (scan3 as { suggestedCompetitors?: string[] }).suggestedCompetitors ?? []
-    const subject3 = competitors3.length > 0
-      ? `${competitors3[0]} уже в топе AI-ответов. Как обогнать?`
-      : `Конкурент в вашей нише уже в топе AI-ответов`
     await getResend().emails.send({
       from: FROM(),
       to: email,
-      subject: subject3,
-      html: emailTemplate3({ companyName, niche, previewScore, auditUrl, suggestedCompetitors: competitors3 }),
+      subject: competitors3.length > 0
+        ? `${competitors3[0]} уже в топе AI-ответов. Как обогнать?`
+        : `Конкурент в вашей нише уже в топе AI-ответов`,
+      html: emailTemplate3({ companyName, niche, previewScore, auditUrl: auditLink(appUrl, 3), unsub, suggestedCompetitors: competitors3 }),
     })
 
-    // Email 4 — +48h: urgency
+    // Email 4 — +48ч (6й день): urgency
     await wait.for({ hours: 48 })
-    const scan4 = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
-    if (!scan4?.emailCaptured) return
+    if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
       from: FROM(),
       to: email,
       subject: `⏳ Последний шанс: данные по ${companyName} удалятся через 48ч`,
-      html: emailTemplate4({ companyName, previewScore, auditUrl }),
+      html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(appUrl, 4), unsub }),
     })
 
-    // Email F-5 — +8 дней (итого ~14 дней): re-engagement
+    // Email 5 — +8 дней (14й день): re-engagement
     await wait.for({ days: 8 })
-    const scan5 = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
-    if (!scan5?.emailCaptured) return
+    if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
       from: FROM(),
       to: email,
       subject: `${companyName}: как меняется AI-видимость в вашей нише`,
-      html: emailTemplate5({ companyName, niche, auditUrl }),
+      html: emailTemplate5({ companyName, niche, auditUrl: auditLink(appUrl, 5), unsub }),
     })
   },
 })
 
-// ── Email templates ──────────────────────────────────────────────────────────
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-function emailWrapper(content: string) {
+function emailWrapper(content: string, unsub: string) {
   return `<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:20px;color:#1a1a1a;">
   <div style="text-align:center;padding:24px 0 16px;">
     <span style="font-family:monospace;font-weight:700;font-size:14px;letter-spacing:0.1em;text-transform:uppercase;">KaliGEO</span>
@@ -102,29 +105,29 @@ function emailWrapper(content: string) {
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;">
   <p style="color:#9ca3af;font-size:11px;text-align:center;">
     KaliGEO · AI Search Visibility<br>
-    Чтобы отписаться — ответьте на это письмо с темой "Отписаться"
+    <a href="${unsub}" style="color:#9ca3af;text-decoration:underline;">Отписаться от рассылки</a>
   </p>
 </body></html>`
 }
 
+// ── Email templates ───────────────────────────────────────────────────────────
+
 function emailTemplate1({
-  companyName, previewScore, previewUrl, auditUrl, platformScores,
+  companyName, previewScore, previewUrl, auditUrl, unsub, platformScores,
 }: {
   companyName: string
   previewScore: number
   previewUrl: string
   auditUrl: string
+  unsub: string
   platformScores: Record<string, { score: number; mentionCount: number; totalQueries: number }>
 }) {
   const color = previewScore >= 60 ? "#22c55e" : previewScore >= 30 ? "#f59e0b" : "#ef4444"
   const verdict =
-    previewScore < 20
-      ? "Критически низкая — AI игнорирует ваш бренд"
-      : previewScore < 30
-      ? "Низкая — конкуренты значительно опережают вас"
-      : previewScore < 60
-      ? "Средняя — есть серьёзный потенциал для роста"
-      : "Хорошая — но конкуренты могут опережать"
+    previewScore < 20  ? "Критически низкая — AI игнорирует ваш бренд"
+    : previewScore < 30 ? "Низкая — конкуренты значительно опережают вас"
+    : previewScore < 60 ? "Средняя — есть серьёзный потенциал для роста"
+    : "Хорошая — но конкуренты могут опережать"
 
   const platformRows = Object.entries(platformScores).map(([name, s]) => {
     const pct = s.totalQueries > 0 ? Math.round((s.mentionCount / s.totalQueries) * 100) : 0
@@ -168,19 +171,24 @@ function emailTemplate1({
     </a>
   </div>
 
-  <p style="font-size:13px;color:#9ca3af;text-align:center;margin:0">
+  <p style="font-size:13px;color:#9ca3af;text-align:center;margin:0 0 16px">
     Завтра пришлём: 3 причины почему AI вас не упоминает — и что с этим делать
-  </p>`)
+  </p>
+
+  <div style="text-align:center;">
+    <a href="${auditUrl}" style="font-size:13px;color:#6b7280;text-decoration:underline;">
+      Сразу к тарифам →
+    </a>
+  </div>`, unsub)
 }
 
 function emailTemplate2({
-  companyName,
-  niche,
-  auditUrl,
+  companyName, niche, auditUrl, unsub,
 }: {
   companyName: string
   niche: string
   auditUrl: string
+  unsub: string
 }) {
   return emailWrapper(`
   <h2 style="font-size:20px;font-weight:700;margin:0 0 16px;">3 причины, почему ChatGPT не знает про ${companyName}</h2>
@@ -208,16 +216,17 @@ function emailTemplate2({
     <a href="${auditUrl}" style="display:inline-block;background:#0f172a;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
       Получить полный аудит →
     </a>
-  </div>`)
+  </div>`, unsub)
 }
 
 function emailTemplate3({
-  companyName, niche, previewScore, auditUrl, suggestedCompetitors,
+  companyName, niche, previewScore, auditUrl, unsub, suggestedCompetitors,
 }: {
   companyName: string
   niche: string
   previewScore: number
   auditUrl: string
+  unsub: string
   suggestedCompetitors: string[]
 }) {
   const competitorList = suggestedCompetitors.slice(0, 3)
@@ -258,17 +267,48 @@ function emailTemplate3({
     <a href="${auditUrl}" style="display:inline-block;background:#0f172a;color:white;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
       Обогнать конкурентов →
     </a>
-  </div>`)
+  </div>`, unsub)
+}
+
+function emailTemplate4({
+  companyName, previewScore, auditUrl, unsub,
+}: {
+  companyName: string
+  previewScore: number
+  auditUrl: string
+  unsub: string
+}) {
+  return emailWrapper(`
+  <h2 style="font-size:20px;font-weight:700;margin:0 0 4px;">Последнее письмо про ${companyName}</h2>
+  <p style="color:#9ca3af;font-size:13px;margin:0 0 20px;">Ваши данные скоро удалятся</p>
+
+  <div style="background:#fef2f2;border-radius:8px;padding:20px;margin:16px 0;text-align:center;">
+    <p style="margin:0;font-size:14px;color:#dc2626;font-weight:600;">⏳ Данные скана удалятся через 48 часов</p>
+    <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">AI Score ${previewScore}/100 и список проблем будут недоступны</p>
+  </div>
+
+  <p style="font-size:14px;color:#374151;line-height:1.6;">
+    Если хотите получить полный отчёт с анализом конкурентов, конкретными рекомендациями и 30/60/90-дневным планом — это последний шанс.
+  </p>
+
+  <div style="text-align:center;margin:24px 0;">
+    <a href="${auditUrl}" style="display:inline-block;background:#dc2626;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;">
+      Запустить аудит сейчас →
+    </a>
+  </div>
+
+  <p style="font-size:12px;color:#9ca3af;text-align:center;">
+    Если вас не интересует AI-видимость прямо сейчас — просто проигнорируйте это письмо.
+  </p>`, unsub)
 }
 
 function emailTemplate5({
-  companyName,
-  niche,
-  auditUrl,
+  companyName, niche, auditUrl, unsub,
 }: {
   companyName: string
   niche: string
   auditUrl: string
+  unsub: string
 }) {
   return emailWrapper(`
   <p style="margin:0 0 6px;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;font-family:monospace">День 14 · Обновление</p>
@@ -304,39 +344,5 @@ function emailTemplate5({
 
   <p style="font-size:12px;color:#9ca3af;text-align:center;margin:16px 0 0">
     Это последнее письмо в этой серии. Если передумаете — всегда рады видеть вас на kaligeo.ru
-  </p>`)
-}
-
-function emailTemplate4({
-  companyName,
-  previewScore,
-  auditUrl,
-}: {
-  companyName: string
-  previewScore: number
-  auditUrl: string
-}) {
-  return emailWrapper(`
-  <h2 style="font-size:20px;font-weight:700;margin:0 0 4px;">Последнее письмо про ${companyName}</h2>
-  <p style="color:#9ca3af;font-size:13px;margin:0 0 20px;">Ваши данные скоро удалятся</p>
-
-  <div style="background:#fef2f2;border-radius:8px;padding:20px;margin:16px 0;text-align:center;">
-    <p style="margin:0;font-size:14px;color:#dc2626;font-weight:600;">⏳ Данные скана удалятся через 48 часов</p>
-    <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">AI Score ${previewScore}/100 и список проблем будут недоступны</p>
-  </div>
-
-  <p style="font-size:14px;color:#374151;line-height:1.6;">
-    Если хотите получить полный отчёт с анализом конкурентов, конкретными рекомендациями и 30/60/90-дневным планом — это последний шанс.
-  </p>
-
-  <div style="text-align:center;margin:24px 0;">
-    <a href="${auditUrl}" style="display:inline-block;background:#dc2626;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:700;font-size:16px;">
-      Запустить аудит сейчас →
-    </a>
-  </div>
-
-  <p style="font-size:12px;color:#9ca3af;text-align:center;">
-    Если вас не интересует AI-видимость прямо сейчас — просто проигнорируйте это письмо.
-    Мы не будем присылать больше сообщений по этой теме.
-  </p>`)
+  </p>`, unsub)
 }

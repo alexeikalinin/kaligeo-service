@@ -1,16 +1,50 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 type State = "idle" | "loading" | "success" | "error"
 
 const PDF_BLOB_URL = process.env.NEXT_PUBLIC_RESEARCH_PDF_URL ?? ""
 
 export default function Research2026Form() {
+  const router = useRouter()
   const [email, setEmail] = useState("")
   const [company, setCompany] = useState("")
   const [state, setState] = useState<State>("idle")
   const [errorMsg, setErrorMsg] = useState("")
+
+  // Freemium scan state (shown in success block)
+  const [scanUrl, setScanUrl] = useState("")
+  const [scanLoading, setScanLoading] = useState(false)
+  const [scanError, setScanError] = useState("")
+
+  async function handleScan(e: React.FormEvent) {
+    e.preventDefault()
+    const trimmed = scanUrl.trim()
+    if (!trimmed) return
+    const normalized = trimmed.startsWith("http") ? trimmed : `https://${trimmed}`
+    setScanLoading(true)
+    setScanError("")
+    try {
+      const res = await fetch("/api/freemium/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ websiteUrl: normalized, source: "research-2026" }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({})) as { error?: string }
+        setScanError(data.error ?? "Ошибка анализа")
+        return
+      }
+      const { scanId } = await res.json() as { scanId: string }
+      router.push(`/preview/${scanId}`)
+    } catch {
+      setScanError("Не удалось подключиться. Проверьте интернет.")
+    } finally {
+      setScanLoading(false)
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -58,59 +92,103 @@ export default function Research2026Form() {
           background: "var(--bone-2)",
           border: "1px solid var(--rule)",
           borderRadius: "var(--radius-lg)",
-          padding: "32px 24px",
-          textAlign: "center",
+          padding: "28px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "20px",
         }}
       >
-        <div
-          style={{
-            width: "48px",
-            height: "48px",
-            background: "var(--accent)",
-            borderRadius: "50%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 16px",
-            fontSize: "22px",
-          }}
-        >
-          ✓
-        </div>
-        <p
-          style={{
-            fontFamily: "var(--font-serif)",
-            fontSize: "20px",
-            fontWeight: 400,
-            margin: "0 0 10px",
-            color: "var(--ink)",
-          }}
-        >
-          PDF отправлен на почту
-        </p>
-        <p style={{ fontSize: "14px", color: "var(--ink-3)", margin: "0 0 24px", lineHeight: 1.6 }}>
-          Проверьте inbox — письмо с PDF придёт в течение минуты.
-          Если не видите — проверьте папку «Спам».
-        </p>
-        {PDF_BLOB_URL && (
-          <a
-            href={PDF_BLOB_URL}
-            target="_blank"
-            rel="noopener noreferrer"
+        {/* PDF confirmation */}
+        <div style={{ display: "flex", alignItems: "flex-start", gap: "14px" }}>
+          <div
             style={{
-              display: "inline-block",
+              width: "36px",
+              height: "36px",
               background: "var(--accent)",
-              color: "var(--accent-ink)",
-              borderRadius: "var(--radius-md)",
-              padding: "11px 22px",
-              fontSize: "14px",
-              fontWeight: 700,
-              textDecoration: "none",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "16px",
+              flexShrink: 0,
             }}
           >
-            Скачать сразу →
-          </a>
-        )}
+            ✓
+          </div>
+          <div>
+            <p style={{ fontFamily: "var(--font-serif)", fontSize: "18px", fontWeight: 400, margin: "0 0 6px", color: "var(--ink)" }}>
+              PDF отправлен на почту
+            </p>
+            <p style={{ fontSize: "13px", color: "var(--ink-3)", margin: 0, lineHeight: 1.5 }}>
+              Письмо придёт в течение минуты. Если нет — проверьте «Спам».
+            </p>
+            {PDF_BLOB_URL && (
+              <a
+                href={PDF_BLOB_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ fontSize: "13px", color: "var(--ink)", display: "inline-block", marginTop: "8px", textDecoration: "underline", textUnderlineOffset: "3px" }}
+              >
+                Скачать сразу →
+              </a>
+            )}
+          </div>
+        </div>
+
+        {/* Divider */}
+        <div style={{ borderTop: "1px solid var(--rule)" }} />
+
+        {/* Freemium scan CTA */}
+        <div>
+          <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--ink)", margin: "0 0 4px" }}>
+            Пока PDF грузится — проверьте свою компанию
+          </p>
+          <p style={{ fontSize: "13px", color: "var(--ink-3)", margin: "0 0 14px", lineHeight: 1.5 }}>
+            Введите URL сайта и узнайте свой AI Score прямо сейчас. Бесплатно, 2 минуты.
+          </p>
+          <form onSubmit={handleScan} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+            <input
+              type="text"
+              value={scanUrl}
+              onChange={(e) => setScanUrl(e.target.value)}
+              placeholder="company.ru"
+              disabled={scanLoading}
+              style={{
+                width: "100%",
+                background: "var(--bone)",
+                border: "1px solid var(--rule)",
+                color: "var(--ink)",
+                borderRadius: "var(--radius-md)",
+                padding: "11px 14px",
+                fontSize: "14px",
+                outline: "none",
+                boxSizing: "border-box",
+                fontFamily: "inherit",
+                opacity: scanLoading ? 0.6 : 1,
+              }}
+            />
+            <button
+              type="submit"
+              disabled={scanLoading || !scanUrl.trim()}
+              style={{
+                background: scanLoading ? "var(--bone)" : "var(--accent)",
+                color: scanLoading ? "var(--ink-3)" : "var(--accent-ink)",
+                border: "none",
+                borderRadius: "var(--radius-md)",
+                padding: "11px",
+                fontSize: "14px",
+                fontWeight: 700,
+                cursor: scanLoading || !scanUrl.trim() ? "not-allowed" : "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {scanLoading ? "Анализирую..." : "Узнать AI Score →"}
+            </button>
+            {scanError && (
+              <p style={{ fontSize: "12px", color: "var(--danger)", margin: 0 }}>{scanError}</p>
+            )}
+          </form>
+        </div>
       </div>
     )
   }

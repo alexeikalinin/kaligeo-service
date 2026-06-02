@@ -73,9 +73,9 @@ describe("calculateVisibilityScores", () => {
 
     const scores = calculateVisibilityScores(results)
     const s = scores["CHATGPT"]
-    // citationRate=0, positiveRate=0, positionNorm=50 (neutral), sourceRate=0
-    // score = 0*40 + 0*25 + (50/100)*20 + 0*15 = 10
-    expect(s.score).toBe(10)
+    // citationRate=0, positiveRate=0, positionNorm=0 (veto: no mentions), sourceRate=0
+    // score = 0*40 + 0*25 + (0/100)*20 + 0*15 = 0
+    expect(s.score).toBe(0)
     expect(s.mentionCount).toBe(0)
   })
 

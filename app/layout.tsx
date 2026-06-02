@@ -44,7 +44,15 @@ export default function RootLayout({
       className={`h-full ${instrumentSerif.variable} ${interTight.variable} ${jetbrainsMono.variable}`}
     >
       <head>
-        {/* Yandex.Metrika counter — inline in <head> so it appears in SSR HTML */}
+        {/* Google Tag Manager */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+          })(window,document,'script','dataLayer','GTM-WRTHCHVF');
+        `}} />
+        {/* Yandex.Metrika counter */}
         <script dangerouslySetInnerHTML={{ __html: `
           (function(m,e,t,r,i,k,a){
             m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
@@ -56,6 +64,14 @@ export default function RootLayout({
         `}} />
       </head>
       <body className="min-h-full flex flex-col">
+        {/* GTM noscript fallback */}
+        <noscript>
+          <iframe
+            src="https://www.googletagmanager.com/ns.html?id=GTM-WRTHCHVF"
+            height="0" width="0"
+            style={{display:"none",visibility:"hidden"}}
+          />
+        </noscript>
         <noscript>
           <div>
             <img src="https://mc.yandex.ru/watch/109349238" style={{position:"absolute",left:"-9999px"}} alt="" />

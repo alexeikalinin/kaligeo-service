@@ -50,7 +50,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </nav>
         <div className="ml-auto flex items-center gap-4">
           <Link
-            href="/chat"
+            href="/pricing"
             className="text-xs px-3 py-1.5 rounded font-medium transition-colors"
             style={{
               background: "var(--accent)",

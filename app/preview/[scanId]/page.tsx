@@ -86,7 +86,7 @@ export default async function PreviewPage({ params }: PageProps) {
       >
         <span className="font-mono text-xs font-bold tracking-widest uppercase">KaliGEO</span>
         <Link
-          href="/chat"
+          href="/pricing"
           className="text-xs px-3 py-1.5 rounded font-medium"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >
@@ -178,7 +178,7 @@ export default async function PreviewPage({ params }: PageProps) {
                 ChatGPT · Claude · Gemini · Perplexity · DeepSeek · YandexGPT · GigaChat · Алиса · Grok
               </p>
               <Link
-                href={`/chat?url=${encodeURIComponent(scan.websiteUrl)}&source=preview`}
+                href={`/pricing`}
                 className="px-4 py-2 rounded font-medium text-sm"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
@@ -250,16 +250,16 @@ export default async function PreviewPage({ params }: PageProps) {
         {/* CTA */}
         <div className="rounded-xl p-6 text-center" style={{ border: "1px solid var(--rule)" }}>
           <p className="text-lg font-bold mb-2" style={{ fontFamily: "var(--font-serif)" }}>
-            Получите полный аудит бесплатно
+            Попробуйте первый аудит бесплатно
           </p>
           <p className="text-sm mb-5" style={{ color: "var(--ink-3)" }}>
-            1 BASIC-аудит бесплатно: 3 платформы · 15 запросов · конкретные слабые места
+            Пробный BASIC: 3 платформы · 15 запросов · слабые места вашего сайта
           </p>
           <TrialForm />
           <p className="text-xs mt-4" style={{ color: "var(--ink-3)" }}>
             или{" "}
             <Link href="/pricing" style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
-              выберите платный тариф →
+              выберите тариф →
             </Link>
           </p>
         </div>

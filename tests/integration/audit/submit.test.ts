@@ -8,13 +8,15 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
-const mockClientUpsert = vi.fn()
-const mockJobCreate    = vi.fn()
+const mockClientUpsert       = vi.fn()
+const mockJobCreate          = vi.fn()
+const mockBrandProfileFind   = vi.fn().mockResolvedValue(null)
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
-    client:   { upsert: (...a: unknown[]) => mockClientUpsert(...a) },
-    auditJob: { create: (...a: unknown[]) => mockJobCreate(...a) },
+    client:       { upsert: (...a: unknown[]) => mockClientUpsert(...a) },
+    auditJob:     { create: (...a: unknown[]) => mockJobCreate(...a) },
+    brandProfile: { findFirst: (...a: unknown[]) => mockBrandProfileFind(...a) },
   },
 }))
 

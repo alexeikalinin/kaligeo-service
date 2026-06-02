@@ -114,6 +114,19 @@ export async function GET(
     <p style="margin:0;color:#374151;line-height:1.7">${actionPlan.strategy}</p>
   </div>` : ""}
 
+  ${(actionPlan.quickWins ?? []).length > 0 ? `
+  <div class="card">
+    <h2 style="margin:0 0 16px;font-size:18px">⚡ Быстрые действия</h2>
+    ${(actionPlan.quickWins ?? []).map((w) => `
+      <div style="padding:14px;border-radius:8px;border:1px solid #e5e7eb;margin-bottom:10px">
+        <div style="font-weight:600;color:#111827;margin-bottom:4px">${w.action}</div>
+        <p style="margin:0 0 8px;font-size:13px;color:#6b7280">${w.howTo}</p>
+        <span style="font-size:11px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:4px;padding:2px 7px;color:#15803d">
+          ${w.timeEstimate} · влияние: ${w.impact}
+        </span>
+      </div>`).join("")}
+  </div>` : ""}
+
   ${(actionPlan["30d"] ?? []).length > 0 ? `
   <div class="card">
     <h2 style="margin:0 0 16px;font-size:18px">План роста — 30 дней</h2>

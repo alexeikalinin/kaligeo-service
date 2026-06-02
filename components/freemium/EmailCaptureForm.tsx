@@ -63,9 +63,9 @@ export function EmailCaptureForm({ scanId }: Props) {
       className="rounded-xl p-5 mb-8"
       style={{ border: "1px solid var(--rule)", background: "var(--bone-2)" }}
     >
-      <p className="t-eyebrow mb-1">Получите детальный отчёт на email</p>
+      <p className="t-eyebrow mb-1">Получите результаты скана на email</p>
       <p className="text-sm mb-4" style={{ color: "var(--ink-3)" }}>
-        Бесплатно · Без спама · Только ваш Score и рекомендации
+        Score, данные ChatGPT и советы по улучшению — сразу на почту
       </p>
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input
@@ -89,7 +89,7 @@ export function EmailCaptureForm({ scanId }: Props) {
           className="px-4 py-2.5 rounded-lg font-semibold text-sm disabled:opacity-50 transition-opacity hover:opacity-85 whitespace-nowrap"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >
-          {loading ? "Отправка..." : "Получить отчёт →"}
+          {loading ? "Отправка..." : "Получить результаты →"}
         </button>
       </form>
       {error && (

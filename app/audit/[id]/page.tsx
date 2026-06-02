@@ -123,7 +123,7 @@ export default function AuditStatusPage() {
               {data.errorMessage ?? "Произошла ошибка при выполнении аудита"}
             </p>
             <button
-              onClick={() => router.push("/chat")}
+              onClick={() => router.push("/pricing")}
               className="w-full py-2 bg-zinc-700 text-zinc-100 rounded-lg text-sm hover:bg-zinc-600 transition-colors"
             >
               Попробовать снова

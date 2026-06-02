@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma"
 import { runRiskAgent } from "@/lib/agents/risk-agent"
 import { getActivePlatforms, getInactivePlatforms } from "@/lib/ai-clients"
+import { PlatformHealth } from "@/components/admin/PlatformHealth"
 
 // Дневные лимиты на запросы к каждой платформе.
 // Настраиваются через env, иначе используются консервативные дефолты.
@@ -246,10 +247,16 @@ export default async function UsagePage() {
         })}
       </div>
 
-      <p className="mt-6 text-xs text-zinc-600">
+      <p className="mt-6 mb-10 text-xs text-zinc-600">
         Лимиты настраиваются через env: LIMIT_CHATGPT, LIMIT_CLAUDE, LIMIT_GEMINI и т.д.
         Счётчики сбрасываются по UTC 00:00. Данные берутся напрямую из БД (таблица QueryResult).
       </p>
+
+      {/* Live API health check */}
+      <div className="mb-2">
+        <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Здоровье API-ключей</p>
+        <PlatformHealth />
+      </div>
     </div>
   )
 }

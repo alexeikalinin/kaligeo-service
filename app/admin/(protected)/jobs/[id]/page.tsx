@@ -1,8 +1,34 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
+
+function DeleteButton({ jobId }: { jobId: string }) {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+
+  async function handleDelete() {
+    if (!confirm("Удалить эту заявку? Действие необратимо.")) return
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/admin/jobs/${jobId}`, { method: "DELETE" })
+      if (res.ok) router.push("/admin")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDelete}
+      disabled={loading}
+      className="px-4 py-2 text-xs text-red-500 border border-red-900/40 rounded-lg hover:bg-red-900/20 hover:text-red-400 transition-colors disabled:opacity-50"
+    >
+      {loading ? "Удаление..." : "Удалить заявку"}
+    </button>
+  )
+}
 
 function RestartButton({ jobId }: { jobId: string }) {
   const [loading, setLoading] = useState(false)
@@ -102,6 +128,13 @@ export default function JobDetailPage() {
 
   return (
     <div className="max-w-2xl">
+      <div className="flex items-center justify-between mb-6">
+        <Link href="/admin" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+          ← Заявки
+        </Link>
+        <DeleteButton jobId={id} />
+      </div>
+
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">{data.companyName}</h1>
