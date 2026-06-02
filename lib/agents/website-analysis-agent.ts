@@ -114,7 +114,7 @@ ${pageContent}
 }`
 
   const { text } = await generateText({
-    model: google("gemini-2.0-flash"),
+    model: google("gemini-2.0-flash-001"),
     prompt,
     maxOutputTokens: 1500,
   })
