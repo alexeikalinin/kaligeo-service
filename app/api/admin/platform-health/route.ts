@@ -85,7 +85,7 @@ async function checkPerplexity(): Promise<Omit<PlatformHealthResult, "key" | "na
       body: JSON.stringify({
         model: "sonar",
         messages: [{ role: "user", content: "ping" }],
-        max_tokens: 1,
+        max_tokens: 16,
       }),
     }))
     if (res.ok) return { status: "ok" }
