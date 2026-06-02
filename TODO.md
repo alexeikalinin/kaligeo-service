@@ -1,6 +1,6 @@
 # KaliGEO — Backlog
 
-> Обновлён: 2026-05-29. Актуальный статус после двух сессий.
+> Обновлён: 2026-06-02. Все 8 платформ работают, ключи обновлены, готовимся к первым аудитам.
 
 ---
 
@@ -42,8 +42,8 @@
 - /pricing, /tools/domain-check, /research-2026 (PDF лид-магнит)
 
 **Env vars (Vercel production) — всё настроено ✅**
-- OPENAI, ANTHROPIC, GOOGLE_AI, DEEPSEEK, YANDEXGPT, PERPLEXITY, GIGACHAT — все ключи
-- GROK_API_KEY (добавлен 3 дня назад)
+- OPENAI, ANTHROPIC, GOOGLE_AI, DEEPSEEK, YANDEXGPT, PERPLEXITY, GROK — все ключи обновлены 2026-06-02 ✅
+- GIGACHAT — удалён (нет аккаунта)
 - DATABASE_URL + DIRECT_URL (Supabase)
 - BLOB_READ_WRITE_TOKEN, UPSTASH_REDIS, RESEND_API_KEY
 - TRIGGER_SECRET_KEY, ADMIN_SESSION_TOKEN, CLIENT_SESSION_SECRET
@@ -65,10 +65,9 @@
 
 ## 🟠 P1 — Важно для продукта
 
-### 2. GigaChat — протестировать реальную работу
-- Ключи (`GIGACHAT_CLIENT_ID`, `GIGACHAT_CLIENT_SECRET`) уже в Vercel с 11-го дня
-- Нужно: запустить тестовый аудит с GigaChat и проверить что ответы приходят
-- Если не работает — отладить TLS/OAuth (было `NODE_TLS_REJECT_UNAUTHORIZED=0`)
+### 2. GigaChat — подключить когда появится аккаунт Sber
+- Аккаунта нет, ключи удалены из Vercel
+- Когда будет: добавить `GIGACHAT_CLIENT_ID` + `GIGACHAT_CLIENT_SECRET`, OAuth через TLS-bypass уже реализован
 
 ### 3. PDF лид-магнит — загрузить файл в Blob
 - Страница `/research-2026` уже есть (Research2026Form.tsx)
@@ -116,8 +115,28 @@
 
 ---
 
+## 🔵 P2 — Добавлено 2026-06-02
+
+### 8. Email-кампании — кнопка запуска из админки
+- Страница `/admin/leads` показывает кампании, данные есть
+- Нужно: кнопка «Запустить кампанию» → `POST /api/leads/campaign/start`
+- Логика старта уже есть в `app/api/leads/campaign/start/route.ts`
+
+### 9. Онбординг после оплаты
+- После `paidAt` нет welcome-письма с инструкцией «что дальше»
+- Нужно: письмо с ссылкой на отчёт + как читать результаты + следующие шаги
+
+### 10. SEO мета-теги для app.kaligeo.ru
+- `app/layout.tsx` — базовые теги есть, но страницы отчётов/дашборда без og:image
+- Нужно: `metadata` на `/pricing`, `/report/demo`, `/tools/domain-check`
+
+### 11. Алерты мониторинга — логика отправки
+- `hasMonitoringAlerts: true` в gates для MONITOR_PRO/AGENT
+- Нужно: задача Trigger.dev, которая сравнивает score с прошлым аудитом и шлёт письмо при падении > 10 пунктов
+
+---
+
 ## ❓ Открытые вопросы
 
 1. **Stripe домен** — отдельный kaligeo.com или мультиязычный на текущем?
 2. **Trial CTA** — показывать TrialForm на лендинге или только в ЛК?
-3. **GigaChat** — работают ли ключи в продакшне или только в sandbox?
