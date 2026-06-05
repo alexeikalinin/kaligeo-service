@@ -232,7 +232,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     // ── Step 7: Email delivery ────────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "DELIVERING" } })
 
-    const reportUrl = `${process.env.NEXT_PUBLIC_APP_URL}/report/${jobId}?token=${job.reportToken}`
+    const reportUrl = `https://app.kaligeo.ru/report/${jobId}?token=${job.reportToken}`
 
     if (job.baselineJobId) {
       const baselineReport = await prisma.report.findUnique({ where: { jobId: job.baselineJobId } })
