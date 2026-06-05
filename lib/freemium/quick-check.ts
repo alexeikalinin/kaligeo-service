@@ -32,15 +32,16 @@ const FREEMIUM_PLATFORMS = ["CHATGPT", "GEMINI", "YANDEXGPT"]
 // Timeout per platform (ms) — freemium must respond within ~25s total
 const PLATFORM_TIMEOUT_MS = 18_000
 
-function buildQuickQueries(companyName: string, niche: string, keywords: string[]): string[] {
+function buildQuickQueries(companyName: string, niche: string, keywords: string[], websiteUrl: string): string[] {
   const topKeyword = keywords[0] ?? niche.split(" ").slice(0, 3).join(" ")
+  const hostname = new URL(websiteUrl).hostname.replace(/^www\./, "")
   return [
-    // Category query — do AI systems know this brand exists?
-    `Посоветуй лучшие компании для ${topKeyword}. Назови топ-3 варианта.`,
-    // Problem query — are they mentioned as a solution?
-    `Ищу надёжного поставщика в сфере ${niche}. Какие компании рекомендуешь?`,
-    // Brand direct query — what does AI say about this brand?
-    `Расскажи что ты знаешь о компании ${companyName}. Чем они занимаются?`,
+    // Direct brand query — what does AI know about this domain/company?
+    `Что ты знаешь о компании ${companyName} (сайт ${hostname})? Чем они занимаются, какие услуги предлагают?`,
+    // Category query — is this brand mentioned as a solution?
+    `Посоветуй лучшие компании для ${topKeyword}. Назови конкретные варианты.`,
+    // Problem query — is this brand mentioned in the niche?
+    `Ищу надёжного исполнителя в сфере ${niche}. Какие компании порекомендуешь?`,
   ]
 }
 
@@ -132,7 +133,7 @@ export async function runFreemiumQuickCheck(
     }
   }
 
-  const queries = buildQuickQueries(companyName, niche, keywords)
+  const queries = buildQuickQueries(companyName, niche, keywords, websiteUrl)
 
   // Run all platforms in parallel — faster total time
   const platformResults = await Promise.allSettled(

@@ -16,6 +16,7 @@
 - [[03-Monetization/Lead Magnets & Ad Copy]] — тексты писем, Яндекс.Директ, VK Ads, Look-alike
 - [[03-Monetization/Advertising Playbook]] — техтребования платформ, готовые объявления, автоматизация заявок
 - [[03-Monetization/Sales Strategy — Мнение и Синтез]] — ⭐ единый документ: freemium vs оплата, воронка, конверсия
+- [[03-Monetization/Traffic & Funnel Strategy]] — ⭐ воронки по каждому источнику трафика, приоритеты конверсии
 
 ### Технический
 - [[02-Technical/Architecture]] — компоненты и агенты

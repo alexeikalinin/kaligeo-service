@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const blob = await put(
     "research/geo-russia-2026.pdf",
     Buffer.from(buffer),
-    { access: "public", contentType: "application/pdf", addRandomSuffix: false }
+    { access: "public", contentType: "application/pdf", addRandomSuffix: false, allowOverwrite: true }
   )
   return NextResponse.json({ url: blob.url })
 }

@@ -1,6 +1,7 @@
 import { task, tasks } from "@trigger.dev/sdk/v3"
 import { postAuditSequence } from "./post-audit-sequence"
 import { prisma } from "../lib/prisma"
+import { runWebsiteAnalysisAgent } from "../lib/agents/website-analysis-agent"
 import { executeQueriesOnPlatform } from "./steps/execute-queries"
 import { generateQueries } from "./steps/generate-queries"
 import { renderAndUploadPdf } from "./steps/render-pdf"
@@ -58,6 +59,36 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     const baseTier = getBaseTier(tier)   // MONITOR_* → BASIC/STANDARD/ADVANCED
     const config = getTierConfig(tier)
     const isAdvanced = baseTier === "ADVANCED"
+
+    // ── Step 0: Website analysis — определяем нишу и компанию по URL ─────
+    if (job.websiteUrl) {
+      try {
+        const analysis = await runWebsiteAnalysisAgent(job.websiteUrl)
+        const updates: Record<string, unknown> = {}
+        // Обновляем нишу если она пустая или дефолтная
+        if (analysis.niche && (!job.niche || job.niche === "Общее")) {
+          updates.niche = analysis.niche
+          job.niche = analysis.niche
+        }
+        // Обновляем имя компании если оно выглядит как тест/мусор (< 4 символов или нет пробелов и букв)
+        const nameIsJunk = !job.companyName || job.companyName.length < 3 ||
+          /^[а-яёa-z]{2,6}$/i.test(job.companyName.trim()) && !/\s/.test(job.companyName)
+        if (analysis.companyName && nameIsJunk) {
+          updates.companyName = analysis.companyName
+          job.companyName = analysis.companyName
+        }
+        // Добавляем конкурентов если не заданы
+        if (analysis.suggestedCompetitors?.length && job.competitors.length === 0) {
+          updates.competitors = analysis.suggestedCompetitors.slice(0, 5)
+          job.competitors = updates.competitors as string[]
+        }
+        if (Object.keys(updates).length > 0) {
+          await prisma.auditJob.update({ where: { id: jobId }, data: updates })
+        }
+      } catch (e) {
+        console.error("[pipeline] Website analysis failed, using submitted data:", e)
+      }
+    }
 
     // ── Step 1: Generate queries ──────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_QUERIES" } })

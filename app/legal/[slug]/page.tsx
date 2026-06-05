@@ -71,13 +71,11 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
         <h2>4. Передача данных третьим лицам</h2>
         <p>Данные передаются только следующим обработчикам, с которыми заключены соответствующие договоры:</p>
         <ul>
-          <li><strong>Resend</strong> (resend.com) — доставка транзакционных email-сообщений.</li>
-          <li><strong>ЗАО «Альфа-Банк»</strong> — процессинг платежей.</li>
-          <li><strong>ipapi.co</strong> — определение страны по IP (передаётся только IP, без иных данных).</li>
-          <li><strong>Vercel Inc.</strong> — хостинг веб-приложения.</li>
-          <li><strong>Neon / Supabase</strong> — хранение данных аудитов (EU-регион).</li>
+          <li><strong>ЗАО «Альфа-Банк»</strong> (alfabank.by) — процессинг платежей. Данные карты KaliGEO не получает и не хранит.</li>
+          <li><strong>hoster.by</strong> (hoster.by) — хостинг статических страниц сайта на территории Республики Беларусь.</li>
+          <li><strong>Почтовый сервис</strong> — доставка транзакционных email-уведомлений (подтверждение заявки, результаты сканирования).</li>
         </ul>
-        <p>Передача данных за пределы Республики Беларусь осуществляется с принятием надлежащих мер защиты согласно гл. 8 Закона № 99-З.</p>
+        <p>Данные не передаются третьим лицам в рекламных или маркетинговых целях.</p>
 
         <h2>5. Хранение данных</h2>
         <p>Email и сведения из формы заявки хранятся 3 года с момента последнего взаимодействия или до отзыва согласия. Данные об оплате хранятся в течение сроков, установленных законодательством РБ (не менее 5 лет).</p>
@@ -172,8 +170,9 @@ export function generateStaticParams() {
   return Object.keys(DOCS).map((slug) => ({ slug }));
 }
 
-export default function LegalPage({ params }: { params: { slug: string } }) {
-  const doc = DOCS[params.slug];
+export default async function LegalPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params
+  const doc = DOCS[slug];
   if (!doc) notFound();
 
   return (

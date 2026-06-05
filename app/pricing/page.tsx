@@ -233,7 +233,7 @@ export default function PricingPage() {
                   </ul>
 
                   <Link
-                    href={`/tools/domain-check`}
+                    href={`https://kaligeo.ru/#cta`}
                     style={{
                       display: "block",
                       textAlign: "center",
@@ -325,7 +325,7 @@ export default function PricingPage() {
                       {cfg.priceLabel}
                     </p>
                     <p style={{ fontSize: "12px", color: "var(--ink-3)" }}>
-                      автопродление · отмена в любой момент
+                      автопродление · минимум 3 месяца
                     </p>
                   </div>
 

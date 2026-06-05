@@ -468,16 +468,16 @@ function buildJob(tier: Tier) {
 
 const DOMAIN_CONFIG = {
   ru: {
-    ctaLabel: "Заказать аудит →",
+    ctaLabel: "Выбрать тариф →",
     ctaSub: "Результат за 48 часов · Оплата онлайн · Без подписки",
-    ctaUrl: "https://kaligeo.ru/#cta",
+    ctaUrl: "https://kaligeo.ru/#pricing",
     landingUrl: "https://kaligeo.ru",
     landingLabel: "kaligeo.ru",
   },
   by: {
-    ctaLabel: "Заказать аудит →",
+    ctaLabel: "Выбрать тариф →",
     ctaSub: "Результат за 48 часов · Аплата праз Альфа-Банк · Без падпіскі",
-    ctaUrl: "https://kaligeo.by/#cta",
+    ctaUrl: "https://kaligeo.by/#pricing",
     landingUrl: "https://kaligeo.by",
     landingLabel: "kaligeo.by",
   },
@@ -500,7 +500,7 @@ export function DemoReportClient() {
   const from = (searchParams.get("from") ?? "ru") as DomainKey
   const domain = DOMAIN_CONFIG[from] ?? DOMAIN_CONFIG.ru
 
-  const [tier, setTier] = useState<Tier>("ADVANCED")
+  const [tier, setTier] = useState<Tier>("BASIC")
   const [currency, setCurrency] = useState<Currency>(from === "by" ? "BYN" : "RUB")
 
   const isStandardPlus = tier !== "BASIC"
@@ -518,13 +518,14 @@ export function DemoReportClient() {
           className="text-center py-1.5 text-xs font-medium flex items-center justify-center gap-3"
           style={{ background: "var(--ink)", color: "var(--bone)" }}
         >
-          <span>Демо-данные для бухгалтерской компании. Ваш результат будет другим.</span>
+          <span>Демо-данные для бухгалтерской компании. Ваш реальный аудит покажет точные данные по вашей нише.</span>
           <a
-            href="/tools/domain-check"
+            href={domain.ctaUrl}
+            target="_blank"
             className="underline font-semibold"
             style={{ color: "var(--accent)" }}
           >
-            Проверить домен бесплатно →
+            Выбрать тариф →
           </a>
         </div>
 
@@ -638,13 +639,6 @@ function DemoConversionSection({ domain, tier }: { domain: typeof DOMAIN_CONFIG[
                 style={{ background: "var(--accent)", color: "var(--accent-ink)", whiteSpace: "nowrap" }}
               >
                 {domain.ctaLabel}
-              </a>
-              <a
-                href="/my/login"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold text-sm transition-opacity hover:opacity-80"
-                style={{ background: "rgba(255,255,255,0.12)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)", whiteSpace: "nowrap" }}
-              >
-                Личный кабинет →
               </a>
             </div>
 

@@ -7,10 +7,11 @@ function getResend() {
 }
 
 const FROM = () => process.env.FROM_EMAIL ?? "noreply@kaligeo.com"
-const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://kaligeo.ru"
+const APP_URL = () => "https://app.kaligeo.ru"
+const LANDING_URL = "https://kaligeo.ru"
 
-function auditLink(appUrl: string, emailNum: number) {
-  return `${appUrl}/pricing?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email${emailNum}`
+function auditLink(emailNum: number) {
+  return `${LANDING_URL}/#pricing?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email${emailNum}`
 }
 
 function unsubLink(appUrl: string, scanId: string) {
@@ -45,7 +46,7 @@ export const freemiumSequence = task({
       from: FROM(),
       to: email,
       subject: `${scoreEmoji} KaliGEO: ${companyName} — score ${previewScore}/100 · ${previewScore < 30 ? "AI вас почти не видит" : "есть потенциал роста"}`,
-      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(appUrl, 1), unsub, platformScores }),
+      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(1), unsub, platformScores }),
     })
 
     // Email 2 — +24ч: образовательный
@@ -55,7 +56,7 @@ export const freemiumSequence = task({
       from: FROM(),
       to: email,
       subject: `3 причины, почему ChatGPT не знает про ${companyName}`,
-      html: emailTemplate2({ companyName, niche, auditUrl: auditLink(appUrl, 2), unsub }),
+      html: emailTemplate2({ companyName, niche, auditUrl: auditLink(2), unsub }),
     })
 
     // Email 3 — +72ч: конкуренты
@@ -69,7 +70,7 @@ export const freemiumSequence = task({
       subject: competitors3.length > 0
         ? `${competitors3[0]} уже в топе AI-ответов. Как обогнать?`
         : `Конкурент в вашей нише уже в топе AI-ответов`,
-      html: emailTemplate3({ companyName, niche, previewScore, auditUrl: auditLink(appUrl, 3), unsub, suggestedCompetitors: competitors3 }),
+      html: emailTemplate3({ companyName, niche, previewScore, auditUrl: auditLink(3), unsub, suggestedCompetitors: competitors3 }),
     })
 
     // Email 4 — +48ч (6й день): urgency
@@ -79,7 +80,7 @@ export const freemiumSequence = task({
       from: FROM(),
       to: email,
       subject: `⏳ Последний шанс: данные по ${companyName} удалятся через 48ч`,
-      html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(appUrl, 4), unsub }),
+      html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(4), unsub }),
     })
 
     // Email 5 — +8 дней (14й день): re-engagement
@@ -89,7 +90,7 @@ export const freemiumSequence = task({
       from: FROM(),
       to: email,
       subject: `${companyName}: как меняется AI-видимость в вашей нише`,
-      html: emailTemplate5({ companyName, niche, auditUrl: auditLink(appUrl, 5), unsub }),
+      html: emailTemplate5({ companyName, niche, auditUrl: auditLink(5), unsub }),
     })
   },
 })
@@ -166,9 +167,12 @@ function emailTemplate1({
   ${platformTable}
 
   <div style="text-align:center;margin:24px 0;">
-    <a href="${previewUrl}" style="display:inline-block;background:#0f172a;color:white;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-      Посмотреть полные результаты →
+    <a href="${auditUrl}" style="display:inline-block;background:#0f172a;color:white;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+      Получить полный отчёт →
     </a>
+    <p style="margin:12px 0 0;font-size:12px;color:#9ca3af">
+      <a href="${previewUrl}" style="color:#9ca3af;text-decoration:underline;">Посмотреть предварительные результаты</a>
+    </p>
   </div>
 
   <p style="font-size:13px;color:#9ca3af;text-align:center;margin:0 0 16px">

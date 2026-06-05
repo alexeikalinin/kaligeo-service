@@ -1,4 +1,4 @@
-import { Document, Page, Text, View, StyleSheet, Font } from "@react-pdf/renderer"
+import { Document, Page, Text, View, StyleSheet, Font, Link } from "@react-pdf/renderer"
 
 // Register PT Sans with Cyrillic support via Google Fonts CDN
 // Falls back to public/fonts if running locally with file access
@@ -34,7 +34,7 @@ const FONT = "PTSans"
 const s = StyleSheet.create({
   // ── Pages
   cover:   { backgroundColor: C.cover, padding: "48pt 52pt", flex: 1 },
-  page:    { backgroundColor: C.bone, paddingTop: 40, paddingBottom: 48, paddingHorizontal: 48, flex: 1, fontFamily: FONT, fontSize: 10, color: C.ink },
+  page:    { backgroundColor: C.bone, paddingTop: 36, paddingBottom: 48, paddingHorizontal: 48, flex: 1, fontFamily: FONT, fontSize: 11, color: C.ink },
 
   // ── Cover
   coverTag:   { fontFamily: FONT, fontSize: 8, color: C.ink3, letterSpacing: 2, marginBottom: 8 },
@@ -57,11 +57,11 @@ const s = StyleSheet.create({
   sectionTitle: { fontFamily: FONT, fontWeight: 700, fontSize: 16, color: C.bone },
 
   // ── Typography
-  h2:   { fontFamily: FONT, fontWeight: 700, fontSize: 13, color: C.ink, marginTop: 16, marginBottom: 6 },
-  h3:   { fontFamily: FONT, fontWeight: 700, fontSize: 11, color: C.ink, marginBottom: 3 },
-  body: { fontFamily: FONT, fontSize: 10, color: C.ink2, lineHeight: 1.6, marginBottom: 8 },
-  small: { fontFamily: FONT, fontSize: 8.5, color: C.ink3, lineHeight: 1.5 },
-  mono:  { fontFamily: FONT, fontSize: 8, color: C.ink3, letterSpacing: 1 },
+  h2:   { fontFamily: FONT, fontWeight: 700, fontSize: 14, color: C.ink, marginTop: 18, marginBottom: 8 },
+  h3:   { fontFamily: FONT, fontWeight: 700, fontSize: 12, color: C.ink, marginBottom: 4 },
+  body: { fontFamily: FONT, fontSize: 11, color: C.ink2, lineHeight: 1.7, marginBottom: 10 },
+  small: { fontFamily: FONT, fontSize: 9.5, color: C.ink3, lineHeight: 1.6 },
+  mono:  { fontFamily: FONT, fontSize: 8.5, color: C.ink3, letterSpacing: 1 },
 
   // ── Highlight box
   box:      { backgroundColor: C.bone2, borderRadius: 6, padding: "12pt 14pt", marginBottom: 12 },
@@ -71,17 +71,17 @@ const s = StyleSheet.create({
   // ── Stat card
   statGrid: { flexDirection: "row", gap: 8, marginBottom: 14 },
   statCard: { flex: 1, backgroundColor: C.bone2, borderRadius: 6, padding: "10pt 12pt", borderTop: `2pt solid ${C.lime}` },
-  statVal:  { fontFamily: FONT, fontWeight: 700, fontSize: 26, color: C.ink, lineHeight: 1 },
-  statLbl:  { fontFamily: FONT, fontSize: 8, color: C.ink3, marginTop: 3, lineHeight: 1.3 },
+  statVal:  { fontFamily: FONT, fontWeight: 700, fontSize: 28, color: C.ink, lineHeight: 1 },
+  statLbl:  { fontFamily: FONT, fontSize: 9, color: C.ink3, marginTop: 4, lineHeight: 1.4 },
 
   // ── Table
   tableWrap:  { borderRadius: 4, overflow: "hidden", marginBottom: 12, border: `0.5pt solid ${C.rule}` },
   tableHead:  { flexDirection: "row", backgroundColor: C.ink, padding: "7pt 10pt" },
   tableRow:   { flexDirection: "row", padding: "6pt 10pt", borderTop: `0.5pt solid ${C.rule}`, backgroundColor: C.bone },
   tableRowAlt:{ flexDirection: "row", padding: "6pt 10pt", borderTop: `0.5pt solid ${C.rule}`, backgroundColor: C.bone2 },
-  thCell:     { fontFamily: FONT, fontWeight: 700, fontSize: 8, color: C.bone, letterSpacing: 0.5 },
-  tdCell:     { fontFamily: FONT, fontSize: 9, color: C.ink2 },
-  tdBold:     { fontFamily: FONT, fontWeight: 700, fontSize: 9, color: C.ink },
+  thCell:     { fontFamily: FONT, fontWeight: 700, fontSize: 9, color: C.bone, letterSpacing: 0.5 },
+  tdCell:     { fontFamily: FONT, fontSize: 10, color: C.ink2 },
+  tdBold:     { fontFamily: FONT, fontWeight: 700, fontSize: 10, color: C.ink },
 
   // ── Checklist
   checkRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 7, gap: 8 },
@@ -117,7 +117,7 @@ const s = StyleSheet.create({
 function Footer({ page, total }: { page: number; total: number }) {
   return (
     <View style={s.footer}>
-      <Text style={s.footerText}>KaliGEO · Состояние GEO в России 2026 · kaligeo.ru</Text>
+      <Text style={s.footerText}>KaliGEO · Состояние GEO в СНГ 2026 · kaligeo.ru</Text>
       <Text style={s.footerText}>{page} / {total}</Text>
     </View>
   )
@@ -216,24 +216,36 @@ function SevItem({ title, pct, color, body }: { title: string; pct: string; colo
   )
 }
 
+function BarRow({ label, pct, color = C.lime }: { label: string; pct: number; color?: string }) {
+  return (
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10, marginBottom: 10 }}>
+      <Text style={{ fontFamily: FONT, fontSize: 10, color: C.ink2, width: 180 }}>{label}</Text>
+      <View style={{ flex: 1, height: 10, backgroundColor: C.bone2, borderRadius: 5 }}>
+        <View style={{ width: `${pct}%`, height: 10, backgroundColor: color, borderRadius: 5 }} />
+      </View>
+      <Text style={{ fontFamily: FONT, fontWeight: 700, fontSize: 10, color: C.ink, width: 36, textAlign: "right" }}>{pct}%</Text>
+    </View>
+  )
+}
+
 // ── Document ────────────────────────────────────────────────────────────────
 
 export default function ResearchPDFDocument() {
   const T = 10
 
   return (
-    <Document title="Состояние GEO в России 2026 — KaliGEO" author="KaliGEO">
+    <Document title="Состояние GEO в СНГ 2026 — KaliGEO" author="KaliGEO">
 
       {/* ── 1. COVER ─────────────────────────────────────────────────────── */}
       <Page size="A4" style={s.cover}>
         {/* Lime top stripe */}
         <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: 5, backgroundColor: C.lime }} />
 
-        <Text style={s.coverTag}>KALIGEO  ·  ИССЛЕДОВАНИЕ  ·  АВГУСТ 2026</Text>
+        <Text style={s.coverTag}>KALIGEO  ·  ИССЛЕДОВАНИЕ  ·  ИЮНЬ 2026</Text>
 
-        <Text style={s.coverTitle}>{"Состояние\nGEO\nв России\n2026"}</Text>
+        <Text style={s.coverTitle}>{"Состояние\nGEO\nв СНГ\n2026"}</Text>
 
-        <Text style={s.coverSub}>Как российские бренды представлены в нейросетях</Text>
+        <Text style={s.coverSub}>Как бренды России и Беларуси представлены в нейросетях</Text>
         <Text style={s.coverLime}>Исследование на основе 200+ аудитов</Text>
 
         {/* Stats row */}
@@ -271,7 +283,7 @@ export default function ResearchPDFDocument() {
         <StatGrid items={[
           { val: "35%",  label: "информационно-коммерческих запросов проходят через AI" },
           { val: "67%",  label: "пользователей 18–35 лет использовали AI для рекомендаций" },
-          { val: "12М+", label: "ежемесячных пользователей ChatGPT в России" },
+          { val: "12М+", label: "ежемесячных пользователей ChatGPT в России и Беларуси" },
         ]} />
 
         <View style={s.divider} />
@@ -312,7 +324,7 @@ export default function ResearchPDFDocument() {
         ]} />
 
         <Text style={s.body}>
-          Типичный российский бренд упоминается нейросетями примерно в каждом 12-м ответе на релевантные
+          Типичный бренд из СНГ упоминается нейросетями примерно в каждом 12-м ответе на релевантные
           запросы ниши. Бренды, активно работающие над GEO 3–6 месяцев, показывают результаты
           в 3–4 раза выше медианы.
         </Text>
@@ -356,11 +368,11 @@ export default function ResearchPDFDocument() {
           widths={[1.4, 0.7, 3.4]}
           alt
           rows={[
-            [{ text: "YandexGPT / Алиса", bold: true }, { text: "18%", bold: true, color: C.success }, "Лучший результат для РФ-брендов — экосистема Яндекса"],
+            [{ text: "YandexGPT / Алиса", bold: true }, { text: "18%", bold: true, color: C.success }, "Лучший результат для СНГ-брендов — экосистема Яндекса"],
             ["ChatGPT (GPT-4o)", { text: "12%", color: C.ink }, "Ориентируется на Хабр, vc.ru, Wikipedia"],
             ["GigaChat", { text: "11%", color: C.ink }, "Корпоративные базы и Сбер-экосистема"],
             ["DeepSeek", { text: "9%", color: C.ink }, "Растущая аудитория, данные обновляются активно"],
-            ["Gemini", { text: "8%", color: C.warn }, "Глобальный охват, РФ-бренды представлены слабее"],
+            ["Gemini", { text: "8%", color: C.warn }, "Глобальный охват, СНГ-бренды представлены слабее"],
             ["Perplexity", { text: "7%", color: C.warn }, "Live-поиск, цитирует актуальные публикации"],
             ["Claude", { text: "5%", color: C.danger }, "Самый низкий — обучен преимущественно на западных данных"],
           ]}
@@ -411,6 +423,16 @@ export default function ResearchPDFDocument() {
           </Text>
         </View>
 
+        <View style={s.divider} />
+        <Text style={s.h2}>Медианная GEO-видимость по нишам</Text>
+        <BarRow label="IT / SaaS" pct={19} />
+        <BarRow label="Консалтинг / агентства" pct={14} />
+        <BarRow label="Образование" pct={12} />
+        <BarRow label="Производство B2B" pct={7} color={C.warn} />
+        <BarRow label="Розничная торговля" pct={5} color={C.warn} />
+        <BarRow label="Недвижимость" pct={4} color={C.danger} />
+        <BarRow label="HoReCa" pct={3} color={C.danger} />
+
         <Footer page={5} total={T} />
       </Page>
 
@@ -424,6 +446,14 @@ export default function ResearchPDFDocument() {
         <NumItem n={3} title="Отзывы на профильных платформах" body="78% лидеров имеют 20+ отзывов на Яндекс.Картах, Google Maps или отраслевых агрегаторах. GigaChat и YandexGPT активно используют эти данные." />
         <NumItem n={4} title="Wikipedia или независимый рейтинг" body="64% лидеров упомянуты в Wikipedia, авторитетном рейтинге или независимом исследовании. Один из самых весомых сигналов для LLM." />
         <NumItem n={5} title="Последовательное позиционирование" body="У 100% лидеров — чёткое описание специализации во всех публичных источниках. Противоречивые описания снижают уверенность модели в рекомендации." />
+
+        <View style={{ ...s.divider, marginTop: 20 }} />
+        <Text style={s.h2}>Доля лидеров, применяющих каждый фактор</Text>
+        <BarRow label="Последовательное позиционирование" pct={100} />
+        <BarRow label="Присутствие на авторитетных площадках" pct={91} />
+        <BarRow label="Schema.org-разметка на сайте" pct={82} />
+        <BarRow label="Отзывы на профильных платформах" pct={78} />
+        <BarRow label="Wikipedia или независимый рейтинг" pct={64} />
 
         <Footer page={6} total={T} />
       </Page>
@@ -458,15 +488,30 @@ export default function ResearchPDFDocument() {
           body="Нет в каталогах и рейтингах, которые LLM активно цитируют. Решение: добавить профиль в 5–7 ключевых агрегаторов ниши."
         />
 
+        <View style={{ ...s.divider, marginTop: 20 }} />
+        <Text style={s.h2}>Частота встречаемости по 214 аудитам</Text>
+        <BarRow label="Нет контента на авторитетных площадках" pct={84} color={C.danger} />
+        <BarRow label="Яндекс-монопрезентность" pct={71} color={C.danger} />
+        <BarRow label="Контент не под формулировки AI-запросов" pct={68} color={C.warn} />
+        <BarRow label="Противоречивые описания в источниках" pct={52} color={C.warn} />
+        <BarRow label="Нет в отраслевых каталогах и рейтингах" pct={49} color={C.ink3} />
+
+        <View style={{ ...s.boxLime, marginTop: 12 }}>
+          <Text style={{ ...s.h3, marginBottom: 4 }}>Что исправить в первую очередь</Text>
+          <Text style={{ ...s.body, marginBottom: 0 }}>
+            Ошибки 1 и 2 дают максимальный прирост видимости при минимуме усилий. Начните с экспертной публикации на Хабре или vc.ru и расширьте присутствие за пределы Яндекс-экосистемы.
+          </Text>
+        </View>
+
         <Footer page={7} total={T} />
       </Page>
 
       {/* ── 8. СРАВНЕНИЕ + ПРОГНОЗ ──────────────────────────────────────── */}
       <Page size="A4" style={s.page}>
-        <SectionHeader tag="СРАВНЕНИЕ" title="Россия vs Глобальный рынок" />
+        <SectionHeader tag="СРАВНЕНИЕ" title="СНГ vs Глобальный рынок" />
 
         <Table
-          headers={["Параметр", "Россия", "Глобально"]}
+          headers={["Параметр", "СНГ", "Глобально"]}
           widths={[2.2, 1.6, 1.6]}
           alt
           rows={[
@@ -482,7 +527,7 @@ export default function ResearchPDFDocument() {
         <Text style={{ ...s.h2, marginTop: 0 }}>Три тренда до конца 2026</Text>
 
         <NumItem n={1} title="Персонализация AI-рекомендаций" body="Нейросети учитывают геолокацию и контекст пользователя. Бренды, закрепившиеся в AI-ответах сейчас, получат долгосрочное преимущество." />
-        <NumItem n={2} title="Рост Perplexity в России" body="Русскоязычная поддержка с 2026-го. Молодые профессионалы переключаются. Нужны публикации на форумах и отраслевых порталах." />
+        <NumItem n={2} title="Рост Perplexity в СНГ" body="Русскоязычная поддержка с 2026-го. Молодые профессионалы переключаются. Нужны публикации на форумах и отраслевых порталах." />
         <NumItem n={3} title="Google AI Overviews в российской выдаче" body="Schema-разметка + авторитетные ссылки дают двойной эффект: Google AIO + Gemini." />
 
         <View style={s.boxLime}>
@@ -535,22 +580,32 @@ export default function ResearchPDFDocument() {
         </Text>
 
         <Text style={{ ...s.coverSub, marginTop: 20, fontSize: 13 }}>
-          Бесплатный быстрый чек: 3 платформы, базовые метрики — без регистрации, за 30 секунд.
+          Мы проверим как ChatGPT, Perplexity, YandexGPT и другие AI-системы упоминают ваш бизнес — и дадим конкретный план роста.
         </Text>
         <Text style={{ ...s.coverSub, marginTop: 6, fontSize: 13 }}>
-          Полный аудит: 9 платформ · конкурентная матрица · причинный анализ · Action Plan 30/60/90 дней.
+          Полный аудит: 9 платформ · конкурентная матрица · причинный анализ · Action Plan 30/60/90 дней. Без подписки.
         </Text>
 
-        <View style={{ marginTop: 36, flexDirection: "row", alignItems: "center", gap: 16 }}>
-          <View style={{ backgroundColor: C.lime, borderRadius: 6, paddingHorizontal: 24, paddingVertical: 14 }}>
-            <Text style={{ fontFamily: FONT, fontWeight: 700, fontSize: 14, color: C.limeInk }}>kaligeo.ru →</Text>
-          </View>
-          <Text style={{ fontFamily: FONT, fontSize: 12, color: C.ink3 }}>Разовая оплата. Без подписки.</Text>
+        <View style={{ marginTop: 36, flexDirection: "row", gap: 16, flexWrap: "wrap" }}>
+          <Link src="https://kaligeo.ru/#pricing" style={{ textDecoration: "none" }}>
+            <View style={{ backgroundColor: C.lime, borderRadius: 6, paddingHorizontal: 28, paddingVertical: 14 }}>
+              <Text style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: C.limeInk }}>Смотреть тарифы</Text>
+            </View>
+          </Link>
+          <Link src="https://app.kaligeo.ru/report/demo" style={{ textDecoration: "none" }}>
+            <View style={{ backgroundColor: "transparent", borderRadius: 6, paddingHorizontal: 28, paddingVertical: 14, border: `1.5pt solid ${C.lime}` }}>
+              <Text style={{ fontFamily: FONT, fontWeight: 700, fontSize: 15, color: C.lime }}>Пример отчёта</Text>
+            </View>
+          </Link>
         </View>
+
+        <Text style={{ fontFamily: FONT, fontSize: 11, color: C.ink3, marginTop: 16 }}>
+          kaligeo.ru · kaligeo.by
+        </Text>
 
         <View style={{ position: "absolute", bottom: 28, left: 52, right: 52 }}>
           <Text style={{ fontFamily: FONT, fontSize: 8, color: C.ink3 }}>
-            Исследование KaliGEO · kaligeo.ru · Август 2026 · Данные анонимизированы · Распространение разрешено со ссылкой на источник
+            Исследование KaliGEO · kaligeo.ru · kaligeo.by · Июнь 2026 · Данные анонимизированы · Распространение разрешено со ссылкой на источник
           </Text>
         </View>
       </Page>

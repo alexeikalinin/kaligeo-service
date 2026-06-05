@@ -84,7 +84,7 @@ interface JobData {
 const STEPS: { key: JobStatus; label: string; description: string }[] = [
   { key: "PENDING", label: "Подготовка", description: "Инициализация задания" },
   { key: "GENERATING_QUERIES", label: "Генерация запросов", description: "GPT создаёт список запросов по нише" },
-  { key: "EXECUTING_QUERIES", label: "Опрос AI-платформ", description: "Параллельный опрос 7 платформ" },
+  { key: "EXECUTING_QUERIES", label: "Опрос AI-платформ", description: "Параллельный опрос платформ по тарифу" },
   { key: "ANALYZING", label: "Анализ", description: "Подсчёт scores и матрицы конкурентов" },
   { key: "GENERATING_REPORT", label: "Генерация отчёта", description: "Claude создаёт план роста и PDF" },
   { key: "DELIVERING", label: "Отправка", description: "Письмо с отчётом на email" },

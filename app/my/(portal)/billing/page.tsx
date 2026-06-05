@@ -41,11 +41,13 @@ export default async function BillingPage() {
       completedAt: true,
       alfaBankOrderId: true,
       status: true,
+      source: true,
     },
     orderBy: { paidAt: "desc" },
   })
 
   const latestPaid = paidJobs[0]
+  const isTrial = latestPaid?.source === "trial"
   const currentTier = latestPaid?.tier as Tier | undefined
   const tierConfig = currentTier ? TIER_CONFIG[currentTier] : null
 
@@ -110,12 +112,13 @@ export default async function BillingPage() {
                     fontWeight: 700,
                   }}
                 >
-                  {tierConfig.isSubscription ? "ПОДПИСКА" : "РАЗОВЫЙ"}
+                  {isTrial ? "ПРОБНЫЙ" : tierConfig.isSubscription ? "ПОДПИСКА" : "РАЗОВЫЙ"}
                 </span>
               </div>
               <div style={{ fontSize: "13px", color: "var(--ink-3)", display: "flex", flexDirection: "column", gap: "3px" }}>
                 <span>{tierConfig.platforms.length} платформ · {tierConfig.queryCount} запросов</span>
-                {latestPaid && <span>Последняя оплата: {formatDate(latestPaid.paidAt)}</span>}
+                {latestPaid && !isTrial && <span>Последняя оплата: {formatDate(latestPaid.paidAt)}</span>}
+                {isTrial && <span>Бесплатный пробный аудит</span>}
               </div>
             </div>
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "8px" }}>
@@ -127,7 +130,7 @@ export default async function BillingPage() {
                   color: "var(--ink)",
                 }}
               >
-                {tierConfig.priceLabel}
+                {isTrial ? "Бесплатно" : tierConfig.priceLabel}
               </span>
               <a
                 href="/pricing"
@@ -242,7 +245,7 @@ export default async function BillingPage() {
                     {TIER_LABELS[job.tier] ?? job.tier}
                   </span>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>
-                    {tc?.priceLabel ?? "—"}
+                    {job.source === "trial" ? "Бесплатно" : (tc?.priceLabel ?? "—")}
                   </span>
                   <span style={{ fontSize: "13px", color: "var(--ink-3)", whiteSpace: "nowrap" }}>
                     {formatDate(job.paidAt)}

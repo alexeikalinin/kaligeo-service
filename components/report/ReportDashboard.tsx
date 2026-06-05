@@ -345,28 +345,6 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
             )}
 
             {/* Re-audit CTA */}
-            <section>
-              <div
-                className="rounded-xl px-6 py-6 flex flex-col sm:flex-row items-start sm:items-center gap-4"
-                style={{ background: "var(--bone-2)", border: "1px solid var(--rule)" }}
-              >
-                <div className="flex-1">
-                  <p className="font-bold text-base mb-1" style={{ fontFamily: "var(--font-serif)", color: "var(--ink)" }}>
-                    Проверьте свой бизнес
-                  </p>
-                  <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-                    Это демо-отчёт с примерными данными. Реальный аудит покажет как AI видит именно ваш сайт и бренд.
-                  </p>
-                </div>
-                <Link
-                  href="/"
-                  className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold transition-opacity hover:opacity-80"
-                  style={{ background: "var(--accent)", color: "var(--accent-ink)", whiteSpace: "nowrap" }}
-                >
-                  Запустить аудит →
-                </Link>
-              </div>
-            </section>
           </div>
         )}
 

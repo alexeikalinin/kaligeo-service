@@ -86,7 +86,7 @@ export default async function PreviewPage({ params }: PageProps) {
       >
         <span className="font-mono text-xs font-bold tracking-widest uppercase">KaliGEO</span>
         <Link
-          href="/pricing"
+          href="https://kaligeo.ru/#pricing"
           className="text-xs px-3 py-1.5 rounded font-medium"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >
@@ -258,7 +258,7 @@ export default async function PreviewPage({ params }: PageProps) {
           <TrialForm />
           <p className="text-xs mt-4" style={{ color: "var(--ink-3)" }}>
             или{" "}
-            <Link href="/pricing" style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
+            <Link href="https://kaligeo.ru/#pricing" style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
               выберите тариф →
             </Link>
           </p>
