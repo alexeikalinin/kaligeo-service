@@ -55,6 +55,7 @@ export function TrendsChart({ jobId, token, clientEmail, companyName }: TrendsCh
   const [loading, setLoading] = useState(true)
   const [activePlatforms, setActivePlatforms] = useState<string[]>([])
   const [showOverall, setShowOverall] = useState(true)
+  const [visiblePlatforms, setVisiblePlatforms] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const url = new URL(`/api/audit/history`, window.location.origin)
@@ -69,6 +70,7 @@ export function TrendsChart({ jobId, token, clientEmail, companyName }: TrendsCh
           // Определяем платформы из первой точки
           const platforms = Object.keys(data.points[0].platformScores ?? {})
           setActivePlatforms(platforms)
+          setVisiblePlatforms(new Set(platforms.slice(0, 4))) // показываем 4 платформы по умолчанию
         }
       })
       .catch(console.error)
@@ -115,10 +117,6 @@ export function TrendsChart({ jobId, token, clientEmail, companyName }: TrendsCh
   })
 
   // Toggle платформы
-  const [visiblePlatforms, setVisiblePlatforms] = useState<Set<string>>(
-    new Set(activePlatforms.slice(0, 4)) // показываем 4 платформы по умолчанию
-  )
-
   function togglePlatform(p: string) {
     setVisiblePlatforms((prev) => {
       const next = new Set(prev)
