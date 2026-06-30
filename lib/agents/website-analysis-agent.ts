@@ -34,24 +34,50 @@ export interface WebsiteAnalysisResult {
   suggestedCompetitors: string[]
 }
 
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 8000)
+}
+
+// Some sites front a bot-challenge: first request 307-redirects to itself with a
+// Set-Cookie, and only a request carrying that cookie gets real content. Node's
+// fetch has no implicit cookie jar, so the default `redirect: "follow"` loops
+// forever. Handle one challenge hop manually, max 3 redirects total.
 async function fetchPageText(url: string): Promise<string> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 10_000)
 
   try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: { "User-Agent": "KaliGEO-Bot/1.0 (brand visibility audit)" },
-    })
-    if (!res.ok) return ""
-    const html = await res.text()
-    return html
-      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
-      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 8000)
+    let currentUrl = url
+    let cookie: string | undefined
+    for (let hop = 0; hop < 3; hop++) {
+      const res = await fetch(currentUrl, {
+        signal: controller.signal,
+        redirect: "manual",
+        headers: {
+          "User-Agent": "KaliGEO-Bot/1.0 (brand visibility audit)",
+          ...(cookie ? { Cookie: cookie } : {}),
+        },
+      })
+
+      if (res.status >= 300 && res.status < 400) {
+        const location = res.headers.get("location")
+        const setCookie = res.headers.get("set-cookie")
+        if (!location) return ""
+        if (setCookie) cookie = setCookie.split(";")[0]
+        currentUrl = new URL(location, currentUrl).toString()
+        continue
+      }
+
+      if (!res.ok) return ""
+      return stripHtml(await res.text())
+    }
+    return ""
   } catch {
     return ""
   } finally {
