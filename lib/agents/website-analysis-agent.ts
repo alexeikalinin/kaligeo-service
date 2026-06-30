@@ -140,17 +140,17 @@ ${pageContent}
   "suggestedCompetitors": ["возможные", "конкуренты", "в", "нише"]
 }`
 
-  const { text } = await generateText({
+  const { text, finishReason } = await generateText({
     model: google("gemini-2.5-flash"),
     prompt,
-    maxOutputTokens: 1500,
+    maxOutputTokens: 4000,
   })
 
   try {
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
     return JSON.parse(cleaned) as WebsiteAnalysisResult
   } catch {
-    console.error(`[website-analysis-agent] JSON parse failed for ${websiteUrl}, raw text: ${text.slice(0, 500)}`)
+    console.error(`[website-analysis-agent] JSON parse failed for ${websiteUrl}, finishReason=${finishReason}, raw text (${text.length} chars): ${text.slice(0, 2000)}`)
     return {
       companyName: "",
       niche: "",
