@@ -110,6 +110,7 @@ export async function runWebsiteAnalysisAgent(
   const pageContent = await gatherPageContent(websiteUrl)
 
   if (!pageContent) {
+    console.error(`[website-analysis-agent] empty pageContent for ${websiteUrl}`)
     return {
       companyName: "",
       niche: "",
@@ -149,6 +150,7 @@ ${pageContent}
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
     return JSON.parse(cleaned) as WebsiteAnalysisResult
   } catch {
+    console.error(`[website-analysis-agent] JSON parse failed for ${websiteUrl}, raw text: ${text.slice(0, 500)}`)
     return {
       companyName: "",
       niche: "",
