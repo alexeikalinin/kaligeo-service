@@ -77,14 +77,19 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Step 3: Persist ────────────────────────────────────────────────────
+    // Gemini's JSON sometimes deviates from the requested array shape (e.g. a
+    // prose string when it found no competitors) — coerce defensively so a
+    // single malformed field doesn't crash the whole scan.
+    const asStringArray = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x) => typeof x === "string") : [])
+
     const scan = await prisma.freemiumScan.create({
       data: {
         websiteUrl,
         companyName,
         niche,
-        services: analysis.services,
-        keywords: analysis.keywords,
-        suggestedCompetitors: analysis.suggestedCompetitors ?? [],
+        services: asStringArray(analysis.services),
+        keywords: asStringArray(analysis.keywords),
+        suggestedCompetitors: asStringArray(analysis.suggestedCompetitors),
         previewScore,
         platformScores: platformScoresJson ?? undefined,
         quickCheckDone,
