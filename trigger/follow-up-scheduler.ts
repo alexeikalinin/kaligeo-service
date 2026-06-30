@@ -68,6 +68,7 @@ export const followUpScheduler = schedules.task({
         recurringFrequency: null,
         followUpSentAt: null,
         completedAt: { lte: new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000) },
+        emailOptOut: false,
         // Ещё не получали upsell-письмо (используем followUpSentAt как флаг)
       },
       take: 50,
@@ -79,6 +80,7 @@ export const followUpScheduler = schedules.task({
       try {
         const reportUrl = `${APP_URL}/report/${job.id}?token=${job.reportToken}`
         const monitoringUrl = `${APP_URL}/`
+        const unsub = `${APP_URL}/api/audit/unsubscribe?jobId=${job.id}`
 
         await getResend().emails.send({
           from: process.env.FROM_EMAIL ?? "KaliGEO <hello@kaligeo.ru>",
@@ -113,8 +115,8 @@ export const followUpScheduler = schedules.task({
                 Подключить мониторинг →
               </a>
               <p style="margin:32px 0 0;font-size:12px;color:#9CA3AF">
-                Письмо отправлено автоматически системой KaliGEO.
-                Если вы не хотите получать такие письма — просто проигнорируйте.
+                Письмо отправлено автоматически системой KaliGEO. ·
+                <a href="${unsub}" style="color:#9CA3AF">Отписаться</a>
               </p>
             </div>
           `,

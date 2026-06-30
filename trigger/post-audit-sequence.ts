@@ -34,11 +34,12 @@ export const postAuditSequence = task({
 
   run: async ({ jobId, tier, isTrial }: PostAuditSequencePayload) => {
     const job = await prisma.auditJob.findUnique({ where: { id: jobId } })
-    if (!job) return
+    if (!job || job.emailOptOut) return
 
     const reportUrl = `${APP_URL()}/report/${jobId}?token=${job.reportToken}`
     const upgradeUrl = `${APP_URL()}/pricing`
     const reauditUrl = `${APP_URL()}/chat?url=${encodeURIComponent(job.websiteUrl)}`
+    const unsub = `${APP_URL()}/api/audit/unsubscribe?jobId=${jobId}`
 
     const getReport = async (): Promise<ReportData | null> => {
       const r = await prisma.report.findUnique({ where: { jobId } })
@@ -51,12 +52,17 @@ export const postAuditSequence = task({
       }
     }
 
+    const isOptedOut = async () => {
+      const fresh = await prisma.auditJob.findUnique({ where: { id: jobId }, select: { emailOptOut: true } })
+      return fresh?.emailOptOut ?? true
+    }
+
     if (isTrial) {
-      await runTrialSequence({ job, reportUrl, upgradeUrl, getReport })
+      await runTrialSequence({ job, reportUrl, upgradeUrl, unsub, getReport, isOptedOut })
     } else if (tier === "BASIC") {
-      await runBasicSequence({ job, reportUrl, upgradeUrl, reauditUrl, getReport })
+      await runBasicSequence({ job, reportUrl, upgradeUrl, reauditUrl, unsub, getReport, isOptedOut })
     } else if (tier === "STANDARD" || tier === "ADVANCED") {
-      await runStandardSequence({ job, reportUrl, reauditUrl, getReport })
+      await runStandardSequence({ job, reportUrl, reauditUrl, unsub, getReport, isOptedOut })
     }
     // MONITOR_* — отдельный monitoring-alerts.ts, здесь skip
   },
@@ -65,15 +71,18 @@ export const postAuditSequence = task({
 // ── Trial sequence ────────────────────────────────────────────────────────────
 
 async function runTrialSequence({
-  job, reportUrl, upgradeUrl, getReport,
+  job, reportUrl, upgradeUrl, unsub, getReport, isOptedOut,
 }: {
   job: { id: string; clientEmail: string; companyName: string; niche: string }
   reportUrl: string
   upgradeUrl: string
+  unsub: string
   getReport: () => Promise<ReportData | null>
+  isOptedOut: () => Promise<boolean>
 }) {
   // T-2: +2 дня — разбор 3 главных находок
   await wait.for({ days: 2 })
+  if (await isOptedOut()) return
   const report = await getReport()
   if (!report) return
 
@@ -85,11 +94,12 @@ async function runTrialSequence({
     from: FROM(),
     to: job.clientEmail,
     subject: `${job.companyName}: 3 вещи, которые мешают вам появляться в ChatGPT`,
-    html: templateTrialFindings({ job, report, topWeakPoints, upgradeUrl }),
+    html: templateTrialFindings({ job, report, topWeakPoints, upgradeUrl, unsub }),
   })
 
   // T-3: +5 дней — конкуренты которых AI называет вместо вас
   await wait.for({ days: 3 })
+  if (await isOptedOut()) return
   const report3 = await getReport()
   if (!report3) return
 
@@ -99,33 +109,37 @@ async function runTrialSequence({
       from: FROM(),
       to: job.clientEmail,
       subject: `${topCompetitors[0]?.name ?? "Конкуренты"} уже в топе AI-ответов. Почему не ${job.companyName}?`,
-      html: templateTrialCompetitors({ job, report: report3, topCompetitors, reportUrl, upgradeUrl }),
+      html: templateTrialCompetitors({ job, report: report3, topCompetitors, reportUrl, upgradeUrl, unsub }),
     })
   }
 
   // T-4: +10 дней — специальное предложение
   await wait.for({ days: 5 })
+  if (await isOptedOut()) return
   await getResend().emails.send({
     from: FROM(),
     to: job.clientEmail,
     subject: `${job.companyName}: −20% на полный план роста (только 72 часа)`,
-    html: templateTrialOffer({ job, report: await getReport() ?? report, upgradeUrl }),
+    html: templateTrialOffer({ job, report: await getReport() ?? report, upgradeUrl, unsub }),
   })
 }
 
 // ── Basic sequence ────────────────────────────────────────────────────────────
 
 async function runBasicSequence({
-  job, reportUrl, upgradeUrl, reauditUrl, getReport,
+  job, reportUrl, upgradeUrl, reauditUrl, unsub, getReport, isOptedOut,
 }: {
   job: { id: string; clientEmail: string; companyName: string; niche: string; websiteUrl: string }
   reportUrl: string
   upgradeUrl: string
   reauditUrl: string
+  unsub: string
   getReport: () => Promise<ReportData | null>
+  isOptedOut: () => Promise<boolean>
 }) {
   // B-2: +3 дня — одно действие на этой неделе
   await wait.for({ days: 3 })
+  if (await isOptedOut()) return
   const report = await getReport()
   if (!report) return
 
@@ -136,11 +150,12 @@ async function runBasicSequence({
     from: FROM(),
     to: job.clientEmail,
     subject: `${job.companyName}: один шаг, который даст +10 к AI-видимости`,
-    html: templateBasicOneAction({ job, quickWin, topWeakPoint, reportUrl }),
+    html: templateBasicOneAction({ job, quickWin, topWeakPoint, reportUrl, unsub }),
   })
 
   // B-3: +14 дней — подсказка под главное слабое место
   await wait.for({ days: 11 })
+  if (await isOptedOut()) return
   const report3 = await getReport()
   if (!report3) return
 
@@ -149,22 +164,25 @@ async function runBasicSequence({
     from: FROM(),
     to: job.clientEmail,
     subject: `Как за 30 минут сделать так, чтобы ChatGPT узнал ${job.companyName}`,
-    html: templateBasicTip({ job, mainWeakPoint, reauditUrl, upgradeUrl }),
+    html: templateBasicTip({ job, mainWeakPoint, reauditUrl, upgradeUrl, unsub }),
   })
 }
 
 // ── Standard / Advanced sequence ─────────────────────────────────────────────
 
 async function runStandardSequence({
-  job, reportUrl, reauditUrl, getReport,
+  job, reportUrl, reauditUrl, unsub, getReport, isOptedOut,
 }: {
   job: { id: string; clientEmail: string; companyName: string; niche: string; websiteUrl: string }
   reportUrl: string
   reauditUrl: string
+  unsub: string
   getReport: () => Promise<ReportData | null>
+  isOptedOut: () => Promise<boolean>
 }) {
   // SA-2: +3 дня — чеклист на первую неделю
   await wait.for({ days: 3 })
+  if (await isOptedOut()) return
   const report = await getReport()
   if (!report) return
 
@@ -175,11 +193,12 @@ async function runStandardSequence({
     from: FROM(),
     to: job.clientEmail,
     subject: `${job.companyName}: ваш план на 7 дней — 3 тактики из отчёта`,
-    html: templateStandardWeekPlan({ job, tactics, quickWins, reportUrl }),
+    html: templateStandardWeekPlan({ job, tactics, quickWins, reportUrl, unsub }),
   })
 
   // SA-3: +21 день — проверка прогресса
   await wait.for({ days: 18 })
+  if (await isOptedOut()) return
   const report3 = await getReport()
   if (!report3) return
 
@@ -188,11 +207,12 @@ async function runStandardSequence({
     from: FROM(),
     to: job.clientEmail,
     subject: `${job.companyName}: 3 недели прошло — как AI-видимость?`,
-    html: templateStandardProgressCheck({ job, topWeakPoints, reportUrl }),
+    html: templateStandardProgressCheck({ job, topWeakPoints, reportUrl, unsub }),
   })
 
   // SA-4: +45 дней — время проверить результат
   await wait.for({ days: 24 })
+  if (await isOptedOut()) return
   const report4 = await getReport()
   if (!report4) return
 
@@ -200,13 +220,13 @@ async function runStandardSequence({
     from: FROM(),
     to: job.clientEmail,
     subject: `45 дней → пора проверить: как изменилась видимость ${job.companyName}?`,
-    html: templateStandardReaudit({ job, report: report4, reauditUrl }),
+    html: templateStandardReaudit({ job, report: report4, reauditUrl, unsub }),
   })
 }
 
 // ── Email Templates ───────────────────────────────────────────────────────────
 
-function base(content: string) {
+function base(content: string, unsub: string) {
   return `<!DOCTYPE html><html lang="ru">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;margin:0;padding:0;color:#111827">
@@ -218,7 +238,7 @@ function base(content: string) {
     ${content}
   </div>
   <div style="text-align:center;margin-top:20px">
-    <p style="font-size:11px;color:#9ca3af;margin:0">KaliGEO · AI Search Visibility · <a href="mailto:hello@kaligeo.ru?subject=Отписаться" style="color:#9ca3af">Отписаться</a></p>
+    <p style="font-size:11px;color:#9ca3af;margin:0">KaliGEO · AI Search Visibility · <a href="${unsub}" style="color:#9ca3af">Отписаться</a></p>
   </div>
 </div>
 </body></html>`
@@ -256,11 +276,13 @@ function weakPointCard(wp: { title: string; description: string; severity: strin
 // T-2: Trial — разбор находок
 function templateTrialFindings({
   job, topWeakPoints, upgradeUrl,
+  unsub,
 }: {
   job: { companyName: string; niche: string }
   report: ReportData
   topWeakPoints: ReportData["weakPoints"]
   upgradeUrl: string
+  unsub: string
 }) {
   const wpCards = topWeakPoints.map((w, i) => weakPointCard(w, i)).join("")
 
@@ -289,18 +311,20 @@ function templateTrialFindings({
     <p style="font-size:12px;color:#9ca3af;text-align:center;margin:8px 0 0">
       Завтра пришлём: кого AI рекомендует вместо ${job.companyName}
     </p>
-  `)
+  `, unsub)
 }
 
 // T-3: Trial — конкуренты
 function templateTrialCompetitors({
   job, topCompetitors, reportUrl, upgradeUrl,
+  unsub,
 }: {
   job: { companyName: string; niche: string }
   report: ReportData
   topCompetitors: ReportData["competitorMatrix"]
   reportUrl: string
   upgradeUrl: string
+  unsub: string
 }) {
   const compRows = topCompetitors.map((c) => `
     <tr>
@@ -344,16 +368,18 @@ function templateTrialCompetitors({
         Обогнать конкурентов →
       </a>
     </div>
-  `)
+  `, unsub)
 }
 
 // T-4: Trial — спецпредложение
 function templateTrialOffer({
   job, report, upgradeUrl,
+  unsub,
 }: {
   job: { companyName: string }
   report: ReportData
   upgradeUrl: string
+  unsub: string
 }) {
   const score = report.overallScore
 
@@ -390,17 +416,19 @@ function templateTrialOffer({
     <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0">
       Предложение действует 72 часа. После — стандартная цена.
     </p>
-  `)
+  `, unsub)
 }
 
 // B-2: Basic — одно действие
 function templateBasicOneAction({
   job, quickWin, topWeakPoint, reportUrl,
+  unsub,
 }: {
   job: { companyName: string }
   quickWin?: { action: string; howTo: string; timeEstimate: string; impact: string }
   topWeakPoint?: { title: string; description: string }
   reportUrl: string
+  unsub: string
 }) {
   const actionTitle = quickWin?.action ?? topWeakPoint?.title ?? "Добавить Schema.org разметку"
   const actionDetail = quickWin?.howTo ?? topWeakPoint?.description ?? "Структурированные данные помогают AI идентифицировать ваш бизнес как авторитетный источник."
@@ -432,17 +460,19 @@ function templateBasicOneAction({
     </p>
 
     ${cta("Открыть полный отчёт →", reportUrl)}
-  `)
+  `, unsub)
 }
 
 // B-3: Basic — совет по слабому месту
 function templateBasicTip({
   job, mainWeakPoint, reauditUrl, upgradeUrl,
+  unsub,
 }: {
   job: { companyName: string }
   mainWeakPoint?: { id: string; title: string; description: string }
   reauditUrl: string
   upgradeUrl: string
+  unsub: string
 }) {
   const isSchema = !mainWeakPoint || mainWeakPoint.id === "missing-schema"
 
@@ -494,17 +524,19 @@ function templateBasicTip({
         Полный план STANDARD →
       </a>
     </div>
-  `)
+  `, unsub)
 }
 
 // SA-2: Standard — план на первую неделю
 function templateStandardWeekPlan({
   job, tactics, quickWins, reportUrl,
+  unsub,
 }: {
   job: { companyName: string }
   tactics: { tactic: string; why: string; expectedEffect: string }[]
   quickWins: { action: string; howTo: string; timeEstimate: string }[]
   reportUrl: string
+  unsub: string
 }) {
   const items = tactics.length > 0 ? tactics : quickWins.map((w) => ({
     tactic: w.action,
@@ -544,16 +576,18 @@ function templateStandardWeekPlan({
     </div>
 
     ${cta("Открыть полный план →", reportUrl)}
-  `)
+  `, unsub)
 }
 
 // SA-3: Standard — проверка прогресса
 function templateStandardProgressCheck({
   job, topWeakPoints, reportUrl,
+  unsub,
 }: {
   job: { companyName: string }
   topWeakPoints: ReportData["weakPoints"]
   reportUrl: string
+  unsub: string
 }) {
   const checkItems = topWeakPoints.slice(0, 3).map((w) => `
     <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #f3f4f6">
@@ -593,16 +627,18 @@ function templateStandardProgressCheck({
         Повторный аудит →
       </a>
     </div>
-  `)
+  `, unsub)
 }
 
 // SA-4: Standard — время проверить результат
 function templateStandardReaudit({
   job, report, reauditUrl,
+  unsub,
 }: {
   job: { companyName: string; niche: string }
   report: ReportData
   reauditUrl: string
+  unsub: string
 }) {
   const score = report.overallScore
   const highWeakPoints = report.weakPoints.filter((w) => w.severity === "high").length
@@ -635,5 +671,5 @@ function templateStandardReaudit({
     <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0">
       ${highWeakPoints > 0 ? `В вашем аудите было ${highWeakPoints} критических пункта. Проверьте, закрыты ли они.` : "Хорошая динамика = правильная стратегия. Продолжайте."}
     </p>
-  `)
+  `, unsub)
 }

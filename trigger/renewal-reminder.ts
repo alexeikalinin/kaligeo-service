@@ -30,6 +30,7 @@ export const renewalReminder = schedules.task({
         subscriptionActiveUntil: { gte: in7d, lt: in8d },
         renewalReminderSentAt: null,
         status: "COMPLETED",
+        emailOptOut: false,
       },
     })
 
@@ -62,6 +63,7 @@ export const renewalReminder = schedules.task({
 
         const pricingUrl = `${APP_URL()}/pricing`
         const reportUrl = `${APP_URL()}/report/${job.id}?token=${job.reportToken}`
+        const unsub = `${APP_URL()}/api/audit/unsubscribe?jobId=${job.id}`
 
         await getResend().emails.send({
           from: FROM(),
@@ -77,6 +79,7 @@ export const renewalReminder = schedules.task({
             scoreDelta,
             pricingUrl,
             reportUrl,
+            unsub,
           }),
         })
 
@@ -98,7 +101,7 @@ export const renewalReminder = schedules.task({
 
 function buildRenewalEmail({
   companyName, tierName, expiryDate, auditCount,
-  firstScore, lastScore, scoreDelta, pricingUrl, reportUrl,
+  firstScore, lastScore, scoreDelta, pricingUrl, reportUrl, unsub,
 }: {
   companyName: string
   tierName: string
@@ -109,6 +112,7 @@ function buildRenewalEmail({
   scoreDelta: number
   pricingUrl: string
   reportUrl: string
+  unsub: string
 }) {
   const deltaColor = scoreDelta > 0 ? "#16a34a" : scoreDelta < 0 ? "#dc2626" : "#6b7280"
   const deltaStr = scoreDelta > 0 ? `+${scoreDelta}` : `${scoreDelta}`
@@ -172,7 +176,7 @@ function buildRenewalEmail({
 
   </div>
   <p style="text-align:center;margin-top:16px;font-size:11px;color:#9ca3af">
-    KaliGEO · Мониторинг AI-видимости · <a href="mailto:hello@kaligeo.ru?subject=Отписаться" style="color:#9ca3af">Отписаться</a>
+    KaliGEO · Мониторинг AI-видимости · <a href="${unsub}" style="color:#9ca3af">Отписаться</a>
   </p>
 </div>
 </body></html>`

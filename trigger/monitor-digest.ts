@@ -93,6 +93,7 @@ export const monitorDigest = schedules.task({
       where: {
         subscriptionActiveUntil: { gt: now },
         status: "COMPLETED",
+        emailOptOut: false,
       },
       orderBy: { completedAt: "desc" },
     })
@@ -153,6 +154,7 @@ export const monitorDigest = schedules.task({
 
         const reportUrl = `${APP_URL()}/report/${latestJob.id}?token=${latestJob.reportToken}`
         const dashboardUrl = `${APP_URL()}/my/dashboard`
+        const unsub = `${APP_URL()}/api/audit/unsubscribe?jobId=${latestJob.id}`
 
         await getResend().emails.send({
           from: FROM(),
@@ -169,6 +171,7 @@ export const monitorDigest = schedules.task({
             geoTip,
             reportUrl,
             dashboardUrl,
+            unsub,
           }),
         })
 
@@ -185,7 +188,7 @@ export const monitorDigest = schedules.task({
 
 function buildDigestEmail({
   companyName, monthName, currentScore, prevScore, scoreDelta,
-  bestPlatforms, warnPlatforms, geoTip, reportUrl, dashboardUrl,
+  bestPlatforms, warnPlatforms, geoTip, reportUrl, dashboardUrl, unsub,
 }: {
   companyName: string
   monthName: string
@@ -197,6 +200,7 @@ function buildDigestEmail({
   geoTip: { title: string; body: string; effort: string }
   reportUrl: string
   dashboardUrl: string
+  unsub: string
 }) {
   const scoreColor = currentScore >= 60 ? "#22c55e" : currentScore >= 30 ? "#f59e0b" : "#ef4444"
   const deltaColor = (scoreDelta ?? 0) > 0 ? "#16a34a" : (scoreDelta ?? 0) < 0 ? "#dc2626" : "#6b7280"
@@ -274,7 +278,7 @@ function buildDigestEmail({
 
   </div>
   <p style="text-align:center;margin-top:16px;font-size:11px;color:#9ca3af">
-    KaliGEO · AI Search Visibility · <a href="mailto:hello@kaligeo.ru?subject=Отписаться" style="color:#9ca3af">Отписаться</a>
+    KaliGEO · AI Search Visibility · <a href="${unsub}" style="color:#9ca3af">Отписаться</a>
   </p>
 </div>
 </body></html>`

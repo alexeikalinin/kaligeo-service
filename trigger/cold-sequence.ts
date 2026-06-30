@@ -65,12 +65,14 @@ export const coldSequence = task({
         auditUrl,
       })
 
+      const unsub = `${APP_URL()}/api/leads/unsubscribe?leadId=${leadId}`
+
       try {
         const result = await getResend().emails.send({
           from: FROM(),
           to: toEmail,
           subject,
-          html: coldEmailWrapper(body),
+          html: coldEmailWrapper(body, unsub),
         })
 
         await prisma.outreachEmail.create({
@@ -106,13 +108,13 @@ function personalizeTemplate(
     .replace(/\{auditUrl\}/g, vars.auditUrl)
 }
 
-function coldEmailWrapper(body: string) {
+function coldEmailWrapper(body: string, unsub: string) {
   return `<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#1a1a1a;font-size:15px;line-height:1.6;">
 ${body}
 <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;">
 <p style="color:#9ca3af;font-size:11px;">
   KaliGEO · AI Search Visibility · <a href="https://kaligeo.ru" style="color:#9ca3af;">kaligeo.ru</a><br>
-  Чтобы отписаться — ответьте с темой "Отписаться"
+  <a href="${unsub}" style="color:#9ca3af;">Отписаться от рассылки</a>
 </p>
 </body></html>`
 }

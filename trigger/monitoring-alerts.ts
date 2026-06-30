@@ -22,6 +22,7 @@ export const monitoringAlerts = schedules.task({
       where: {
         subscriptionActiveUntil: { gt: new Date() },
         status: "COMPLETED",
+        emailOptOut: false,
       },
       orderBy: { completedAt: "desc" },
     })
@@ -67,6 +68,7 @@ export const monitoringAlerts = schedules.task({
 
         const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
         const reportUrl = `${appUrl}/report/${latestJob.id}?token=${latestJob.reportToken}`
+        const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${latestJob.id}`
 
         await sendAlertEmail({
           to: email,
@@ -75,6 +77,7 @@ export const monitoringAlerts = schedules.task({
           prevScore,
           delta,
           reportUrl,
+          unsub,
         })
 
         // Telegram уведомление (admin)
@@ -102,8 +105,9 @@ async function sendAlertEmail(opts: {
   prevScore: number
   delta: number
   reportUrl: string
+  unsub: string
 }) {
-  const { to, companyName, currentScore, prevScore, delta, reportUrl } = opts
+  const { to, companyName, currentScore, prevScore, delta, reportUrl, unsub } = opts
 
   await getResend().emails.send({
     from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
@@ -148,7 +152,7 @@ async function sendAlertEmail(opts: {
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
   <p style="font-size:12px;color:#9ca3af;text-align:center">
     KaliGEO · Мониторинг AI-видимости<br>
-    Настроить порог уведомлений → Личный кабинет
+    Настроить порог уведомлений → Личный кабинет · <a href="${unsub}" style="color:#9ca3af">Отписаться</a>
   </p>
 </body>
 </html>`,

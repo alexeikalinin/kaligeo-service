@@ -24,13 +24,14 @@ export const researchNurtureSequence = task({
   run: async ({ leadId, email, companyName }: ResearchNurturePayload) => {
     const scanUrl = `${APP_URL()}?utm_source=research-nurture&utm_medium=email`
     const auditUrl = `${APP_URL()}/pricing?utm_source=research-nurture&utm_medium=email`
+    const unsub = `${APP_URL()}/api/leads/unsubscribe?leadId=${leadId}`
 
     // Письмо 1 — немедленно: PDF + мягкий CTA
     await getResend().emails.send({
       from: FROM(),
       to: email,
       subject: "Состояние GEO в России 2026 — ваш PDF",
-      html: letter1({ companyName, pdfUrl: PDF_URL(), scanUrl }),
+      html: letter1({ companyName, pdfUrl: PDF_URL(), scanUrl, unsub }),
     })
 
     // Письмо 2 — +2 дня: данные по отрасли из исследования
@@ -41,7 +42,7 @@ export const researchNurtureSequence = task({
       from: FROM(),
       to: email,
       subject: "78% компаний невидимы в AI-поиске. Что делают оставшиеся 22%",
-      html: letter2({ companyName, scanUrl }),
+      html: letter2({ companyName, scanUrl, unsub }),
     })
 
     // Письмо 3 — +4 дня: прямой push на freemium
@@ -52,7 +53,7 @@ export const researchNurtureSequence = task({
       from: FROM(),
       to: email,
       subject: `2 минуты — и вы знаете свой AI Score`,
-      html: letter3({ companyName, scanUrl }),
+      html: letter3({ companyName, scanUrl, unsub }),
     })
 
     // Письмо 4 — +7 дней: конкурентный угол + urgency
@@ -63,14 +64,14 @@ export const researchNurtureSequence = task({
       from: FROM(),
       to: email,
       subject: `Пока ${companyName} читает — конкуренты действуют`,
-      html: letter4({ companyName, auditUrl }),
+      html: letter4({ companyName, auditUrl, unsub }),
     })
   },
 })
 
 // ── Обёртка ──────────────────────────────────────────────────────────────────
 
-function emailWrapper(content: string) {
+function emailWrapper(content: string, unsub: string) {
   return `<!DOCTYPE html><html lang="ru">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f9fafb;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
@@ -85,7 +86,7 @@ function emailWrapper(content: string) {
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.6;">
       KaliGEO · AI Search Visibility · kaligeo.ru<br>
       Вы получили это письмо потому что скачали исследование на сайте.<br>
-      Чтобы отписаться — ответьте с темой «Отписаться».
+      <a href="${unsub}" style="color:#9ca3af;">Отписаться от рассылки</a>
     </p>
   </div>
 </div>
@@ -94,10 +95,11 @@ function emailWrapper(content: string) {
 
 // ── Письмо 1: PDF + мягкий CTA ───────────────────────────────────────────────
 
-function letter1({ companyName, pdfUrl, scanUrl }: {
+function letter1({ companyName, pdfUrl, scanUrl, unsub }: {
   companyName: string
   pdfUrl: string
   scanUrl: string
+  unsub: string
 }) {
   const name = companyName || "Коллега"
   const downloadBtn = pdfUrl
@@ -135,12 +137,12 @@ function letter1({ companyName, pdfUrl, scanUrl }: {
     <a href="${scanUrl}" style="font-size:14px;color:#0f1115;text-decoration:underline;text-underline-offset:3px;">
       Проверить свою компанию бесплатно →
     </a>
-  `)
+  `, unsub)
 }
 
 // ── Письмо 2: данные по отраслям ─────────────────────────────────────────────
 
-function letter2({ companyName, scanUrl }: { companyName: string; scanUrl: string }) {
+function letter2({ companyName, scanUrl, unsub }: { companyName: string; scanUrl: string; unsub: string }) {
   const name = companyName || "Коллега"
   return emailWrapper(`
     <p style="font-family:'Courier New',monospace;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px;">День 2 · Данные из исследования</p>
@@ -171,12 +173,12 @@ function letter2({ companyName, scanUrl }: { companyName: string; scanUrl: strin
         Проверить ${name} бесплатно →
       </a>
     </div>
-  `)
+  `, unsub)
 }
 
 // ── Письмо 3: прямой push на freemium ────────────────────────────────────────
 
-function letter3({ companyName, scanUrl }: { companyName: string; scanUrl: string }) {
+function letter3({ companyName, scanUrl, unsub }: { companyName: string; scanUrl: string; unsub: string }) {
   const name = companyName || "вашу компанию"
   return emailWrapper(`
     <p style="font-family:'Courier New',monospace;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px;">День 4 · Пора проверить</p>
@@ -207,12 +209,12 @@ function letter3({ companyName, scanUrl }: { companyName: string; scanUrl: strin
         Запустить бесплатный скан →
       </a>
     </div>
-  `)
+  `, unsub)
 }
 
 // ── Письмо 4: конкурентный угол + urgency ────────────────────────────────────
 
-function letter4({ companyName, auditUrl }: { companyName: string; auditUrl: string }) {
+function letter4({ companyName, auditUrl, unsub }: { companyName: string; auditUrl: string; unsub: string }) {
   const name = companyName || "вашей компании"
   return emailWrapper(`
     <p style="font-family:'Courier New',monospace;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.08em;margin:0 0 12px;">День 7 · Последнее письмо серии</p>
@@ -253,5 +255,5 @@ function letter4({ companyName, auditUrl }: { companyName: string; auditUrl: str
     <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0;">
       Это последнее письмо в этой серии. Если понадобится — kaligeo.ru всегда доступен.
     </p>
-  `)
+  `, unsub)
 }
