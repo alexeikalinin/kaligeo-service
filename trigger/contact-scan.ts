@@ -18,10 +18,13 @@ export const contactScan = task({
   run: async ({ websiteUrl, email, name, market = "ru" }: ContactScanPayload) => {
     const { appUrl } = getMarketConfig(market)
 
-    // Reuse existing scan if done within last 24h
+    // Reuse existing scan for THIS market if done within last 24h. Scoped by
+    // market so a .ru and a .by lead for the same site never share (and race
+    // to overwrite) one another's scan record.
     const existing = await prisma.freemiumScan.findFirst({
       where: {
         websiteUrl,
+        market,
         quickCheckDone: true,
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
@@ -32,13 +35,9 @@ export const contactScan = task({
 
     if (existing) {
       scanId = existing.id
-      // This lead's own market always wins — a cached scan may have been
-      // created by a visitor from the other domain and must not leak its
-      // market into this lead's follow-up sequence.
-      await prisma.freemiumScan.update({
-        where: { id: scanId },
-        data: { market, ...(existing.emailCaptured ? {} : { emailCaptured: email }) },
-      })
+      if (!existing.emailCaptured) {
+        await prisma.freemiumScan.update({ where: { id: scanId }, data: { emailCaptured: email } })
+      }
     } else {
       // Делегируем скан в Vercel API — там есть все API-ключи платформ
       const resp = await fetch(`${appUrl}/api/freemium/scan`, {

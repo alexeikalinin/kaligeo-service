@@ -27,10 +27,13 @@ export async function POST(req: NextRequest) {
     const { websiteUrl, source, market: bodyMarket } = ScanSchema.parse(body)
     const market = bodyMarket ?? marketFromOrigin(req.headers.get("origin"))
 
-    // Check for recent scan of same URL (cache for 24h)
+    // Check for recent scan of same URL for THIS market (cache for 24h).
+    // Scoped by market so a .ru and a .by lead for the same site never share
+    // (and race to overwrite) one another's scan record.
     const existing = await prisma.freemiumScan.findFirst({
       where: {
         websiteUrl,
+        market,
         quickCheckDone: true,
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
@@ -38,9 +41,6 @@ export async function POST(req: NextRequest) {
     })
 
     if (existing) {
-      // This lead's own market always wins over whatever market the cached
-      // scan was originally created under.
-      await prisma.freemiumScan.update({ where: { id: existing.id }, data: { market } })
       return NextResponse.json({ scanId: existing.id })
     }
 
