@@ -27,7 +27,8 @@ export interface TierConfig {
   priorityHours: number // SLA в часах
   isSubscription: boolean // подписочная модель (авто-повторные аудиты)
   priceRub: number | null // цена в рублях (null = кастомный/enterprise)
-  priceLabel: string // отображаемая цена
+  priceLabel: string // отображаемая цена (RUB)
+  priceLabelByn: string // отображаемая цена (BYN, для kaligeo.by)
 }
 
 export const TIER_CONFIG: Record<Tier, TierConfig> = {
@@ -56,6 +57,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     isSubscription: false,
     priceRub: 4900,
     priceLabel: "4 900 ₽",
+    priceLabelByn: "149 BYN",
   },
   STANDARD: {
     displayName: "Профи",
@@ -82,6 +84,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     isSubscription: false,
     priceRub: 13900,
     priceLabel: "13 900 ₽",
+    priceLabelByn: "449 BYN",
   },
   ADVANCED: {
     displayName: "Агентский",
@@ -108,6 +111,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     isSubscription: false,
     priceRub: 27900,
     priceLabel: "27 900 ₽",
+    priceLabelByn: "899 BYN",
   },
   // ── Подписочные тарифы (мониторинг) ──────────────────────────────────────────
   MONITOR_START: {
@@ -136,6 +140,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     isSubscription: true,
     priceRub: 2990,
     priceLabel: "2 990 ₽/мес",
+    priceLabelByn: "99 BYN/мес",
   },
   MONITOR_PRO: {
     displayName: "Мониторинг Профи",
@@ -163,6 +168,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     isSubscription: true,
     priceRub: 9990,
     priceLabel: "9 990 ₽/мес",
+    priceLabelByn: "399 BYN/мес",
   },
   MONITOR_AGENT: {
     displayName: "Мониторинг Агент",
@@ -190,6 +196,7 @@ export const TIER_CONFIG: Record<Tier, TierConfig> = {
     isSubscription: true,
     priceRub: 19990,
     priceLabel: "19 990 ₽/мес",
+    priceLabelByn: "699 BYN/мес",
   },
 }
 

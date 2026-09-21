@@ -48,7 +48,9 @@ function isTicked(val: unknown): boolean {
 
 export default async function PricingPage() {
   const host = (await headers()).get("host")
-  const { landingUrl } = getMarketConfig(marketFromHost(host))
+  const market = marketFromHost(host)
+  const { landingUrl } = getMarketConfig(market)
+  const isByn = market === "by"
 
   return (
     <div style={{ background: "var(--bone)", minHeight: "100vh" }}>
@@ -181,7 +183,7 @@ export default async function PricingPage() {
                         lineHeight: 1,
                       }}
                     >
-                      {cfg.priceLabel}
+                      {isByn ? cfg.priceLabelByn : cfg.priceLabel}
                     </p>
                     <p style={{ fontSize: "12px", color: isPremium ? "var(--bone-2)" : "var(--ink-3)" }}>
                       единовременно
@@ -327,7 +329,7 @@ export default async function PricingPage() {
                         lineHeight: 1,
                       }}
                     >
-                      {cfg.priceLabel}
+                      {isByn ? cfg.priceLabelByn : cfg.priceLabel}
                     </p>
                     <p style={{ fontSize: "12px", color: "var(--ink-3)" }}>
                       автопродление · минимум 3 месяца
