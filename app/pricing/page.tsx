@@ -103,7 +103,7 @@ export default async function PricingPage() {
             Платите один раз.<br />Отчёт ваш навсегда.
           </h1>
           <p style={{ fontSize: "16px", color: "var(--ink-3)", maxWidth: "480px", margin: "0 auto" }}>
-            У конкурентов — 29 990 ₽/мес за подписку. У нас — разовый аудит с полным отчётом.
+            У конкурентов — {isByn ? "970 BYN/мес" : "29 990 ₽/мес"} за подписку. У нас — разовый аудит с полным отчётом.
           </p>
         </div>
 
@@ -199,7 +199,7 @@ export default async function PricingPage() {
                           textDecorationColor: "rgba(200,242,74,0.5)",
                         }}
                       >
-                        29 990 ₽/мес у конкурентов
+                        {isByn ? "970 BYN/мес у конкурентов" : "29 990 ₽/мес у конкурентов"}
                       </p>
                     )}
                   </div>
@@ -270,8 +270,8 @@ export default async function PricingPage() {
           <div className="flex items-start gap-3">
             <span style={{ fontSize: "20px", flexShrink: 0 }}>💡</span>
             <p style={{ fontSize: "13px", color: "var(--ink-2)", lineHeight: 1.6, margin: 0 }}>
-              <strong style={{ color: "var(--ink)" }}>VisioBrand Про стоит 29 990 ₽/мес</strong> — это 359 880 ₽ в год за подписку.
-              Наш Агентский аудит — разово 27 900 ₽, отчёт остаётся у вас навсегда.
+              <strong style={{ color: "var(--ink)" }}>VisioBrand Про стоит {isByn ? "970 BYN/мес" : "29 990 ₽/мес"}</strong> — это {isByn ? "11 640 BYN" : "359 880 ₽"} в год за подписку.
+              Наш Агентский аудит — разово {isByn ? "899 BYN" : "27 900 ₽"}, отчёт остаётся у вас навсегда.
               Нужен мониторинг? Есть подписочные тарифы ниже.
             </p>
           </div>
