@@ -18,6 +18,7 @@ import { Resend } from "resend"
 import { tasks } from "@trigger.dev/sdk/v3"
 import { tg } from "@/lib/telegram"
 import type { contactScan } from "@/trigger/contact-scan"
+import { marketFromDomain, getMarketConfig } from "@/lib/market"
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM    = process.env.FROM_EMAIL ?? "hello@kaligeo.ru"
@@ -75,6 +76,8 @@ export async function POST(req: NextRequest) {
   }
 
   const domain = origin.includes("kaligeo.by") ? "kaligeo.by" : "kaligeo.ru"
+  const market = marketFromDomain(domain)
+  const marketConfig = getMarketConfig(market)
   const planLabel = plan || "не выбран"
 
   try {
@@ -115,7 +118,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Подтверждение клиенту
     const { error: clientErr } = await resend.emails.send({
-      from: FROM,
+      from: marketConfig.fromEmail,
       to: email,
       subject: "Запускаем AI-скан вашего сайта — KaliGEO",
       html: `
@@ -136,7 +139,7 @@ export async function POST(req: NextRequest) {
           </div>
           <p style="color:#374151;line-height:1.7">Пока ждёте — посмотрите как выглядит полный отчёт:</p>
           <div style="text-align:center;margin:20px 0">
-            <a href="https://app.kaligeo.ru/report/demo" style="display:inline-block;background:#0f172a;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
+            <a href="${marketConfig.appUrl}/report/demo" style="display:inline-block;background:#0f172a;color:white;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px">
               Пример полного отчёта →
             </a>
           </div>
@@ -144,7 +147,7 @@ export async function POST(req: NextRequest) {
             Письмо с результатами придёт отдельно — там будет ваш AI-индекс и разбивка по платформам.
           </p>
           <hr style="border:none;border-top:1px solid #eee;margin:24px 0">
-          <p style="color:#9ca3af;font-size:12px;text-align:center">KaliGEO · <a href="https://${domain}" style="color:#9ca3af">${domain}</a> · <a href="mailto:hello@kaligeo.ru" style="color:#9ca3af">hello@kaligeo.ru</a></p>
+          <p style="color:#9ca3af;font-size:12px;text-align:center">KaliGEO · <a href="https://${domain}" style="color:#9ca3af">${domain}</a> · <a href="mailto:${marketConfig.fromEmail}" style="color:#9ca3af">${marketConfig.fromEmail}</a></p>
         </div>
       `,
     })
@@ -158,6 +161,7 @@ export async function POST(req: NextRequest) {
           websiteUrl: url.toString(),
           email,
           name,
+          market,
         })
       } catch (e) {
         console.error("[contact] contact-scan trigger failed:", e)

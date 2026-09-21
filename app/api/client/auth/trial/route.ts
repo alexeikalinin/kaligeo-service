@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma"
 import { tasks } from "@trigger.dev/sdk/v3"
 import { auditPipeline } from "@/trigger/audit-pipeline"
 import { sendMagicLinkEmail } from "@/lib/notify"
+import { getMarketConfig, marketFromHost } from "@/lib/market"
 import { z } from "zod"
 
 const TrialSchema = z.object({
@@ -79,10 +80,10 @@ export async function POST(req: NextRequest) {
     data: { email, expiresAt: new Date(Date.now() + 30 * 60 * 1000) },
   })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
+  const { appUrl, fromEmail } = getMarketConfig(marketFromHost(req.headers.get("host")))
   const magicLinkUrl = `${appUrl}/api/client/auth/verify?token=${tokenRecord.token}&redirect=/my/dashboard`
 
-  await sendMagicLinkEmail({ to: email, magicLinkUrl }).catch(console.error)
+  await sendMagicLinkEmail({ to: email, magicLinkUrl, fromEmail }).catch(console.error)
 
   return NextResponse.json({ success: true, jobId: job.id, magicLinkUrl })
 }

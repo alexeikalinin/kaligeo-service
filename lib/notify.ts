@@ -144,10 +144,11 @@ export async function notifyAuditCompleted(opts: {
 export async function sendMagicLinkEmail(opts: {
   to: string
   magicLinkUrl: string
+  fromEmail?: string
 }): Promise<void> {
-  const { to, magicLinkUrl } = opts
+  const { to, magicLinkUrl, fromEmail } = opts
   await getResend().emails.send({
-    from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    from: fromEmail ?? process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
     to,
     subject: "Ссылка для входа в KaliGEO",
     html: `

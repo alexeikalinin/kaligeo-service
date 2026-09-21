@@ -1,17 +1,14 @@
 import { task, wait } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
+import { getMarketConfig, type Market } from "../lib/market"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
 
-const FROM = () => process.env.FROM_EMAIL ?? "noreply@kaligeo.com"
-const APP_URL = () => "https://app.kaligeo.ru"
-const LANDING_URL = "https://kaligeo.ru"
-
-function auditLink(emailNum: number) {
-  return `${LANDING_URL}/#pricing?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email${emailNum}`
+function auditLink(landingUrl: string, emailNum: number) {
+  return `${landingUrl}/#pricing?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email${emailNum}`
 }
 
 function unsubLink(appUrl: string, scanId: string) {
@@ -33,7 +30,7 @@ export const freemiumSequence = task({
     if (!scan) return
 
     const { companyName, previewScore, niche } = scan
-    const appUrl = APP_URL()
+    const { landingUrl, appUrl, fromEmail } = getMarketConfig((scan.market as Market) ?? "ru")
     const previewUrl = `${appUrl}/preview/${scanId}?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email1`
     const unsub = unsubLink(appUrl, scanId)
     const scoreEmoji = previewScore >= 60 ? "🟢" : previewScore >= 30 ? "🟡" : "🔴"
@@ -43,20 +40,20 @@ export const freemiumSequence = task({
 
     // Email 1 — сразу: результат скана
     await getResend().emails.send({
-      from: FROM(),
+      from: fromEmail,
       to: email,
       subject: `${scoreEmoji} KaliGEO: ${companyName} — score ${previewScore}/100 · ${previewScore < 30 ? "AI вас почти не видит" : "есть потенциал роста"}`,
-      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(1), unsub, platformScores }),
+      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(landingUrl, 1), unsub, platformScores }),
     })
 
     // Email 2 — +24ч: образовательный
     await wait.for({ hours: 24 })
     if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
-      from: FROM(),
+      from: fromEmail,
       to: email,
       subject: `3 причины, почему ChatGPT не знает про ${companyName}`,
-      html: emailTemplate2({ companyName, niche, auditUrl: auditLink(2), unsub }),
+      html: emailTemplate2({ companyName, niche, auditUrl: auditLink(landingUrl, 2), unsub }),
     })
 
     // Email 3 — +72ч: конкуренты
@@ -65,32 +62,32 @@ export const freemiumSequence = task({
     if (!scan3?.emailCaptured) return
     const competitors3 = (scan3 as { suggestedCompetitors?: string[] }).suggestedCompetitors ?? []
     await getResend().emails.send({
-      from: FROM(),
+      from: fromEmail,
       to: email,
       subject: competitors3.length > 0
         ? `${competitors3[0]} уже в топе AI-ответов. Как обогнать?`
         : `Конкурент в вашей нише уже в топе AI-ответов`,
-      html: emailTemplate3({ companyName, niche, previewScore, auditUrl: auditLink(3), unsub, suggestedCompetitors: competitors3 }),
+      html: emailTemplate3({ companyName, niche, previewScore, auditUrl: auditLink(landingUrl, 3), unsub, suggestedCompetitors: competitors3 }),
     })
 
     // Email 4 — +48ч (6й день): urgency
     await wait.for({ hours: 48 })
     if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
-      from: FROM(),
+      from: fromEmail,
       to: email,
       subject: `⏳ Последний шанс: данные по ${companyName} удалятся через 48ч`,
-      html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(4), unsub }),
+      html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(landingUrl, 4), unsub }),
     })
 
     // Email 5 — +8 дней (14й день): re-engagement
     await wait.for({ days: 8 })
     if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
-      from: FROM(),
+      from: fromEmail,
       to: email,
       subject: `${companyName}: как меняется AI-видимость в вашей нише`,
-      html: emailTemplate5({ companyName, niche, auditUrl: auditLink(5), unsub }),
+      html: emailTemplate5({ companyName, niche, auditUrl: auditLink(landingUrl, 5), unsub }),
     })
   },
 })

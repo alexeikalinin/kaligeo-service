@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { EmailCaptureForm } from "@/components/freemium/EmailCaptureForm"
 import TrialForm from "@/components/portal/TrialForm"
+import { getMarketConfig, type Market } from "@/lib/market"
 
 // Full platform list shown in preview (blurred for paid)
 const ALL_PLATFORMS = [
@@ -70,6 +71,7 @@ export default async function PreviewPage({ params }: PageProps) {
   const scan = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
   if (!scan) notFound()
 
+  const { landingUrl } = getMarketConfig((scan.market as Market) ?? "ru")
   const services = scan.services as string[]
   const platformScores = (scan.platformScores ?? {}) as unknown as Record<string, QuickCheckPlatformResult>
   const hasRealData = scan.quickCheckDone && Object.keys(platformScores).length > 0
@@ -86,7 +88,7 @@ export default async function PreviewPage({ params }: PageProps) {
       >
         <span className="font-mono text-xs font-bold tracking-widest uppercase">KaliGEO</span>
         <Link
-          href="https://kaligeo.ru/#pricing"
+          href={`${landingUrl}/#pricing`}
           className="text-xs px-3 py-1.5 rounded font-medium"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >
@@ -178,7 +180,7 @@ export default async function PreviewPage({ params }: PageProps) {
                 ChatGPT · Claude · Gemini · Perplexity · DeepSeek · YandexGPT · GigaChat · Алиса · Grok
               </p>
               <Link
-                href={`/pricing`}
+                href={`${landingUrl}/#pricing`}
                 className="px-4 py-2 rounded font-medium text-sm"
                 style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
               >
@@ -258,7 +260,7 @@ export default async function PreviewPage({ params }: PageProps) {
           <TrialForm />
           <p className="text-xs mt-4" style={{ color: "var(--ink-3)" }}>
             или{" "}
-            <Link href="https://kaligeo.ru/#pricing" style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
+            <Link href={`${landingUrl}/#pricing`} style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
               выберите тариф →
             </Link>
           </p>

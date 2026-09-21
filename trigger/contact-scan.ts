@@ -1,13 +1,13 @@
 import { task, tasks } from "@trigger.dev/sdk/v3"
 import { prisma } from "../lib/prisma"
 import type { freemiumSequence } from "./freemium-sequence"
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
+import { getMarketConfig, type Market } from "../lib/market"
 
 export interface ContactScanPayload {
   websiteUrl: string
   email: string
   name: string
+  market?: Market
 }
 
 export const contactScan = task({
@@ -15,7 +15,9 @@ export const contactScan = task({
   maxDuration: 900,
   retry: { maxAttempts: 1 },
 
-  run: async ({ websiteUrl, email, name }: ContactScanPayload) => {
+  run: async ({ websiteUrl, email, name, market = "ru" }: ContactScanPayload) => {
+    const { appUrl } = getMarketConfig(market)
+
     // Reuse existing scan if done within last 24h
     const existing = await prisma.freemiumScan.findFirst({
       where: {
@@ -30,18 +32,19 @@ export const contactScan = task({
 
     if (existing) {
       scanId = existing.id
-      if (!existing.emailCaptured) {
-        await prisma.freemiumScan.update({
-          where: { id: scanId },
-          data: { emailCaptured: email },
-        })
-      }
+      // This lead's own market always wins — a cached scan may have been
+      // created by a visitor from the other domain and must not leak its
+      // market into this lead's follow-up sequence.
+      await prisma.freemiumScan.update({
+        where: { id: scanId },
+        data: { market, ...(existing.emailCaptured ? {} : { emailCaptured: email }) },
+      })
     } else {
       // Делегируем скан в Vercel API — там есть все API-ключи платформ
-      const resp = await fetch(`${APP_URL}/api/freemium/scan`, {
+      const resp = await fetch(`${appUrl}/api/freemium/scan`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ websiteUrl, source: "contact_form" }),
+        body: JSON.stringify({ websiteUrl, source: "contact_form", market }),
       })
 
       if (!resp.ok) {

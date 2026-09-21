@@ -4,10 +4,12 @@ import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
 import { runFreemiumQuickCheck } from "@/lib/freemium/quick-check"
 import { z } from "zod"
 import { checkRateLimit } from "@/lib/rate-limit"
+import { marketFromOrigin } from "@/lib/market"
 
 const ScanSchema = z.object({
   websiteUrl: z.string().url(),
   source: z.string().max(64).optional(),
+  market: z.enum(["by", "ru"]).optional(),
 })
 
 export async function POST(req: NextRequest) {
@@ -22,7 +24,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { websiteUrl, source } = ScanSchema.parse(body)
+    const { websiteUrl, source, market: bodyMarket } = ScanSchema.parse(body)
+    const market = bodyMarket ?? marketFromOrigin(req.headers.get("origin"))
 
     // Check for recent scan of same URL (cache for 24h)
     const existing = await prisma.freemiumScan.findFirst({
@@ -35,6 +38,9 @@ export async function POST(req: NextRequest) {
     })
 
     if (existing) {
+      // This lead's own market always wins over whatever market the cached
+      // scan was originally created under.
+      await prisma.freemiumScan.update({ where: { id: existing.id }, data: { market } })
       return NextResponse.json({ scanId: existing.id })
     }
 
@@ -93,6 +99,7 @@ export async function POST(req: NextRequest) {
         previewScore,
         platformScores: platformScoresJson ?? undefined,
         quickCheckDone,
+        market,
         ...(source ? { source } : {}),
       },
     })

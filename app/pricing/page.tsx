@@ -1,6 +1,8 @@
 import { Metadata } from "next"
 import Link from "next/link"
+import { headers } from "next/headers"
 import { TIER_CONFIG } from "@/lib/gates"
+import { getMarketConfig, marketFromHost } from "@/lib/market"
 
 export const metadata: Metadata = {
   title: "Тарифы — KaliGEO",
@@ -44,7 +46,10 @@ function isTicked(val: unknown): boolean {
   return false
 }
 
-export default function PricingPage() {
+export default async function PricingPage() {
+  const host = (await headers()).get("host")
+  const { landingUrl } = getMarketConfig(marketFromHost(host))
+
   return (
     <div style={{ background: "var(--bone)", minHeight: "100vh" }}>
       {/* Header */}
@@ -233,7 +238,7 @@ export default function PricingPage() {
                   </ul>
 
                   <Link
-                    href={`https://kaligeo.ru/#cta`}
+                    href={`${landingUrl}/#pricing`}
                     style={{
                       display: "block",
                       textAlign: "center",

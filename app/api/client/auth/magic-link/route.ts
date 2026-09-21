@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { checkRateLimit } from "@/lib/rate-limit"
 import { sendMagicLinkEmail } from "@/lib/notify"
+import { getMarketConfig, marketFromHost } from "@/lib/market"
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown"
@@ -43,10 +44,10 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
+  const { appUrl, fromEmail } = getMarketConfig(marketFromHost(req.headers.get("host")))
   const magicLinkUrl = `${appUrl}/api/client/auth/verify?token=${token.token}`
 
-  await sendMagicLinkEmail({ to: email, magicLinkUrl })
+  await sendMagicLinkEmail({ to: email, magicLinkUrl, fromEmail })
 
   return NextResponse.json({ success: true })
 }

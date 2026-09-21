@@ -140,6 +140,7 @@ model FreemiumScan {
   quickCheckDone       Boolean  @default(false)
   emailCaptured        String?
   source               String?
+  market               String   @default("ru")
   createdAt            DateTime @default(now())
 
   @@index([websiteUrl])
