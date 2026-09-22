@@ -70,6 +70,7 @@ model AuditJob {
   adminNotes       String?
   paidAt           DateTime?
   alfaBankOrderId  String?    // Alfa-Bank's orderId returned after order creation
+  market           String     @default("ru") // "ru" | "by" — determines which Alfa-Bank merchant account handles payment
   source              String?
   // Подписка (мониторинг-тарифы)
   subscriptionActiveUntil DateTime?  // null = разовый аудит

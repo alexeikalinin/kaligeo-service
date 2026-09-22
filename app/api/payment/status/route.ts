@@ -11,7 +11,7 @@ import { auditPipeline } from "@/trigger/audit-pipeline"
 import { notifyAuditStarted } from "@/lib/notify"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 
-const SANDBOX_URL = "https://sandbox.alfabank.by/sandbox/payment/rest"
+const SANDBOX_URL = "https://abby.rbsuat.com/payment/rest"
 const PROD_URL = "https://ecom.alfabank.by/payment/rest"
 
 export async function OPTIONS(req: NextRequest) {
@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
   const job = await prisma.auditJob.findUnique({
     where: { id: jobId },
-    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true },
+    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true, market: true },
   })
 
   if (!job) {
@@ -53,9 +53,14 @@ export async function GET(req: NextRequest) {
   const isSandbox = process.env.ALFABANK_SANDBOX === "true"
   const baseUrl = isSandbox ? SANDBOX_URL : PROD_URL
 
+  // Same merchant account used at order creation must be used to check status
+  const isRu = job.market === "ru"
+  const userName = isRu ? (process.env.ALFABANK_USER_RU ?? "") : (process.env.ALFABANK_USER ?? "")
+  const password = isRu ? (process.env.ALFABANK_PASS_RU ?? "") : (process.env.ALFABANK_PASS ?? "")
+
   const params = new URLSearchParams({
-    userName: process.env.ALFABANK_USER ?? "",
-    password: process.env.ALFABANK_PASS ?? "",
+    userName,
+    password,
     orderId: job.alfaBankOrderId,
     language: "ru",
   })

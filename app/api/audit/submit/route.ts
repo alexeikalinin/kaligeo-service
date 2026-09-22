@@ -5,6 +5,12 @@ import { Redis } from "@upstash/redis"
 import { notifyNewAuditRequest } from "@/lib/notify"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 
+/** Detect market ("ru" | "by") from request origin — determines Alfa-Bank merchant used at payment time */
+function detectMarket(origin: string | null): "ru" | "by" {
+  if (origin?.includes("kaligeo.by")) return "by"
+  return "ru" // default to RU
+}
+
 const PLATFORMS = ["CHATGPT", "CLAUDE", "GEMINI", "PERPLEXITY", "DEEPSEEK", "YANDEXGPT", "GIGACHAT", "ALISA", "GROK"] as const
 
 const SubmitSchema = z.object({
@@ -91,6 +97,7 @@ export async function POST(req: NextRequest) {
         competitors: effectiveCompetitors,
         tier: "BASIC", // always starts as BASIC; admin sets real tier at confirm
         status: "PENDING_PAYMENT",
+        market: detectMarket(req.headers.get("origin")),
         ...(data.selectedPlatforms?.length ? { selectedPlatforms: data.selectedPlatforms } : {}),
         ...(data.baselineJobId ? { baselineJobId: data.baselineJobId } : {}),
         ...(data.followUpScheduledAt ? { followUpScheduledAt: new Date(data.followUpScheduledAt) } : {}),

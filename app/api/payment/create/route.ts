@@ -13,7 +13,7 @@ import { prisma } from "@/lib/prisma"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 import type { Tier } from "@/lib/gates"
 
-const SANDBOX_URL = "https://sandbox.alfabank.by/sandbox/payment/rest"
+const SANDBOX_URL = "https://abby.rbsuat.com/payment/rest"
 const PROD_URL    = "https://ecom.alfabank.by/payment/rest"
 
 /** Prices in BYN kopecks (1 BYN = 100 kopecks) */
@@ -62,12 +62,10 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const locale = detectLocale(origin, bodyLocale)
-
   // Look up job to get authoritative tier and validate it exists
   const job = await prisma.auditJob.findUnique({
     where: { id: jobId },
-    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true },
+    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true, market: true },
   })
 
   if (!job) {
@@ -76,6 +74,10 @@ export async function POST(req: NextRequest) {
       { status: 404, headers: corsHeaders }
     )
   }
+
+  // Job's market (set at submit time) is authoritative — falls back to origin/body detection
+  // only in the unlikely case it's missing, so the merchant account never drifts after order creation.
+  const locale = (job.market === "ru" || job.market === "by") ? job.market : detectLocale(origin, bodyLocale)
 
   if (job.paidAt) {
     return NextResponse.json(
