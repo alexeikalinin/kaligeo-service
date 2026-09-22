@@ -13,7 +13,7 @@ export interface ContactScanPayload {
 export const contactScan = task({
   id: "contact-scan",
   maxDuration: 900,
-  retry: { maxAttempts: 1 },
+  retry: { maxAttempts: 3, minTimeoutInMs: 3_000, maxTimeoutInMs: 20_000, factor: 2 },
 
   run: async ({ websiteUrl, email, name, market = "ru" }: ContactScanPayload) => {
     const { appUrl } = getMarketConfig(market)
@@ -39,16 +39,22 @@ export const contactScan = task({
         await prisma.freemiumScan.update({ where: { id: scanId }, data: { emailCaptured: email } })
       }
     } else {
-      // Делегируем скан в Vercel API — там есть все API-ключи платформ
-      const resp = await fetch(`${appUrl}/api/freemium/scan`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ websiteUrl, source: "contact_form", market }),
-      })
+      // Делегируем скан в Vercel API — там есть все API-ключи платформ.
+      // Не глотаем сбои молча: бросаем ошибку, чтобы сработал retry задачи
+      // (иначе временный сбой домена/DNS/сертификата теряет лида навсегда).
+      let resp: Response
+      try {
+        resp = await fetch(`${appUrl}/api/freemium/scan`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ websiteUrl, source: "contact_form", market }),
+        })
+      } catch (err) {
+        throw new Error(`[contact-scan] freemium scan fetch failed for market=${market}: ${err instanceof Error ? err.message : String(err)}`)
+      }
 
       if (!resp.ok) {
-        console.error("[contact-scan] freemium scan API failed:", resp.status, await resp.text())
-        return
+        throw new Error(`[contact-scan] freemium scan API failed for market=${market}: ${resp.status} ${await resp.text()}`)
       }
 
       const { scanId: newScanId } = await resp.json() as { scanId: string }
