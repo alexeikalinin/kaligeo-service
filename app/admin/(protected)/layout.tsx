@@ -36,6 +36,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/funnel" className="hover:text-zinc-100 transition-colors">
             Аналитика
           </Link>
+          <Link href="/admin/agents" className="hover:text-zinc-100 transition-colors">
+            Агенты
+          </Link>
         </nav>
         <div className="ml-auto">
           <Link href="/chat" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">

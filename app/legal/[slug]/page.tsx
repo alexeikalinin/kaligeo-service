@@ -1,11 +1,18 @@
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
+import { headers } from 'next/headers';
+import { getMarketConfig, marketFromHost, type Market } from '@/lib/market';
 
-const DOCS: Record<string, { title: string; date: string; body: React.ReactNode }> = {
+interface LegalCtx {
+  email: string;
+  pricingUrl: string; // <landingUrl>/pricing
+}
+
+const DOCS: Record<string, { title: string; date: string; body: (ctx: LegalCtx) => React.ReactNode }> = {
   offer: {
     title: 'Порядок оказания услуг (публичная оферта)',
     date: 'Редакция от 28 мая 2026 г.',
-    body: (
+    body: (ctx) => (
       <>
         <p>Настоящий документ является публичной офертой самозанятого гражданина Калинина А.Н. (далее — Исполнитель) в соответствии со статьями 405–408 Гражданского кодекса Республики Беларусь. Оплата услуги означает безоговорочное принятие (акцепт) условий настоящей оферты.</p>
 
@@ -18,7 +25,7 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
           <li><strong>Стандарт (449 BYN / 13 900 ₽ / $150):</strong> Расширенный аудит в большем числе AI-платформ. Отчёт в формате PDF, сравнительный анализ с конкурентами, приоритизированный план действий на 30/60/90 дней. Возможность задать вопросы по результатам через чат.</li>
           <li><strong>Продвинутый (899 BYN+ / 27 900 ₽+ / $300+):</strong> Полный аудит с максимальным охватом AI-платформ. Углублённый конкурентный анализ, персональный план роста, рекомендации по повышению AI-видимости бизнеса. Расширенный объём данных и инсайтов.</li>
         </ul>
-        <p>Цены могут быть изменены Исполнителем в одностороннем порядке; изменение не затрагивает уже оплаченные заказы.</p>
+        <p>Актуальный перечень тарифов: <a href={ctx.pricingUrl}>{ctx.pricingUrl.replace('https://', '')}</a>. Цены могут быть изменены Исполнителем в одностороннем порядке; изменение не затрагивает уже оплаченные заказы.</p>
 
         <h2>3. Порядок и сроки</h2>
         <p><strong>Шаг 1.</strong> Клиент заполняет форму на сайте: указывает email, название компании и нишу.</p>
@@ -37,7 +44,7 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
         <p>Настоящая оферта регулируется правом Республики Беларусь. Споры разрешаются в претензионном порядке (срок ответа — 30 дней), а при недостижении согласия — в суде по месту нахождения Исполнителя.</p>
 
         <h2>7. Реквизиты исполнителя</h2>
-        <p>Самозанятый гражданин Калинин А.Н. · УНП HB0983375 · р/с BY55ALFA301432XJDW0010270000 в ЗАО «Альфа-Банк» · БИК ALFABY2X · Республика Беларусь, 220069, г. Минск, ул. Лукьяновича, 4-130 · Email: hello@kaligeo.ru · Тел.: +375 (44) 765-42-31.</p>
+        <p>Самозанятый гражданин Калинин А.Н. · УНП HB0983375 · р/с BY55ALFA301432XJDW0010270000 в ЗАО «Альфа-Банк» · БИК ALFABY2X · Республика Беларусь, 220069, г. Минск, ул. Лукьяновича, 4-130 · Email: {ctx.email} · Тел.: +375 (44) 765-42-31.</p>
       </>
     ),
   },
@@ -45,12 +52,12 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
   privacy: {
     title: 'Политика конфиденциальности',
     date: 'Редакция от 28 мая 2026 г.',
-    body: (
+    body: (ctx) => (
       <>
         <p>Настоящая Политика составлена в соответствии с Законом Республики Беларусь «О защите персональных данных» от 07.05.2021 № 99-З.</p>
 
         <h2>1. Оператор персональных данных</h2>
-        <p>Самозанятый гражданин Калинин А.Н., УНП HB0983375, Республика Беларусь, 220069, г. Минск, ул. Лукьяновича, 4-130. Контактное лицо по вопросам обработки данных: <a href="mailto:hello@kaligeo.ru">hello@kaligeo.ru</a>.</p>
+        <p>Самозанятый гражданин Калинин А.Н., УНП HB0983375, Республика Беларусь, 220069, г. Минск, ул. Лукьяновича, 4-130. Контактное лицо по вопросам обработки данных: <a href={`mailto:${ctx.email}`}>{ctx.email}</a>.</p>
 
         <h2>2. Перечень обрабатываемых данных</h2>
         <ul>
@@ -82,7 +89,7 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
 
         <h2>6. Права субъекта персональных данных</h2>
         <p>В соответствии со ст. 10–17 Закона № 99-З вы вправе: получить сведения об обрабатываемых данных; потребовать их исправления, дополнения или удаления; отозвать согласие; обжаловать действия оператора в Национальный центр защиты персональных данных РБ.</p>
-        <p>Запросы направляйте на: <a href="mailto:hello@kaligeo.ru"><strong>hello@kaligeo.ru</strong></a>. Срок рассмотрения — 15 календарных дней.</p>
+        <p>Запросы направляйте на: <a href={`mailto:${ctx.email}`}><strong>{ctx.email}</strong></a>. Срок рассмотрения — 15 календарных дней.</p>
 
         <h2>7. Cookie</h2>
         <p>Сайт использует cookie для корректной работы (технические) и анализа трафика (аналитические). Вы можете отключить cookie в настройках браузера, однако это может повлиять на работу сайта. Согласие на аналитические cookie принимается при продолжении использования сайта.</p>
@@ -93,7 +100,7 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
   returns: {
     title: 'Правила возврата',
     date: 'Редакция от 28 мая 2026 г.',
-    body: (
+    body: (ctx) => (
       <>
         <p>Настоящие правила составлены в соответствии с Законом Республики Беларусь «О защите прав потребителей» от 09.01.2002 № 90-З и постановлением Совета Министров РБ от 14.06.2002 № 778.</p>
 
@@ -113,7 +120,7 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
         <p>Выбор между возвратом средств и повторным выполнением — за клиентом.</p>
 
         <h2>4. Порядок обращения за возвратом</h2>
-        <p>Направьте письмо на <a href="mailto:hello@kaligeo.ru"><strong>hello@kaligeo.ru</strong></a> с темой «Возврат» и укажите:</p>
+        <p>Направьте письмо на <a href={`mailto:${ctx.email}`}><strong>{ctx.email}</strong></a> с темой «Возврат» и укажите:</p>
         <ul>
           <li>email, использованный при оплате;</li>
           <li>дату и сумму транзакции;</li>
@@ -134,7 +141,7 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
   payment: {
     title: 'Правила оплаты и безопасность',
     date: 'Редакция от 28 мая 2026 г.',
-    body: (
+    body: (ctx) => (
       <>
         <p>Самозанятый гражданин Калинин А.Н. (далее — Исполнитель) принимает оплату через систему интернет-эквайринга ЗАО «Альфа-Банк» (лицензия НБРБ серия 02100/5) в соответствии с Законом Республики Беларусь «Об электронной торговле» от 28.07.2003 № 231-З и требованиями платёжных систем Visa и Mastercard.</p>
 
@@ -142,7 +149,7 @@ const DOCS: Record<string, { title: string; date: string; body: React.ReactNode 
         <ul>
           <li>Банковские карты Visa, Mastercard, Белкарт (внутренние и международные).</li>
           <li>Оплата производится в белорусских рублях (BYN), российских рублях (RUB) или долларах США (USD) в зависимости от выбранного тарифа.</li>
-          <li>Оплата счётом для юридических лиц — по запросу на <a href="mailto:hello@kaligeo.ru">hello@kaligeo.ru</a>.</li>
+          <li>Оплата счётом для юридических лиц — по запросу на <a href={`mailto:${ctx.email}`}>{ctx.email}</a>.</li>
         </ul>
 
         <h2>2. Безопасность платежей</h2>
@@ -174,6 +181,11 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
   const { slug } = await params
   const doc = DOCS[slug];
   if (!doc) notFound();
+
+  const host = (await headers()).get('host');
+  const market: Market = marketFromHost(host);
+  const { landingUrl, fromEmail } = getMarketConfig(market);
+  const ctx: LegalCtx = { email: fromEmail, pricingUrl: `${landingUrl}/pricing` };
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>
@@ -208,12 +220,12 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
             .legal-body strong { color: var(--ink); }
           `}</style>
           <div className="legal-body">
-            {doc.body}
+            {doc.body(ctx)}
           </div>
         </div>
 
         <footer style={{ marginTop: 64, paddingTop: 24, borderTop: '1px solid var(--rule)', fontSize: 12, color: 'var(--ink-3)' }}>
-          <p>По вопросам: <a href="mailto:hello@kaligeo.ru" style={{ color: 'var(--ink-3)' }}>hello@kaligeo.ru</a> · +375 (44) 765-42-31</p>
+          <p>По вопросам: <a href={`mailto:${ctx.email}`} style={{ color: 'var(--ink-3)' }}>{ctx.email}</a> · +375 (44) 765-42-31</p>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' as const, marginTop: 8 }}>
             <Link href="/legal/offer" style={{ color: 'var(--ink-3)', fontSize: 12 }}>Оферта</Link>
             <Link href="/legal/privacy" style={{ color: 'var(--ink-3)', fontSize: 12 }}>Конфиденциальность</Link>

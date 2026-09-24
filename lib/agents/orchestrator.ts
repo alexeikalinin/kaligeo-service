@@ -102,6 +102,29 @@ const TOOLS: Anthropic.Tool[] = [
     },
   },
   {
+    name: "invoke_website_analysis_agent",
+    description: "Проанализировать сайт компании по URL и извлечь нишу, услуги, ЦА и предполагаемых конкурентов.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        websiteUrl: { type: "string", description: "Полный URL сайта, включая https://" },
+      },
+      required: ["websiteUrl"],
+    },
+  },
+  {
+    name: "invoke_query_optimizer_agent",
+    description: "Улучшить генерацию будущих запросов на основе истории аудитов в той же нише.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        niche: { type: "string", description: "Ниша компании" },
+        companyName: { type: "string", description: "Название компании" },
+      },
+      required: ["niche", "companyName"],
+    },
+  },
+  {
     name: "invoke_lead_scorer_agent",
     description: "Оценить приоритет лида (hot/warm/cold) и получить рекомендацию по следующему действию.",
     input_schema: {

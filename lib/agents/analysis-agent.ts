@@ -120,3 +120,67 @@ ${dataGateWarning}
 
   return response.content[0].type === "text" ? response.content[0].text : ""
 }
+
+export interface CompetitorGap {
+  name: string
+  score: number
+  theirSignals: string[]
+  yourSignals: string[]
+}
+
+/**
+ * Структурированный (JSON) gap-анализ по топ-конкурентам — питает вкладку
+ * «Конкуренты» → CompetitorGapAnalysis. В отличие от runAnalysisAgent("competitors")
+ * (свободный текст для контекста growth-plan-agent), здесь строгий JSON-контракт.
+ */
+export async function runCompetitorGapsAgent(jobId: string, competitors: string[]): Promise<CompetitorGap[]> {
+  if (competitors.length === 0) return []
+
+  const results = await prisma.queryResult.findMany({
+    where: { jobId },
+    select: { platform: true, query: true, response: true, brandMentioned: true, competitors: true, sources: true },
+  })
+
+  if (results.length === 0) return []
+
+  const topCompetitors = competitors.slice(0, 5)
+
+  const resultsSummary = results
+    .filter((r) => topCompetitors.some((c) => r.competitors.includes(c)) || r.brandMentioned)
+    .map(
+      (r) =>
+        `[${r.platform}] Query: "${r.query}"\nMentioned: ${r.brandMentioned}, Competitors: ${r.competitors.join(", ") || "нет"}, Sources: ${(r.sources as string[]).join(", ") || "нет"}\nResponse excerpt: ${r.response.substring(0, 300)}...`
+    )
+    .join("\n\n")
+
+  const prompt = `Ты — аналитик по GEO (Generative Engine Optimization). На основе данных AI-аудита сравни бренд с конкурентами: ${topCompetitors.join(", ")}.
+
+Для каждого конкурента из списка определи:
+- score (0-100): насколько сильнее конкурент представлен в AI-ответах относительно бренда (100 = полностью доминирует, 0 = наравне)
+- theirSignals: 2-4 конкретных сигнала, которые дают конкуренту преимущество (авторитетные источники, формат контента, платформы где он лидирует) — только из реальных данных ниже, без домыслов
+- yourSignals: 2-4 конкретных действия, которые нужно предпринять бренду, чтобы закрыть этот разрыв
+
+Если данных о конкуренте недостаточно — не включай его в результат вместо того чтобы придумывать.
+
+Данные аудита:
+${resultsSummary || "Недостаточно данных о совместных упоминаниях."}
+
+Верни ТОЛЬКО валидный JSON-массив без markdown-блоков:
+[{"name": "...", "score": 0, "theirSignals": ["..."], "yourSignals": ["..."]}]`
+
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-6",
+    max_tokens: 1500,
+    messages: [{ role: "user", content: prompt }],
+  })
+
+  const text = response.content[0].type === "text" ? response.content[0].text : ""
+  const jsonMatch = text.match(/\[[\s\S]*\]/)
+  if (!jsonMatch) return []
+
+  try {
+    return JSON.parse(jsonMatch[0]) as CompetitorGap[]
+  } catch {
+    return []
+  }
+}

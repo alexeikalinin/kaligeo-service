@@ -1,12 +1,11 @@
 import { task, wait } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
+import { getMarketConfig, type Market } from "../lib/market"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
-const FROM = () => process.env.FROM_EMAIL ?? "hello@kaligeo.ru"
-const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
 
 export interface PostAuditSequencePayload {
   jobId: string
@@ -36,10 +35,11 @@ export const postAuditSequence = task({
     const job = await prisma.auditJob.findUnique({ where: { id: jobId } })
     if (!job || job.emailOptOut) return
 
-    const reportUrl = `${APP_URL()}/report/${jobId}?token=${job.reportToken}`
-    const upgradeUrl = `${APP_URL()}/pricing`
-    const reauditUrl = `${APP_URL()}/chat?url=${encodeURIComponent(job.websiteUrl)}`
-    const unsub = `${APP_URL()}/api/audit/unsubscribe?jobId=${jobId}`
+    const { appUrl, fromEmail } = getMarketConfig((job.market as Market) ?? "ru")
+    const reportUrl = `${appUrl}/report/${jobId}?token=${job.reportToken}`
+    const upgradeUrl = `${appUrl}/pricing`
+    const reauditUrl = `${appUrl}/chat?url=${encodeURIComponent(job.websiteUrl)}`
+    const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${jobId}`
 
     const getReport = async (): Promise<ReportData | null> => {
       const r = await prisma.report.findUnique({ where: { jobId } })
@@ -58,11 +58,11 @@ export const postAuditSequence = task({
     }
 
     if (isTrial) {
-      await runTrialSequence({ job, reportUrl, upgradeUrl, unsub, getReport, isOptedOut })
+      await runTrialSequence({ job, reportUrl, upgradeUrl, unsub, getReport, isOptedOut, fromEmail })
     } else if (tier === "BASIC") {
-      await runBasicSequence({ job, reportUrl, upgradeUrl, reauditUrl, unsub, getReport, isOptedOut })
+      await runBasicSequence({ job, reportUrl, upgradeUrl, reauditUrl, unsub, getReport, isOptedOut, fromEmail })
     } else if (tier === "STANDARD" || tier === "ADVANCED") {
-      await runStandardSequence({ job, reportUrl, reauditUrl, unsub, getReport, isOptedOut })
+      await runStandardSequence({ job, reportUrl, reauditUrl, unsub, getReport, isOptedOut, fromEmail })
     }
     // MONITOR_* — отдельный monitoring-alerts.ts, здесь skip
   },
@@ -71,7 +71,7 @@ export const postAuditSequence = task({
 // ── Trial sequence ────────────────────────────────────────────────────────────
 
 async function runTrialSequence({
-  job, reportUrl, upgradeUrl, unsub, getReport, isOptedOut,
+  job, reportUrl, upgradeUrl, unsub, getReport, isOptedOut, fromEmail,
 }: {
   job: { id: string; clientEmail: string; companyName: string; niche: string }
   reportUrl: string
@@ -79,6 +79,7 @@ async function runTrialSequence({
   unsub: string
   getReport: () => Promise<ReportData | null>
   isOptedOut: () => Promise<boolean>
+  fromEmail: string
 }) {
   // T-2: +2 дня — разбор 3 главных находок
   await wait.for({ days: 2 })
@@ -91,7 +92,7 @@ async function runTrialSequence({
     .slice(0, 3)
 
   await getResend().emails.send({
-    from: FROM(),
+    from: fromEmail,
     to: job.clientEmail,
     subject: `${job.companyName}: 3 вещи, которые мешают вам появляться в ChatGPT`,
     html: templateTrialFindings({ job, report, topWeakPoints, upgradeUrl, unsub }),
@@ -106,7 +107,7 @@ async function runTrialSequence({
   const topCompetitors = report3.competitorMatrix.slice(0, 3)
   if (topCompetitors.length > 0) {
     await getResend().emails.send({
-      from: FROM(),
+      from: fromEmail,
       to: job.clientEmail,
       subject: `${topCompetitors[0]?.name ?? "Конкуренты"} уже в топе AI-ответов. Почему не ${job.companyName}?`,
       html: templateTrialCompetitors({ job, report: report3, topCompetitors, reportUrl, upgradeUrl, unsub }),
@@ -117,7 +118,7 @@ async function runTrialSequence({
   await wait.for({ days: 5 })
   if (await isOptedOut()) return
   await getResend().emails.send({
-    from: FROM(),
+    from: fromEmail,
     to: job.clientEmail,
     subject: `${job.companyName}: −20% на полный план роста (только 72 часа)`,
     html: templateTrialOffer({ job, report: await getReport() ?? report, upgradeUrl, unsub }),
@@ -127,7 +128,7 @@ async function runTrialSequence({
 // ── Basic sequence ────────────────────────────────────────────────────────────
 
 async function runBasicSequence({
-  job, reportUrl, upgradeUrl, reauditUrl, unsub, getReport, isOptedOut,
+  job, reportUrl, upgradeUrl, reauditUrl, unsub, getReport, isOptedOut, fromEmail,
 }: {
   job: { id: string; clientEmail: string; companyName: string; niche: string; websiteUrl: string }
   reportUrl: string
@@ -136,6 +137,7 @@ async function runBasicSequence({
   unsub: string
   getReport: () => Promise<ReportData | null>
   isOptedOut: () => Promise<boolean>
+  fromEmail: string
 }) {
   // B-2: +3 дня — одно действие на этой неделе
   await wait.for({ days: 3 })
@@ -147,7 +149,7 @@ async function runBasicSequence({
   const topWeakPoint = report.weakPoints[0]
 
   await getResend().emails.send({
-    from: FROM(),
+    from: fromEmail,
     to: job.clientEmail,
     subject: `${job.companyName}: один шаг, который даст +10 к AI-видимости`,
     html: templateBasicOneAction({ job, quickWin, topWeakPoint, reportUrl, unsub }),
@@ -161,7 +163,7 @@ async function runBasicSequence({
 
   const mainWeakPoint = report3.weakPoints.find((w) => w.severity === "high") ?? report3.weakPoints[0]
   await getResend().emails.send({
-    from: FROM(),
+    from: fromEmail,
     to: job.clientEmail,
     subject: `Как за 30 минут сделать так, чтобы ChatGPT узнал ${job.companyName}`,
     html: templateBasicTip({ job, mainWeakPoint, reauditUrl, upgradeUrl, unsub }),
@@ -171,7 +173,7 @@ async function runBasicSequence({
 // ── Standard / Advanced sequence ─────────────────────────────────────────────
 
 async function runStandardSequence({
-  job, reportUrl, reauditUrl, unsub, getReport, isOptedOut,
+  job, reportUrl, reauditUrl, unsub, getReport, isOptedOut, fromEmail,
 }: {
   job: { id: string; clientEmail: string; companyName: string; niche: string; websiteUrl: string }
   reportUrl: string
@@ -179,6 +181,7 @@ async function runStandardSequence({
   unsub: string
   getReport: () => Promise<ReportData | null>
   isOptedOut: () => Promise<boolean>
+  fromEmail: string
 }) {
   // SA-2: +3 дня — чеклист на первую неделю
   await wait.for({ days: 3 })
@@ -190,7 +193,7 @@ async function runStandardSequence({
   const quickWins = report.actionPlan.quickWins?.slice(0, 3) ?? []
 
   await getResend().emails.send({
-    from: FROM(),
+    from: fromEmail,
     to: job.clientEmail,
     subject: `${job.companyName}: ваш план на 7 дней — 3 тактики из отчёта`,
     html: templateStandardWeekPlan({ job, tactics, quickWins, reportUrl, unsub }),
@@ -204,7 +207,7 @@ async function runStandardSequence({
 
   const topWeakPoints = report3.weakPoints.filter((w) => w.severity === "high").slice(0, 3)
   await getResend().emails.send({
-    from: FROM(),
+    from: fromEmail,
     to: job.clientEmail,
     subject: `${job.companyName}: 3 недели прошло — как AI-видимость?`,
     html: templateStandardProgressCheck({ job, topWeakPoints, reportUrl, unsub }),
@@ -217,7 +220,7 @@ async function runStandardSequence({
   if (!report4) return
 
   await getResend().emails.send({
-    from: FROM(),
+    from: fromEmail,
     to: job.clientEmail,
     subject: `45 дней → пора проверить: как изменилась видимость ${job.companyName}?`,
     html: templateStandardReaudit({ job, report: report4, reauditUrl, unsub }),
@@ -598,7 +601,7 @@ function templateStandardProgressCheck({
       </div>
     </div>`).join("")
 
-  const reauditUrl = `${APP_URL()}/pricing`
+  const reauditUrl = `${new URL(reportUrl).origin}/pricing`
 
   return base(`
     ${eyebrow("День 21 · Проверка прогресса")}

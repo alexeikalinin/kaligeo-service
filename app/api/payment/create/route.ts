@@ -1,8 +1,17 @@
 /**
  * POST /api/payment/create
  *
- * Creates an Alfa-Bank order for a given audit job.
- * Supports both kaligeo.by (BYN) and kaligeo.ru (RUB) via separate merchant accounts.
+ * Creates a payment order for a given audit job — Alfa-Bank for kaligeo.by (always) and
+ * kaligeo.ru (until YooKassa credentials are set), YooKassa for kaligeo.ru once configured.
+ * See lib/billing/provider.ts for the selection rule.
+ *
+ * For MONITOR_* (subscription) tiers, additionally requests that the provider save the
+ * payment method (Alfa card binding / YooKassa save_payment_method) so that
+ * trigger/subscription-billing.ts can charge future periods automatically. If the provider
+ * isn't configured for that (ALFABANK_BINDING_ENABLED unset, or first YooKassa save fails),
+ * the payment itself still succeeds — the subscription simply stays PENDING_FIRST_PAYMENT
+ * and never gets auto-charged, with no impact on this one-off payment.
+ *
  * Amount is determined SERVER-SIDE from the job's tier — never trusted from the client.
  *
  * Request body: { jobId: string, locale?: "by" | "ru" }
@@ -12,9 +21,11 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 import type { Tier } from "@/lib/gates"
+import { registerOrder, merchantForMarket, bindingEnabled } from "@/lib/billing/alfabank"
+import { createPayment as createYooKassaPayment } from "@/lib/billing/yookassa"
+import { resolveProvider } from "@/lib/billing/provider"
 
-const SANDBOX_URL = "https://abby.rbsuat.com/payment/rest"
-const PROD_URL    = "https://ecom.alfabank.by/payment/rest"
+const SUBSCRIPTION_TIERS = new Set(["MONITOR_START", "MONITOR_PRO", "MONITOR_AGENT"])
 
 /** Prices in BYN kopecks (1 BYN = 100 kopecks) */
 const TIER_PRICE_BYN_KOPECKS: Record<string, number> = {
@@ -65,7 +76,7 @@ export async function POST(req: NextRequest) {
   // Look up job to get authoritative tier and validate it exists
   const job = await prisma.auditJob.findUnique({
     where: { id: jobId },
-    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true, market: true },
+    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true, market: true, clientId: true },
   })
 
   if (!job) {
@@ -96,6 +107,7 @@ export async function POST(req: NextRequest) {
 
   const tier = job.tier as Tier
   const isRu = locale === "ru"
+  const isSubscription = SUBSCRIPTION_TIERS.has(tier)
 
   const amount = isRu
     ? TIER_PRICE_RUB_KOPECKS[tier]
@@ -108,75 +120,67 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const isSandbox = process.env.ALFABANK_SANDBOX === "true"
-  const baseUrl = isSandbox ? SANDBOX_URL : PROD_URL
-
-  // Merchant credentials & return domain per locale
-  const userName = isRu
-    ? (process.env.ALFABANK_USER_RU ?? "")
-    : (process.env.ALFABANK_USER    ?? "")
-  const password = isRu
-    ? (process.env.ALFABANK_PASS_RU ?? "")
-    : (process.env.ALFABANK_PASS    ?? "")
   const siteUrl = isRu ? "https://kaligeo.ru" : "https://kaligeo.by"
-  const currency = isRu ? "643" : "933"        // 643 = RUB, 933 = BYN (ISO 4217)
+  const description = `KaliGEO — аудит видимости ${job.companyName}, тариф ${tier}`
+  const provider = resolveProvider(locale)
 
-  const params = new URLSearchParams({
-    userName,
-    password,
-    orderNumber: job.id,
-    amount: String(amount),
-    currency,
-    returnUrl: `${siteUrl}/?paymentStatus=success&jobId=${job.id}`,
-    failUrl:   `${siteUrl}/?paymentStatus=fail&jobId=${job.id}`,
-    description: `KaliGEO — аудит видимости ${job.companyName}, тариф ${tier}`,
-    language: "ru",
-    pageView: "DESKTOP",
-  })
-
-  try {
-    const bankResp = await fetch(`${baseUrl}/register.do`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-      redirect: "follow",
+  if (provider === "yookassa") {
+    const result = await createYooKassaPayment({
+      amount,
+      currency: "RUB",
+      description,
+      returnUrl: `${siteUrl}/?paymentStatus=success&jobId=${job.id}`,
+      savePaymentMethod: isSubscription,
+      metadata: { jobId: job.id },
+      idempotenceKey: job.id,
     })
 
-    if (!bankResp.ok) throw new Error(`Bank API HTTP ${bankResp.status}`)
-
-    const data = await bankResp.json() as {
-      errorCode?: number
-      errorMessage?: string
-      orderId?: string
-      formUrl?: string
+    if (!result.ok) {
+      return NextResponse.json({ errorMessage: result.error ?? "Ошибка создания заказа" }, { status: 400, headers: corsHeaders })
     }
 
-    if (data.errorCode && data.errorCode !== 0) {
+    await prisma.auditJob.update({
+      where: { id: job.id },
+      data: { alfaBankOrderId: result.orderId }, // reused as generic "provider order id" column
+    })
+
+    return NextResponse.json({ orderId: result.orderId, formUrl: result.formUrl }, { headers: corsHeaders })
+  }
+
+  // Alfa-Bank branch (kaligeo.by always; kaligeo.ru fallback until YooKassa is configured)
+  const currency = isRu ? "643" : "933" // 643 = RUB, 933 = BYN (ISO 4217)
+  const merchant = merchantForMarket(locale)
+
+  try {
+    const result = await registerOrder({
+      merchant,
+      amount,
+      currency,
+      orderNumber: job.id,
+      returnUrl: `${siteUrl}/?paymentStatus=success&jobId=${job.id}`,
+      failUrl: `${siteUrl}/?paymentStatus=fail&jobId=${job.id}`,
+      description,
+      // Only ask the bank to bind the card once it has confirmed it supports this —
+      // otherwise clientId is simply ignored by register.do with no side effects.
+      clientId: isSubscription && bindingEnabled() && job.clientId ? job.clientId : undefined,
+    })
+
+    if (!result.ok) {
       return NextResponse.json(
-        { errorCode: data.errorCode, errorMessage: data.errorMessage ?? "Ошибка создания заказа" },
+        { errorCode: result.errorCode, errorMessage: result.error ?? "Ошибка создания заказа" },
         { status: 400, headers: corsHeaders }
       )
-    }
-
-    if (!data.orderId || !data.formUrl) {
-      throw new Error("Bank returned no orderId or formUrl")
     }
 
     // Persist bank orderId so we can look up payment status later
     await prisma.auditJob.update({
       where: { id: job.id },
-      data: { alfaBankOrderId: data.orderId },
+      data: { alfaBankOrderId: result.orderId },
     })
 
-    return NextResponse.json(
-      { orderId: data.orderId, formUrl: data.formUrl },
-      { headers: corsHeaders }
-    )
+    return NextResponse.json({ orderId: result.orderId, formUrl: result.formUrl }, { headers: corsHeaders })
   } catch (err) {
     console.error("[payment/create]", err)
-    return NextResponse.json(
-      { error: "Bank API unavailable" },
-      { status: 502, headers: corsHeaders }
-    )
+    return NextResponse.json({ error: "Bank API unavailable" }, { status: 502, headers: corsHeaders })
   }
 }

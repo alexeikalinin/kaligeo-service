@@ -1,12 +1,11 @@
 import { schedules } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
+import { getMarketConfig, type Market } from "../lib/market"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
-const FROM = () => process.env.FROM_EMAIL ?? "hello@kaligeo.ru"
-const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
 
 const TIER_NAMES: Record<string, string> = {
   MONITOR_START: "Мониторинг Старт",
@@ -61,12 +60,13 @@ export const renewalReminder = schedules.task({
         const scoreDelta = lastScore - firstScore
         const auditCount = allJobs.length
 
-        const pricingUrl = `${APP_URL()}/pricing`
-        const reportUrl = `${APP_URL()}/report/${job.id}?token=${job.reportToken}`
-        const unsub = `${APP_URL()}/api/audit/unsubscribe?jobId=${job.id}`
+        const { appUrl, fromEmail } = getMarketConfig((job.market as Market) ?? "ru")
+        const pricingUrl = `${appUrl}/pricing`
+        const reportUrl = `${appUrl}/report/${job.id}?token=${job.reportToken}`
+        const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${job.id}`
 
         await getResend().emails.send({
-          from: FROM(),
+          from: fromEmail,
           to: job.clientEmail,
           subject: `${job.companyName}: ${tierName} заканчивается ${expiryDate}`,
           html: buildRenewalEmail({

@@ -105,6 +105,13 @@ interface ReportDashboardProps {
   verbatimQuotes?: VerbatimQuote[]
   platformInsights?: PlatformInsight[]
   competitorGaps?: { name: string; score: number; theirSignals: string[]; yourSignals: string[] }[]
+  nicheBenchmark?: { nicheMedian: number; samplesCount: number; tierLabel: string; contextPhrase: string } | null
+  analysisNotes?: { gapsAnalysis: string; sentimentAnalysis: string } | null
+  contentRecommendations?: {
+    blogTopics: { title: string; angle: string; keywords: string[] }[]
+    faqStructure: { question: string; answerOutline: string }[]
+    contentBriefs: { title: string; goal: string; format: string }[]
+  } | null
   comparison?: AuditComparison | null
   shareOfVoice?: ShareOfVoiceResult | null
   competitivePosition?: CompetitivePosition | null
@@ -149,7 +156,7 @@ function getFirstAvailableTab(tier: string): TabKey {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, comparison, sourcesReport, shareOfVoice, competitivePosition }: ReportDashboardProps) {
+export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, nicheBenchmark, analysisNotes, contentRecommendations, comparison, sourcesReport, shareOfVoice, competitivePosition }: ReportDashboardProps) {
   const [tab, setTab] = useState<TabKey>(() => getFirstAvailableTab(job.tier))
 
   // Reset tab when tier changes (e.g. demo tier selector)
@@ -162,7 +169,8 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
 
   const hasPdf = job.tier !== "BASIC" && !!job.pdfUrl
   const hasWebsiteFix = job.tier === "ADVANCED"
-  const benchmarkScore = job.tier !== "BASIC" ? 41 : undefined
+  // Скрываем блок, если бенчмарк не считался (BASIC) или в базе ещё мало аудитов по нише
+  const benchmarkScore = nicheBenchmark && nicheBenchmark.samplesCount >= 5 ? nicheBenchmark.nicheMedian : undefined
   const hallucinations = report.hallucinationAudit ?? []
 
   const totalMentions = Object.values(report.visibilityScores).reduce((a, s) => a + s.mentionCount, 0)
@@ -410,6 +418,31 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                     companyName={job.companyName}
                   />
                 )}
+                {analysisNotes && (analysisNotes.gapsAnalysis || analysisNotes.sentimentAnalysis) && (
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-bold" style={{ color: "var(--ink)" }}>
+                      AI-анализ ниши
+                    </h2>
+                    {analysisNotes.gapsAnalysis && (
+                      <div
+                        className="rounded-xl p-5 text-sm whitespace-pre-wrap"
+                        style={{ background: "var(--card)", border: "1px solid var(--rule)", color: "var(--ink-2)" }}
+                      >
+                        <p className="t-eyebrow mb-2" style={{ color: "var(--ink-3)" }}>Пробелы видимости</p>
+                        {analysisNotes.gapsAnalysis}
+                      </div>
+                    )}
+                    {analysisNotes.sentimentAnalysis && (
+                      <div
+                        className="rounded-xl p-5 text-sm whitespace-pre-wrap"
+                        style={{ background: "var(--card)", border: "1px solid var(--rule)", color: "var(--ink-2)" }}
+                      >
+                        <p className="t-eyebrow mb-2" style={{ color: "var(--ink-3)" }}>Тональность упоминаний</p>
+                        {analysisNotes.sentimentAnalysis}
+                      </div>
+                    )}
+                  </div>
+                )}
                 <OpportunityMap
                   results={job.queryResults}
                   companyName={job.companyName}
@@ -488,11 +521,46 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
           isTabLocked("STANDARD", job.tier)
             ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="plan" />
             : (
-              <div>
-                <h2 className="text-lg font-bold mb-6" style={{ color: "var(--ink)" }}>
-                  План роста видимости
-                </h2>
-                <ActionPlanTimeline plan={report.actionPlan} />
+              <div className="space-y-10">
+                <div>
+                  <h2 className="text-lg font-bold mb-6" style={{ color: "var(--ink)" }}>
+                    План роста видимости
+                  </h2>
+                  <ActionPlanTimeline plan={report.actionPlan} />
+                </div>
+                {contentRecommendations && (
+                  <div className="space-y-4">
+                    <h2 className="text-lg font-bold" style={{ color: "var(--ink)" }}>
+                      Контент-рекомендации
+                    </h2>
+                    {contentRecommendations.blogTopics?.length > 0 && (
+                      <div
+                        className="rounded-xl p-5"
+                        style={{ background: "var(--card)", border: "1px solid var(--rule)" }}
+                      >
+                        <p className="t-eyebrow mb-3" style={{ color: "var(--ink-3)" }}>Темы для блога</p>
+                        <ul className="space-y-2 text-sm" style={{ color: "var(--ink-2)" }}>
+                          {contentRecommendations.blogTopics.map((t, i) => (
+                            <li key={i}><strong style={{ color: "var(--ink)" }}>{t.title}</strong> — {t.angle}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {contentRecommendations.faqStructure?.length > 0 && (
+                      <div
+                        className="rounded-xl p-5"
+                        style={{ background: "var(--card)", border: "1px solid var(--rule)" }}
+                      >
+                        <p className="t-eyebrow mb-3" style={{ color: "var(--ink-3)" }}>FAQ для сайта</p>
+                        <ul className="space-y-2 text-sm" style={{ color: "var(--ink-2)" }}>
+                          {contentRecommendations.faqStructure.map((f, i) => (
+                            <li key={i}><strong style={{ color: "var(--ink)" }}>{f.question}</strong> — {f.answerOutline}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )
         )}

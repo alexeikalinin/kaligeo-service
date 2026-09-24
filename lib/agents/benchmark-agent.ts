@@ -5,11 +5,14 @@
  * Читает исторические Report из БД → считает распределение → возвращает контекст.
  *
  * Используется для добавления строки "Ты в топ-30% для B2B SaaS" в отчёт.
+ * Гейтится TierConfig.hasBenchmark (lib/gates.ts) — считается только для STANDARD/ADVANCED
+ * (и их MONITOR_* аналогов), для BASIC не вызывается.
  *
  * Вызывается из:
- * - audit-pipeline.ts Step 3 (после подсчёта overallScore)
- * - report-agent.ts (при regeneration executiveSummary)
- * - orchestrator (через invoke_benchmark_agent)
+ * - trigger/audit-pipeline.ts, runPipeline() Step 3 — результат пишется в Report.nicheBenchmark
+ *   и оттуда читается на странице app/report/[id]/page.tsx (компонент ExecutiveSummary/PlatformScoreCard)
+ * - lib/agents/report-agent.ts, ветка section === "executiveSummary" — contextPhrase подставляется в промпт
+ * - lib/agents/orchestrator.ts через tool "invoke_benchmark_agent" (ручной вызов из /admin/agents)
  */
 
 import { prisma } from "../prisma"

@@ -1,8 +1,11 @@
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { getClientSession } from "@/lib/client-session"
 import { prisma } from "@/lib/prisma"
 import { TIER_CONFIG, type Tier } from "@/lib/gates"
+import { getMarketConfig, marketFromHost } from "@/lib/market"
+import { SubscriptionCancelButton } from "./SubscriptionCancelButton"
 
 export const metadata: Metadata = {
   title: "Тариф и оплата — KaliGEO",
@@ -25,6 +28,9 @@ function formatDate(d: Date | null) {
 export default async function BillingPage() {
   const clientId = await getClientSession()
   if (!clientId) redirect("/my/login")
+
+  const host = (await headers()).get("host")
+  const { fromEmail } = getMarketConfig(marketFromHost(host))
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -50,6 +56,18 @@ export default async function BillingPage() {
   const isTrial = latestPaid?.source === "trial"
   const currentTier = latestPaid?.tier as Tier | undefined
   const tierConfig = currentTier ? TIER_CONFIG[currentTier] : null
+
+  const subscription = await prisma.subscription.findFirst({
+    where: { clientId, status: { in: ["ACTIVE", "PAST_DUE", "PENDING_FIRST_PAYMENT", "CANCELED"] } },
+    orderBy: { createdAt: "desc" },
+  })
+
+  const SUBSCRIPTION_STATUS_LABELS: Record<string, { label: string; color: string }> = {
+    ACTIVE: { label: "АКТИВНА", color: "#16A34A" },
+    PAST_DUE: { label: "ПРОСРОЧЕНА ОПЛАТА", color: "#DC2626" },
+    PENDING_FIRST_PAYMENT: { label: "ОЖИДАЕТ ПРИВЯЗКИ КАРТЫ", color: "#D97706" },
+    CANCELED: { label: "ОТМЕНЕНА", color: "var(--ink-3)" },
+  }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "32px" }}>
@@ -179,6 +197,68 @@ export default async function BillingPage() {
           </div>
         )}
       </section>
+
+      {/* Subscription (MONITOR_*) status */}
+      {subscription && (
+        <section>
+          <SectionTitle>Автосписание</SectionTitle>
+          <div
+            style={{
+              background: "var(--bone-2)",
+              border: "1px solid var(--rule)",
+              borderRadius: "var(--radius-lg)",
+              padding: "20px 24px",
+              display: "flex",
+              flexDirection: "column",
+              gap: "12px",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "10px",
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  color: SUBSCRIPTION_STATUS_LABELS[subscription.status]?.color ?? "var(--ink-3)",
+                }}
+              >
+                ● {SUBSCRIPTION_STATUS_LABELS[subscription.status]?.label ?? subscription.status}
+              </span>
+              <span style={{ fontSize: "13px", color: "var(--ink-3)" }}>
+                {TIER_LABELS[subscription.tier] ?? subscription.tier} · {subscription.provider === "alfabank" ? "Альфа-Банк" : "ЮKassa"}
+              </span>
+            </div>
+
+            {subscription.status === "ACTIVE" && subscription.nextChargeAt && (
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--ink-2)" }}>
+                Следующее списание: <strong>{formatDate(subscription.nextChargeAt)}</strong>
+              </p>
+            )}
+            {subscription.status === "PENDING_FIRST_PAYMENT" && (
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--ink-2)" }}>
+                Способ оплаты ещё не привязан — автосписание начнётся после подтверждения от банка.
+              </p>
+            )}
+            {subscription.status === "PAST_DUE" && (
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--ink-2)" }}>
+                Не удалось списать оплату. Свяжитесь с поддержкой, чтобы обновить способ оплаты — иначе подписка будет отменена автоматически.
+              </p>
+            )}
+            {subscription.status === "CANCELED" && subscription.canceledAt && (
+              <p style={{ margin: 0, fontSize: "13px", color: "var(--ink-2)" }}>
+                Отменена {formatDate(subscription.canceledAt)}.
+              </p>
+            )}
+
+            {(subscription.status === "ACTIVE" || subscription.status === "PAST_DUE") && (
+              <div style={{ paddingTop: "4px" }}>
+                <SubscriptionCancelButton />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Payment history */}
       {paidJobs.length > 0 && (
@@ -312,7 +392,7 @@ export default async function BillingPage() {
             Работаем с юридическими лицами РФ и РБ. Выставляем счёт на оплату, предоставляем закрывающие документы (акт, счёт-фактура).
           </p>
           <div style={{ fontSize: "13px", color: "var(--ink-3)", display: "flex", flexDirection: "column", gap: "4px" }}>
-            <span>Email: <a href="mailto:hello@kaligeo.ru" style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>hello@kaligeo.ru</a></span>
+            <span>Email: <a href={`mailto:${fromEmail}`} style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>{fromEmail}</a></span>
             <span>Укажите: название компании, ИНН, нужный тариф — пришлём счёт в течение 1 рабочего дня.</span>
           </div>
         </div>

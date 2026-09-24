@@ -2,12 +2,11 @@ import { schedules, tasks } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
 import { auditPipeline } from "./audit-pipeline"
+import { getMarketConfig, type Market } from "../lib/market"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
-
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
 
 export const followUpScheduler = schedules.task({
   id: "follow-up-scheduler",
@@ -18,11 +17,15 @@ export const followUpScheduler = schedules.task({
     const now = new Date()
 
     // Находим все аудиты у которых наступил срок повторного аудита
+    // subscriptionId: null — MONITOR_* audits are billed and re-run by
+    // trigger/subscription-billing.ts, which charges real money; this free-rerun
+    // loop must never touch them or it would give subscribers audits for free.
     const due = await prisma.auditJob.findMany({
       where: {
         followUpScheduledAt: { lte: now },
         followUpSentAt: null,
         status: "COMPLETED",
+        subscriptionId: null,
       },
     })
 
@@ -67,6 +70,7 @@ export const followUpScheduler = schedules.task({
         status: "COMPLETED",
         recurringFrequency: null,
         followUpSentAt: null,
+        subscriptionId: null,
         completedAt: { lte: new Date(now.getTime() - 28 * 24 * 60 * 60 * 1000) },
         emailOptOut: false,
         // Ещё не получали upsell-письмо (используем followUpSentAt как флаг)
@@ -78,12 +82,13 @@ export const followUpScheduler = schedules.task({
 
     for (const job of upsellCandidates) {
       try {
-        const reportUrl = `${APP_URL}/report/${job.id}?token=${job.reportToken}`
-        const monitoringUrl = `${APP_URL}/`
-        const unsub = `${APP_URL}/api/audit/unsubscribe?jobId=${job.id}`
+        const { appUrl, fromEmail } = getMarketConfig((job.market as Market) ?? "ru")
+        const reportUrl = `${appUrl}/report/${job.id}?token=${job.reportToken}`
+        const monitoringUrl = `${appUrl}/`
+        const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${job.id}`
 
         await getResend().emails.send({
-          from: process.env.FROM_EMAIL ?? "KaliGEO <hello@kaligeo.ru>",
+          from: fromEmail,
           to: job.clientEmail,
           subject: `AI-видимость ${job.companyName} изменилась — проверьте`,
           html: `

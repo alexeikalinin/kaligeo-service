@@ -19,6 +19,8 @@ import { prisma } from "@/lib/prisma"
 import { tasks } from "@trigger.dev/sdk/v3"
 import { auditPipeline } from "@/trigger/audit-pipeline"
 import { notifyAuditStarted } from "@/lib/notify"
+import { getBindings, merchantForMarket, bindingEnabled } from "@/lib/billing/alfabank"
+import { activateSubscriptionForJob } from "@/lib/billing/subscription"
 
 function verifyChecksum(params: Record<string, string>, token: string): boolean {
   const checksum = params["checksum"]
@@ -81,7 +83,7 @@ export async function POST(req: NextRequest) {
   try {
     const job = await prisma.auditJob.findUnique({
       where: { id: jobId },
-      select: { id: true, tier: true, companyName: true, paidAt: true },
+      select: { id: true, tier: true, companyName: true, paidAt: true, market: true, clientId: true },
     })
 
     if (!job) {
@@ -108,6 +110,24 @@ export async function POST(req: NextRequest) {
       }).catch(console.error)
 
       console.log(`[payment/callback] ✅ Payment confirmed for job ${jobId}, audit triggered`)
+
+      if (job.clientId) {
+        const market = job.market === "ru" ? "ru" : "by"
+        let bindingId: string | undefined
+        if (bindingEnabled()) {
+          const merchant = merchantForMarket(market)
+          const binding = await getBindings(merchant, job.clientId)
+          if (binding.ok) bindingId = binding.bindingId
+        }
+        await activateSubscriptionForJob({
+          jobId: job.id,
+          clientId: job.clientId,
+          tier: job.tier,
+          market,
+          provider: "alfabank",
+          bindingId,
+        }).catch((err) => console.error("[payment/callback] activateSubscriptionForJob failed", err))
+      }
     }
 
     return NextResponse.json({ ok: true })

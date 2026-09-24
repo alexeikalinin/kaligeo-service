@@ -13,13 +13,12 @@ import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
 import { runMonitoringAgent, type MonitoringResult } from "../lib/agents/monitoring-agent"
 import { tg } from "../lib/telegram"
+import { getMarketConfig, type Market } from "../lib/market"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
 
-const FROM = () => process.env.FROM_EMAIL ?? "noreply@kaligeo.com"
-const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
 const ADMIN_TG_CHAT = () => process.env.ADMIN_TELEGRAM_CHAT_ID ?? ""
 
 export const monitoringTask = schedules.task({
@@ -47,6 +46,7 @@ export const monitoringTask = schedules.task({
         completedAt: true,
         followUpSentAt: true,  // используем как "последняя проверка мониторинга"
         tier: true,
+        market: true,
       },
     })
 
@@ -77,7 +77,7 @@ export const monitoringTask = schedules.task({
 
         // Отправляем уведомление если есть падение
         if (result.alertLevel !== "ok") {
-          await sendAlertEmail(job.clientEmail, job.id, job.reportToken, result)
+          await sendAlertEmail(job.clientEmail, job.id, job.reportToken, result, job.market)
           await sendAdminTgAlert(job.companyName, result)
         }
 
@@ -106,9 +106,11 @@ async function sendAlertEmail(
   to: string,
   jobId: string,
   reportToken: string,
-  result: MonitoringResult
+  result: MonitoringResult,
+  market: string
 ) {
-  const reportUrl = `${APP_URL()}/report/${jobId}?token=${reportToken}`
+  const { appUrl, fromEmail } = getMarketConfig((market as Market) ?? "ru")
+  const reportUrl = `${appUrl}/report/${jobId}?token=${reportToken}`
   const emoji = result.alertLevel === "critical" ? "🔴" : "🟡"
   const subject =
     result.alertLevel === "critical"
@@ -171,7 +173,7 @@ ${platformRows ? `<table style="width:100%;border-collapse:collapse;margin:16px 
 </body></html>`
 
   try {
-    await getResend().emails.send({ from: FROM(), to, subject, html })
+    await getResend().emails.send({ from: fromEmail, to, subject, html })
   } catch (err) {
     console.error(`[monitoring] Ошибка отправки алерта на ${to}:`, err)
   }

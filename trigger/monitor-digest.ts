@@ -1,12 +1,11 @@
 import { schedules } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
+import { getMarketConfig, type Market } from "../lib/market"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
-const FROM = () => process.env.FROM_EMAIL ?? "hello@kaligeo.ru"
-const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
 
 const MONITOR_TIERS = new Set(["MONITOR_START", "MONITOR_PRO", "MONITOR_AGENT"])
 
@@ -152,12 +151,13 @@ export const monitorDigest = schedules.task({
         const bestPlatforms = platforms.filter((p) => (p.delta ?? 0) > 0).slice(0, 2)
         const warnPlatforms = platforms.filter((p) => (p.delta ?? 0) < -5 || p.score < 25).slice(0, 2)
 
-        const reportUrl = `${APP_URL()}/report/${latestJob.id}?token=${latestJob.reportToken}`
-        const dashboardUrl = `${APP_URL()}/my/dashboard`
-        const unsub = `${APP_URL()}/api/audit/unsubscribe?jobId=${latestJob.id}`
+        const { appUrl, fromEmail } = getMarketConfig((latestJob.market as Market) ?? "ru")
+        const reportUrl = `${appUrl}/report/${latestJob.id}?token=${latestJob.reportToken}`
+        const dashboardUrl = `${appUrl}/my/dashboard`
+        const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${latestJob.id}`
 
         await getResend().emails.send({
-          from: FROM(),
+          from: fromEmail,
           to: email,
           subject: `${latestJob.companyName}: AI-видимость за ${monthName} — дайджест`,
           html: buildDigestEmail({

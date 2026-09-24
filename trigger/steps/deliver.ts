@@ -140,7 +140,7 @@ export async function sendReportEmail(opts: DeliveryOptions): Promise<void> {
   </p>` : ""}
 
   <p style="text-align: center; margin: 16px 0 0;">
-    <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"}/my/dashboard" style="color: #999; font-size: 13px;">
+    <a href="${new URL(reportUrl).origin}/my/dashboard" style="color: #999; font-size: 13px;">
       Все ваши аудиты → Личный кабинет
     </a>
   </p>

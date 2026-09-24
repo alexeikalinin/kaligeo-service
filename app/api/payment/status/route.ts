@@ -1,8 +1,10 @@
 /**
  * GET /api/payment/status?jobId=<id>
  *
- * Verifies payment status for a given audit job via Alfa-Bank.
- * If payment is confirmed, sets paidAt and triggers the audit pipeline.
+ * Verifies payment status for a given audit job via the provider used at order creation
+ * (Alfa-Bank or YooKassa — see lib/billing/provider.ts). If payment is confirmed, sets
+ * paidAt and triggers the audit pipeline. For MONITOR_* tiers, also activates the
+ * associated Subscription (creating it if this is the first payment).
  */
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
@@ -10,9 +12,10 @@ import { tasks } from "@trigger.dev/sdk/v3"
 import { auditPipeline } from "@/trigger/audit-pipeline"
 import { notifyAuditStarted } from "@/lib/notify"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
-
-const SANDBOX_URL = "https://abby.rbsuat.com/payment/rest"
-const PROD_URL = "https://ecom.alfabank.by/payment/rest"
+import { getOrderStatus, getBindings, merchantForMarket, bindingEnabled } from "@/lib/billing/alfabank"
+import { getPayment as getYooKassaPayment } from "@/lib/billing/yookassa"
+import { resolveProvider } from "@/lib/billing/provider"
+import { activateSubscriptionForJob } from "@/lib/billing/subscription"
 
 export async function OPTIONS(req: NextRequest) {
   return corsOptionsResponse(req.headers.get("origin"))
@@ -31,14 +34,14 @@ export async function GET(req: NextRequest) {
 
   const job = await prisma.auditJob.findUnique({
     where: { id: jobId },
-    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true, market: true },
+    select: { id: true, tier: true, companyName: true, paidAt: true, alfaBankOrderId: true, market: true, clientId: true },
   })
 
   if (!job) {
     return NextResponse.json({ error: "Job not found" }, { status: 404, headers: corsHeaders })
   }
 
-  // Already paid — no need to call bank again
+  // Already paid — no need to call the provider again
   if (job.paidAt) {
     return NextResponse.json({ jobId, paid: true, alreadyPaid: true }, { headers: corsHeaders })
   }
@@ -50,67 +53,74 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const isSandbox = process.env.ALFABANK_SANDBOX === "true"
-  const baseUrl = isSandbox ? SANDBOX_URL : PROD_URL
+  const market = job.market === "ru" ? "ru" : "by"
+  const provider = resolveProvider(market)
 
-  // Same merchant account used at order creation must be used to check status
-  const isRu = job.market === "ru"
-  const userName = isRu ? (process.env.ALFABANK_USER_RU ?? "") : (process.env.ALFABANK_USER ?? "")
-  const password = isRu ? (process.env.ALFABANK_PASS_RU ?? "") : (process.env.ALFABANK_PASS ?? "")
-
-  const params = new URLSearchParams({
-    userName,
-    password,
-    orderId: job.alfaBankOrderId,
-    language: "ru",
-  })
+  let paid = false
+  let errorCode: number | undefined
+  let errorMessage: string | undefined
+  let orderStatus: number | undefined
+  let paymentMethodId: string | undefined
 
   try {
-    const bankResp = await fetch(`${baseUrl}/getOrderStatusExtended.do`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: params.toString(),
-      redirect: "follow",
-    })
-
-    const data = await bankResp.json() as {
-      orderStatus?: number
-      errorCode?: number
-      errorMessage?: string
-      amount?: number
+    if (provider === "yookassa") {
+      const payment = await getYooKassaPayment(job.alfaBankOrderId)
+      paid = !!payment && (payment.paid || payment.status === "succeeded")
+      if (payment?.payment_method?.saved) paymentMethodId = payment.payment_method.id
+      if (!payment) errorMessage = "YooKassa API unavailable"
+    } else {
+      const merchant = merchantForMarket(market)
+      const result = await getOrderStatus(merchant, job.alfaBankOrderId)
+      paid = result.paid
+      orderStatus = result.orderStatus
+      errorCode = result.errorCode
+      errorMessage = result.errorMessage
     }
-
-    const paid = data.orderStatus === 2
-
-    if (paid) {
-      // Mark as paid and trigger audit pipeline (idempotent — check paidAt again)
-      const updated = await prisma.auditJob.updateMany({
-        where: { id: job.id, paidAt: null }, // only if not yet paid
-        data: { paidAt: new Date(), status: "PENDING" },
-      })
-
-      if (updated.count > 0) {
-        await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: job.id })
-        notifyAuditStarted({
-          companyName: job.companyName,
-          tier: job.tier,
-          jobId: job.id,
-        }).catch(console.error)
-      }
-    }
-
-    return NextResponse.json(
-      {
-        jobId,
-        paid,
-        orderStatus: data.orderStatus,
-        errorCode: data.errorCode,
-        errorMessage: data.errorMessage,
-      },
-      { headers: corsHeaders }
-    )
   } catch (err) {
     console.error("[payment/status]", err)
     return NextResponse.json({ error: "Bank API unavailable" }, { status: 502, headers: corsHeaders })
   }
+
+  if (paid) {
+    // Mark as paid and trigger audit pipeline (idempotent — check paidAt again)
+    const updated = await prisma.auditJob.updateMany({
+      where: { id: job.id, paidAt: null }, // only if not yet paid
+      data: { paidAt: new Date(), status: "PENDING" },
+    })
+
+    if (updated.count > 0) {
+      await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: job.id })
+      notifyAuditStarted({
+        companyName: job.companyName,
+        tier: job.tier,
+        jobId: job.id,
+      }).catch(console.error)
+
+      // Subscription tiers: activate (or create) the Subscription. Alfa binding is looked up
+      // here (it's only available after a successful clientId-tagged payment); YooKassa's
+      // saved payment_method_id, if any, was already read off the payment object above.
+      if (job.clientId) {
+        let bindingId: string | undefined
+        if (provider === "alfabank" && bindingEnabled()) {
+          const merchant = merchantForMarket(market)
+          const binding = await getBindings(merchant, job.clientId)
+          if (binding.ok) bindingId = binding.bindingId
+        }
+        await activateSubscriptionForJob({
+          jobId: job.id,
+          clientId: job.clientId,
+          tier: job.tier,
+          market,
+          provider,
+          bindingId,
+          paymentMethodId,
+        }).catch((err) => console.error("[payment/status] activateSubscriptionForJob failed", err))
+      }
+    }
+  }
+
+  return NextResponse.json(
+    { jobId, paid, orderStatus, errorCode, errorMessage },
+    { headers: corsHeaders }
+  )
 }

@@ -6,6 +6,10 @@ import { compareAudits } from "@/lib/analysis/compare-audits"
 import { getTierConfig, type Tier } from "@/lib/gates"
 import { calculateShareOfVoice } from "@/lib/analysis/share-of-voice"
 import { calculateCompetitivePosition } from "@/lib/analysis/competitive-positioning"
+import { buildNicheIntel } from "@/lib/analysis/build-niche-intel"
+import { buildSourceEntries } from "@/lib/analysis/build-source-entries"
+import { buildPlatformInsights } from "@/lib/analysis/build-platform-insights"
+import { buildVerbatimQuotes } from "@/lib/analysis/build-verbatim-quotes"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -39,6 +43,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           query: true,
           response: true,
           brandMentioned: true,
+          competitors: true,      // для verbatimQuotes (brandsMentioned)
           sentiment: true,
           mentionContext: true,   // Волна 3: семантическая классификация
           mentionQuality: true,   // Волна 3: quality score 0–100
@@ -92,7 +97,17 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
       : null
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sourcesReport = ((job.report as Record<string, unknown>).sourcesReport as any) ?? null
+  const reportJson = job.report as unknown as Record<string, any>
+  const sourcesReport = reportJson.sourcesReport ?? null
+  const nicheBenchmark = reportJson.nicheBenchmark ?? null
+  const competitorGaps = reportJson.competitorGaps ?? null
+  const analysisNotes = reportJson.analysisNotes ?? null
+  const contentRecommendations = reportJson.contentRecommendations ?? null
+
+  const nicheIntel = buildNicheIntel(report.visibilityScores, report.competitorMatrix)
+  const sources = sourcesReport ? buildSourceEntries(sourcesReport) : undefined
+  const platformInsights = buildPlatformInsights(report.visibilityScores)
+  const verbatimQuotes = tierConfig.hasAnalysisAgent ? buildVerbatimQuotes(job.queryResults) : undefined
 
   // SoV — вычисляем на сервере для STANDARD+
   let shareOfVoice = null
@@ -126,6 +141,14 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         sourcesReport={sourcesReport}
         shareOfVoice={shareOfVoice}
         competitivePosition={competitivePosition}
+        nicheIntel={nicheIntel}
+        sources={sources}
+        platformInsights={platformInsights}
+        verbatimQuotes={verbatimQuotes}
+        competitorGaps={competitorGaps}
+        nicheBenchmark={nicheBenchmark}
+        analysisNotes={analysisNotes}
+        contentRecommendations={contentRecommendations}
       />
       {/* Chat panel — shown for all tiers, upgrade prompt for Basic */}
       <ReportChatPanel

@@ -207,6 +207,54 @@ export async function notifyAuditFailed(opts: {
   await sendAdminEmail(`🔴 Аудит упал: ${companyName}`, html)
 }
 
+// ── Subscription billing (MONITOR_*) ─────────────────────────────────────────
+
+export async function notifySubscriptionCharged(opts: {
+  companyName: string
+  tier: string
+  jobId: string
+}) {
+  const { companyName, tier, jobId } = opts
+  const jobUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${jobId}`
+  await sendTelegram(`💳 <b>Автосписание прошло</b>\n${companyName} · ${tier}\n${jobUrl}`)
+}
+
+export async function notifySubscriptionPastDue(opts: {
+  companyName: string
+  email: string
+  tier: string
+  error: string
+}) {
+  const { companyName, email, tier, error } = opts
+  const tg = [
+    `⚠️ <b>Подписка просрочена (3 неудачные попытки)</b>`,
+    `${companyName} (${email}) · ${tier}`,
+    `Ошибка: ${error.slice(0, 200)}`,
+  ].join("\n")
+  await sendTelegram(tg)
+
+  const html = adminBase(`
+    <h2 style="margin:0 0 16px;font-size:18px">⚠️ Подписка просрочена</h2>
+    <table style="border-collapse:collapse">
+      ${row("Компания", companyName)}
+      ${row("Email", email)}
+      ${row("Тариф", tier)}
+      ${row("Ошибка", `<span style="color:#f87171">${error.slice(0, 400)}</span>`)}
+    </table>
+  `)
+  await sendAdminEmail(`⚠️ Подписка просрочена: ${companyName}`, html)
+}
+
+export async function notifySubscriptionCanceled(opts: {
+  companyName: string
+  email: string
+  tier: string
+  reason: string
+}) {
+  const { companyName, email, tier, reason } = opts
+  await sendTelegram(`🚫 <b>Подписка отменена</b>\n${companyName} (${email}) · ${tier}\nПричина: ${reason}`)
+}
+
 export async function notifyScoreDrop(opts: {
   companyName: string
   email: string

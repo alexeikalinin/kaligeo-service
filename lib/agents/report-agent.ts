@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk"
 import { prisma } from "../prisma"
 import type { ActionPlan } from "../report/action-plan-gen"
+import { runBenchmarkAgent } from "./benchmark-agent"
 
 type ReportSection = "actionPlan" | "executiveSummary" | "platformNotes"
 
@@ -60,11 +61,14 @@ export async function runReportAgent(
       .map((s) => `${s.platform}: ${s.score}/100 (citation: ${s.citationRate}%)`)
       .join("\n")
 
+    const benchmark = await runBenchmarkAgent(job.niche, reportData.overallScore).catch(() => undefined)
+    const benchmarkLine = benchmark && benchmark.samplesCount >= 5 ? `\n${benchmark.contextPhrase}` : ""
+
     const prompt = `Напиши executive summary для AI-аудита компании "${job.companyName}".
 
 Overall Score: ${reportData.overallScore}/100
 Платформы:\n${scores}
-Слабые места: ${reportData.weakPoints.filter(w => w.detected).map(w => w.title).join(", ")}
+Слабые места: ${reportData.weakPoints.filter(w => w.detected).map(w => w.title).join(", ")}${benchmarkLine}
 
 Формат: 3-4 абзаца. Ключевые выводы, сравнение с отраслью, приоритеты. На русском.`
 

@@ -17,6 +17,7 @@ model Client {
   auditJobs       AuditJob[]
   magicLinkTokens MagicLinkToken[]
   brandProfiles   BrandProfile[]
+  subscriptions   Subscription[]
 }
 
 model BrandProfile {
@@ -84,8 +85,44 @@ model AuditJob {
   brandProfileId      String?       // linked BrandProfile for custom prompts
   renewalReminderSentAt DateTime?   // когда отправлен renewal reminder (чтобы не слать дважды)
   emailOptOut          Boolean       @default(false) // клиент отписался от email-рассылок (по clientEmail)
+  subscriptionId       String?       // ссылка на Subscription — если этот аудит создан автосписанием
+  subscription         Subscription? @relation(fields: [subscriptionId], references: [id])
   queryResults        QueryResult[]
   report              Report?
+
+  @@index([subscriptionId])
+}
+
+/// Активная подписка (MONITOR_*) с привязанным способом оплаты для автосписания.
+/// Источник истины по автосписаниям — отдельно от старых AuditJob.subscriptionTier/subscriptionActiveUntil,
+/// которые остаются как есть и не используются этой моделью.
+model Subscription {
+  id                String    @id @default(cuid())
+  clientId          String
+  client            Client    @relation(fields: [clientId], references: [id])
+  tier              String    // "MONITOR_START" | "MONITOR_PRO" | "MONITOR_AGENT"
+  market            String    // "ru" | "by"
+  provider          String    // "alfabank" | "yookassa"
+
+  status            String    @default("PENDING_FIRST_PAYMENT")
+  // PENDING_FIRST_PAYMENT | ACTIVE | PAST_DUE | CANCELED
+
+  bindingId         String?   // Alfa-Bank: bindingId привязанной карты
+  paymentMethodId   String?   // YooKassa: payment_method_id
+
+  nextChargeAt      DateTime?
+  lastChargeAt      DateTime?
+  lastChargeError   String?
+  failedChargeCount Int       @default(0)
+  canceledAt        DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  auditJobs         AuditJob[]
+
+  @@index([status, nextChargeAt])
+  @@index([clientId])
 }
 
 model QueryResult {
@@ -117,6 +154,10 @@ model Report {
   actionPlan       Json
   overallScore     Int      @default(0)
   sourcesReport    Json?    // SourcesReport — top domains, by category, competitor advantage
+  nicheBenchmark   Json?    // NicheBenchmark — percentile/медиана по нише (benchmark-agent)
+  competitorGaps   Json?    // { name, score, theirSignals, yourSignals }[] — структурированный gap-анализ (ADVANCED)
+  analysisNotes    Json?    // { gapsAnalysis: string, sentimentAnalysis: string } — текстовый вывод analysis-agent (ADVANCED)
+  contentRecommendations Json? // ContentRecommendations — вывод content-agent (ADVANCED)
   createdAt        DateTime @default(now())
   job              AuditJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 }
