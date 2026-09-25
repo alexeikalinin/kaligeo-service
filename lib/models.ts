@@ -32,8 +32,18 @@ const openai    = createOpenAI({ apiKey: process.env.OPENAI_API_KEY })
 /** Диалог с клиентом (сбор URL, ниши, email). Все тарифы. */
 export const CHAT_MODEL: LanguageModel = google("gemini-2.5-flash")
 
-/** Генерация аудит-запросов. Все тарифы. */
-export const QUERY_GEN_MODEL = "gpt-4o-mini"  // используется через openai SDK напрямую
+/**
+ * Генерация аудит-запросов. Все тарифы.
+ * gpt-4o-mini залипал на few-shot примерах в промпте и штамповал структурно
+ * идентичные вопросы в любой нише (см. трекер: "Топ-5 X в России 2026" под
+ * копирку для видеоигр и медцентра). gpt-4o заметно лучше держит инструкции
+ * "не копируй синтаксис примера" при том же промпте. Это один вызов на весь
+ * аудит (не на платформу), так что разница в цене против mini — центы, а не
+ * рубли, и не влияет на стоимость последующих 6×N вызовов к AI-платформам —
+ * тот расход управляется длиной самих сгенерированных вопросов (см. лимит
+ * "максимум 16 слов" в промпте), а не моделью-генератором.
+ */
+export const QUERY_GEN_MODEL = "gpt-4o"  // используется через openai SDK напрямую
 
 /** Анализ сайта перед чатом (website-analysis-agent). Все тарифы. */
 export const WEBSITE_ANALYSIS_MODEL = "gemini-2.5-flash"
@@ -72,21 +82,21 @@ export function getOrchestratorModel(): LanguageModel {
 export const MODEL_MATRIX = {
   BASIC: {
     chat:         "gemini-2.5-flash  ($0.075/1M)",
-    queryGen:     "gpt-4o-mini       ($0.15/1M)",
+    queryGen:     "gpt-4o            ($2.50/1M)",
     actionPlan:   "— (нет)",
     analysis:     "— (нет)",
     websiteAnalysis: "gemini-2.5-flash ($0.075/1M)",
   },
   STANDARD: {
     chat:         "gemini-2.5-flash  ($0.075/1M)",
-    queryGen:     "gpt-4o-mini       ($0.15/1M)",
+    queryGen:     "gpt-4o            ($2.50/1M)",
     actionPlan:   "gpt-4o-mini       ($0.15/1M)",
     analysis:     "— (нет)",
     websiteAnalysis: "gemini-2.5-flash ($0.075/1M)",
   },
   ADVANCED: {
     chat:         "gemini-2.5-flash  ($0.075/1M)",
-    queryGen:     "gpt-4o-mini       ($0.15/1M)",
+    queryGen:     "gpt-4o            ($2.50/1M)",
     actionPlan:   "claude-sonnet-4-6 ($3/1M)",
     analysis:     "claude-sonnet-4-6 ($3/1M)",
     websiteAnalysis: "gemini-2.5-flash ($0.075/1M)",

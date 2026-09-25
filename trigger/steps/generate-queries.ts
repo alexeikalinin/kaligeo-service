@@ -1,6 +1,7 @@
 import OpenAI from "openai"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { getQueryCountForTier, type Tier } from "../../lib/gates"
+import { QUERY_GEN_MODEL } from "../../lib/models"
 import type { QueryOptimizationHints } from "../../lib/agents/query-optimizer-agent"
 
 export interface SiteContext {
@@ -25,21 +26,17 @@ async function generateWithGemini(prompt: string): Promise<string[]> {
   return Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
 }
 
-export async function generateQueries(
+/** Строит промпт генерации GEO-запросов. Вынесено отдельно, чтобы один и тот же
+ * промпт можно было прогнать через разные AI-клиенты для сравнения (см.
+ * app/api/admin/query-gen-test), не дублируя шаблон. */
+export function buildQueryGenPrompt(
   companyName: string,
   niche: string,
   competitors: string[],
-  tier: "BASIC" | "STANDARD" | "ADVANCED",
-  customPrompts: string[] = [],
+  aiCount: number,
   siteContext?: SiteContext,
   optimizerHints?: QueryOptimizationHints
-): Promise<string[]> {
-  const count = getQueryCountForTier(tier as Tier)
-
-  // Reserve slots for custom prompts (max 20% of total, capped at 10)
-  const customEnabled = customPrompts.filter(Boolean).slice(0, Math.min(10, Math.floor(count * 0.2)))
-  const aiCount = count - customEnabled.length
-
+): string {
   const competitorsList = competitors.length > 0 ? competitors.join(", ") : "нет данных"
 
   // comparison — самая рискованная категория: прямое «X или Y» гарантированно
@@ -75,46 +72,63 @@ ${optimizerHints.avoidPatterns.length > 0 ? `Дополнительно избе
 ${siteContextBlock}${optimizerBlock}
 Сгенерируй ровно ${aiCount} запросов, которые потенциальный клиент реалистично напишет в ChatGPT, Perplexity, YandexGPT, Claude или Gemini, когда ищет товар/услугу в данной нише.
 
-ВАЖНО — распредели запросы по 7 категориям:
+ВАЖНО — распредели запросы по 7 категориям НАМЕРЕНИЙ. Ниже для каждой категории описано, ЧТО ищет пользователь и ЗАЧЕМ — придумай формулировку сам, исходя из реальной ниши и деталей сайта выше. Не копируй синтаксис или порядок слов иллюстративных примеров (они взяты из другой ниши специально, чтобы их нельзя было скопировать) — если два запроса из разных категорий или разных вопросов легко превращаются один в другой заменой пары слов, это ошибка, переформулируй.
 
-1. **recommendation** (~${otherCategoriesCount} запросов) — запросы на рекомендацию:
-   «Посоветуй [услугу] для [ситуации]», «Какую [нишу] выбрать для малого бизнеса?», «Что лучше использовать для [задача]?»
+1. **recommendation** (~${otherCategoriesCount} запросов) — пользователь в конкретной жизненной/бизнес-ситуации просит совет, что выбрать. Пример стиля из другой ниши: «Ищу студию для монтажа свадебного видео, бюджет ограничен — на что смотреть?»
 
-2. **position** (~${otherCategoriesCount} запросов) — запросы на рейтинги и топы (ключевые для отслеживания позиции бренда в ответе):
-   «Топ-5 [ниша] в России 2026», «Лучшие [услуга] — рейтинг», «Назови трёх лидеров рынка [ниша]», «Какие компании [ниша] самые надёжные?»
+2. **position** (~${otherCategoriesCount} запросов) — пользователь хочет список лидеров/рейтинг рынка, не называя конкретных игроков сам. Пример стиля: «Кто сейчас считается лучшим в доставке цветов по СПб?»
 
-3. **comparison** (ровно ${comparisonCount} запросов, НЕ больше) — сравнение с конкурентами:
+3. **comparison** (ровно ${comparisonCount} запросов, НЕ больше) — сравнение игроков рынка.
    Из них максимум ${namedComparisonCount} могут прямо называть конкурентов по имени (например «${competitors[0] ?? "[компания1]"} или ${competitors[1] ?? "[компания2]"} — что лучше?») — такой формат структурно исключает бренд с низкой узнаваемостью, поэтому используй его экономно.
-   Остальные — обобщённые сравнения без явных имён: «Сравни [ниша] по цене и качеству», «Чем отличаются топовые игроки рынка [ниша]?», «На что смотреть при выборе [услуги] среди конкурентов?»
+   Остальные — обобщённое сравнение игроков рынка без явных имён, но с конкретным критерием сравнения (цена, скорость, качество, гарантии — выбери релевантный для этой ниши).
 
-4. **conversational** (~${otherCategoriesCount} запросов) — диалоговые вопросы (стиль Perplexity, Алиса):
-   «Помоги выбрать [услугу], я [описание ситуации]», «Объясни разницу между [вариант А] и [вариант Б] в [нише]», «Я новичок в [ниша], с чего начать?»
+4. **conversational** (~${otherCategoriesCount} запросов) — развёрнутый разговорный вопрос с личным контекстом говорящего (кто он, в какой ситуации), в стиле голосового ассистента. Пример стиля: «Я переезжаю в новый район, посоветуй куда обращаться за интернетом, у меня частный дом».
 
-5. **rag** (~${otherCategoriesCount} запросов) — запросы с явным запросом источников (активируют RAG-цитирование):
-   «Посоветуй [услугу] со ссылками на проверенные источники», «Где прочитать честные отзывы о [ниша]?», «Какие авторитетные ресурсы про [нишу] существуют?»
+5. **rag** (~${otherCategoriesCount} запросов) — пользователь явно просит источники, отзывы или ссылки на проверенную информацию, а не готовый ответ. Пример стиля: «Скинь ссылки, где почитать независимые обзоры кофемашин перед покупкой».
 
-6. **price** (~${otherCategoriesCount} запросов) — ценовые запросы:
-   «Сколько стоит [услуга]?», «Средняя цена [ниша] в 2026», «Какой бюджет нужен для [задача]?»
+6. **price** (~${otherCategoriesCount} запросов) — вопрос о стоимости, бюджете или структуре цены применительно к конкретной задаче пользователя в этой нише, не абстрактный "сколько стоит X".
 
-7. **problem** (~${otherCategoriesCount} запросов) — запросы про боль / проблему:
-   «Как решить [конкретная проблема в нише]?», «Что делать если [типичная ошибка]?», «Почему [нишевая проблема] возникает и как избежать?»
+7. **problem** (~${otherCategoriesCount} запросов) — у пользователя уже есть конкретная проблема/боль в этой нише и он ищет решение, а не общую информацию.
 
 Дополнительные требования:
 - 70% запросов на русском, 30% на английском (английские — для ChatGPT, Claude, Perplexity)
+- Каждый запрос — короткая фраза или одно предложение, максимум 16 слов. Это не эссе, это то, что человек реально печатает в чат за 5 секунд. Экономия токенов важна: короче формулировка — дешевле обходится запуск на 6+ AI-платформах.
 - Запросы — естественная разговорная речь, не SEO-ключи
 - НЕ генерируй запросы про саму компанию «${companyName}» — только про нишу в целом
+- Внутри каждой категории и между категориями запросы должны различаться грамматической конструкцией (не все начинаются с глагола в повелительном наклонении, не все — вопросом "Какой/Какая")
 - Каждый запрос должен быть уникальным и реалистичным
 - Используй конкретные детали ниши и то, чем реально занимается компания (см. блок выше), а не абстрактные шаблоны — если ниша заявлена неточно, ориентируйся на реальное описание сайта
 
 Верни JSON-объект с единственным полем "queries" — массив строк (без меток категорий в тексте):
 {"queries": ["запрос 1", "запрос 2", ...]}`
 
+  return prompt
+}
+
+export async function generateQueries(
+  companyName: string,
+  niche: string,
+  competitors: string[],
+  tier: "BASIC" | "STANDARD" | "ADVANCED",
+  customPrompts: string[] = [],
+  siteContext?: SiteContext,
+  optimizerHints?: QueryOptimizationHints
+): Promise<string[]> {
+  const count = getQueryCountForTier(tier as Tier)
+
+  // Reserve slots for custom prompts (max 20% of total, capped at 10)
+  const customEnabled = customPrompts.filter(Boolean).slice(0, Math.min(10, Math.floor(count * 0.2)))
+  const aiCount = count - customEnabled.length
+
+  const prompt = buildQueryGenPrompt(companyName, niche, competitors, aiCount, siteContext, optimizerHints)
+
   let aiQueries: string[]
   try {
     const response = await getClient().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: QUERY_GEN_MODEL,
       messages: [{ role: "user", content: prompt }],
       response_format: { type: "json_object" },
+      temperature: 1.1,
       max_tokens: 4000,
     })
     const text = response.choices[0]?.message?.content ?? "{}"
