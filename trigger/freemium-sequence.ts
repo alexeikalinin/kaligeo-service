@@ -29,6 +29,15 @@ export const freemiumSequence = task({
     const scan = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
     if (!scan) return
 
+    // Self-heal: guarantee emailCaptured is set before we rely on it for the
+    // +24h/+72h/... checkpoints below. Upstream callers (contact-scan,
+    // freemium/email route) already try to set this, but if that write was
+    // ever lost/raced, we'd otherwise silently stop after Email 1.
+    if (!scan.emailCaptured) {
+      await prisma.freemiumScan.update({ where: { id: scanId }, data: { emailCaptured: email } })
+      scan.emailCaptured = email
+    }
+
     const { companyName, previewScore, niche } = scan
     const { landingUrl, appUrl, fromEmail } = getMarketConfig((scan.market as Market) ?? "ru")
     const previewUrl = `${appUrl}/preview/${scanId}?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email1`
