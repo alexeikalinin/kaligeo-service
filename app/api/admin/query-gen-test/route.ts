@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import Anthropic from "@anthropic-ai/sdk"
 import { AI_CLIENTS } from "@/lib/ai-clients"
 import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
-import { buildQueryGenPrompt } from "@/trigger/steps/generate-queries"
+import { buildQueryGenPrompt, generateQueries } from "@/trigger/steps/generate-queries"
 
 async function isAuthed(): Promise<boolean> {
   const cookieStore = await cookies()
@@ -75,6 +75,30 @@ export async function POST(req: Request) {
   const { websiteUrl, platform, count = 30 } = await req.json()
   if (!websiteUrl || !platform) {
     return NextResponse.json({ error: "websiteUrl and platform are required" }, { status: 400 })
+  }
+
+  // ENSEMBLE — не отдельная платформа, а прогон прод-схемы генерации целиком
+  // (2 генератора → детерминированный фильтр → judge), в отличие от веток
+  // ниже, которые тестируют одну модель-генератор в изоляции.
+  if (platform === "ENSEMBLE") {
+    const t0 = Date.now()
+    try {
+      const analysis = await runWebsiteAnalysisAgent(websiteUrl)
+      const siteContext = analysis.description
+        ? { description: analysis.description, services: analysis.services ?? [], targetAudience: analysis.targetAudience ?? "" }
+        : undefined
+      const queries = await generateQueries(
+        analysis.companyName || websiteUrl,
+        analysis.niche || "Общее",
+        analysis.suggestedCompetitors?.slice(0, 5) ?? [],
+        "STANDARD",
+        [],
+        siteContext
+      )
+      return NextResponse.json({ platform, analysis, queries, ms: Date.now() - t0 })
+    } catch (e) {
+      return NextResponse.json({ platform, error: String(e), ms: Date.now() - t0 }, { status: 500 })
+    }
   }
 
   const client = AI_CLIENTS[platform as keyof typeof AI_CLIENTS]

@@ -1,7 +1,8 @@
 import OpenAI from "openai"
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import Anthropic from "@anthropic-ai/sdk"
 import { getQueryCountForTier, type Tier } from "../../lib/gates"
-import { QUERY_GEN_MODEL } from "../../lib/models"
+import { QUERY_GEN_MODEL, QUERY_GEN_MODEL_B, QUERY_JUDGE_MODEL } from "../../lib/models"
 import type { QueryOptimizationHints } from "../../lib/agents/query-optimizer-agent"
 
 export interface SiteContext {
@@ -10,20 +11,37 @@ export interface SiteContext {
   targetAudience: string
 }
 
-function getClient() {
+const MAX_WORDS = 16
+
+function getOpenAIClient() {
   return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+}
+
+function extractQueries(text: string): string[] {
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+  const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned)
+  return Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
+}
+
+async function generateWithOpenAI(prompt: string): Promise<string[]> {
+  const response = await getOpenAIClient().chat.completions.create({
+    model: QUERY_GEN_MODEL,
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 1.1,
+    max_tokens: 4000,
+  })
+  return extractQueries(response.choices[0]?.message?.content ?? "{}")
 }
 
 async function generateWithGemini(prompt: string): Promise<string[]> {
   const genAI = new GoogleGenerativeAI(process.env.GOOGLE_AI_API_KEY ?? "")
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" })
+  const model = genAI.getGenerativeModel({ model: QUERY_GEN_MODEL_B })
   const result = await model.generateContent(
     prompt + '\n\nВерни ТОЛЬКО валидный JSON объект {"queries": [...]} без markdown-блоков.'
   )
-  const text = result.response.text().trim()
-  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")
-  const parsed = JSON.parse(cleaned)
-  return Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
+  return extractQueries(result.response.text())
 }
 
 /** Строит промпт генерации GEO-запросов. Вынесено отдельно, чтобы один и тот же
@@ -51,7 +69,8 @@ export function buildQueryGenPrompt(
     ? `\nЧто реально делает компания (по анализу сайта, используй это как основной источник истины о нише — если он расходится со строкой "Ниша / отрасль" выше, доверяй этому блоку):
 Описание: ${siteContext.description}
 Услуги/продукты: ${siteContext.services.join(", ") || "не определены"}
-Целевая аудитория: ${siteContext.targetAudience || "не определена"}\n`
+Целевая аудитория: ${siteContext.targetAudience || "не определена"}
+Если в целевой аудитории или услугах явно видно НЕСКОЛЬКО разных сегментов (например конечные потребители и одновременно бизнес-партнёры/B2B-клиенты) — распредели вопросы между всеми сегментами, а не только одним.\n`
     : ""
 
   const optimizerBlock = optimizerHints && optimizerHints.samplesAnalyzed > 0
@@ -92,7 +111,7 @@ ${siteContextBlock}${optimizerBlock}
 
 Дополнительные требования:
 - 70% запросов на русском, 30% на английском (английские — для ChatGPT, Claude, Perplexity)
-- Каждый запрос — короткая фраза или одно предложение, максимум 16 слов. Это не эссе, это то, что человек реально печатает в чат за 5 секунд. Экономия токенов важна: короче формулировка — дешевле обходится запуск на 6+ AI-платформах.
+- Каждый запрос — короткая фраза или одно предложение, максимум ${MAX_WORDS} слов. Это не эссе, это то, что человек реально печатает в чат за 5 секунд. Экономия токенов важна: короче формулировка — дешевле обходится запуск на 6+ AI-платформах.
 - Запросы — естественная разговорная речь, не SEO-ключи
 - НЕ генерируй запросы про саму компанию «${companyName}» — только про нишу в целом
 - Внутри каждой категории и между категориями запросы должны различаться грамматической конструкцией (не все начинаются с глагола в повелительном наклонении, не все — вопросом "Какой/Какая")
@@ -103,6 +122,119 @@ ${siteContextBlock}${optimizerBlock}
 {"queries": ["запрос 1", "запрос 2", ...]}`
 
   return prompt
+}
+
+function normalizeForDedup(q: string): Set<string> {
+  return new Set(
+    q.toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]/gu, "")
+      .split(/\s+/)
+      .filter((w) => w.length > 2)
+  )
+}
+
+function jaccardSimilarity(a: Set<string>, b: Set<string>): number {
+  const intersection = [...a].filter((x) => b.has(x)).length
+  const union = new Set([...a, ...b]).size
+  return union === 0 ? 0 : intersection / union
+}
+
+/**
+ * Механические проверки — дешевле и надёжнее гонять в коде, чем поручать
+ * третьей модели-судье: самоупоминание бренда (баг, который реально ловили
+ * у Perplexity) и превышение лимита длины (ловили у Gemini) — это не
+ * семантическая оценка, а детерминированная проверка строки.
+ */
+export function filterCandidates(candidates: string[], companyName: string): string[] {
+  const brandLower = companyName.trim().toLowerCase()
+  const seenTokenSets: Set<string>[] = []
+  const result: string[] = []
+
+  for (const raw of candidates) {
+    const q = raw.trim()
+    if (!q) continue
+    if (q.split(/\s+/).length > MAX_WORDS) continue
+    if (brandLower && q.toLowerCase().includes(brandLower)) continue
+
+    const tokens = normalizeForDedup(q)
+    const isDuplicate = seenTokenSets.some((s) => jaccardSimilarity(s, tokens) > 0.7)
+    if (isDuplicate) continue
+
+    seenTokenSets.push(tokens)
+    result.push(q)
+  }
+
+  return result
+}
+
+/** Чередует кандидатов из двух генераторов, чтобы даже без судьи (fallback)
+ * итоговая выборка не была перекошена в сторону одной модели. */
+function interleave(a: string[], b: string[]): string[] {
+  const result: string[] = []
+  const max = Math.max(a.length, b.length)
+  for (let i = 0; i < max; i++) {
+    if (a[i]) result.push(a[i])
+    if (b[i]) result.push(b[i])
+  }
+  return result
+}
+
+/**
+ * Третья модель отбирает финальные `count` вопросов из объединённого пула
+ * кандидатов от двух генераторов — балансирует по сегментам аудитории и
+ * категориям намерений, которые ни один генератор в одиночку не покрывает
+ * целиком (см. находку: одни модели видят только B2C-аудиторию, другие —
+ * только B2B). Работает по индексам, а не переписывает текст — дешевле и
+ * не рискует перефразировать вопрос в процессе отбора.
+ */
+async function judgeAndSelect(
+  candidates: string[],
+  count: number,
+  companyName: string,
+  niche: string,
+  siteContext?: SiteContext
+): Promise<string[]> {
+  if (candidates.length <= count) return candidates
+
+  const list = candidates.map((q, i) => `${i + 1}. ${q}`).join("\n")
+  const audienceBlock = siteContext
+    ? `Целевая аудитория (может включать несколько разных сегментов — например конечных потребителей и отдельно B2B-партнёров): ${siteContext.targetAudience}\nУслуги компании: ${siteContext.services.join(", ") || "не определены"}`
+    : "Данных о целевой аудитории нет — суди по нише и запросам."
+
+  const prompt = `Ты отбираешь лучшие ${count} поисковых запросов из пула кандидатов для GEO-аудита видимости бренда «${companyName}» (ниша: ${niche}).
+${audienceBlock}
+
+Кандидаты (пронумерованы, собраны из двух независимых генераций разными моделями):
+${list}
+
+Отбери ровно ${count} лучших по критериям:
+1. Покрой ВСЕ сегменты целевой аудитории, если их несколько (не бери вопросы только с одного ракурса, если сайт явно обслуживает разные типы клиентов).
+2. Убери вопросы, которые по смыслу почти дублируют уже выбранные, даже если сформулированы разными словами.
+3. Предпочитай вопросы, которые реалистичный человек реально напишет в чат, а не канцелярские или неестественные формулировки.
+4. Сохраняй баланс между разными типами вопросов (рекомендации, рейтинги, сравнения, разговорные с контекстом, запросы источников, про цену, про проблему) — не допускай перекоса в одну категорию.
+
+Верни JSON {"selected": [номера кандидатов через запятую, ровно ${count} штук]} без пояснений.`
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const response = await client.messages.create({
+    model: QUERY_JUDGE_MODEL,
+    max_tokens: 1000,
+    system: "Отвечай ТОЛЬКО валидным JSON без markdown-блоков, без пояснений.",
+    messages: [{ role: "user", content: prompt }],
+  })
+  const block = response.content[0]
+  const text = block.type === "text" ? block.text : "{}"
+  const cleaned = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "")
+  const jsonMatch = cleaned.match(/\{[\s\S]*\}/)
+  const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned)
+  const indices: number[] = Array.isArray(parsed.selected) ? parsed.selected : []
+
+  const selected = indices
+    .map((i) => candidates[i - 1])
+    .filter((q): q is string => Boolean(q))
+
+  const unique = [...new Set(selected)].slice(0, count)
+  return unique.length > 0 ? unique : candidates.slice(0, count)
 }
 
 export async function generateQueries(
@@ -122,21 +254,35 @@ export async function generateQueries(
 
   const prompt = buildQueryGenPrompt(companyName, niche, competitors, aiCount, siteContext, optimizerHints)
 
+  // Два независимых генератора параллельно — разные модели видят нишу под
+  // разными углами (проверено эмпирически: одна модель тянет к B2C-вопросам,
+  // другая — к B2B), объединённый пул даёт судье реальный выбор.
+  const [genA, genB] = await Promise.allSettled([
+    generateWithOpenAI(prompt),
+    generateWithGemini(prompt),
+  ])
+
+  if (genA.status === "rejected") console.warn("[generateQueries] generator A (OpenAI) failed:", genA.reason)
+  if (genB.status === "rejected") console.warn("[generateQueries] generator B (Gemini) failed:", genB.reason)
+
+  const pool = interleave(
+    genA.status === "fulfilled" ? genA.value : [],
+    genB.status === "fulfilled" ? genB.value : []
+  )
+
+  if (pool.length === 0) {
+    throw new Error("Both query generators failed — cannot generate audit queries")
+  }
+
+  const filtered = filterCandidates(pool, companyName)
+  const candidatePool = filtered.length > 0 ? filtered : pool
+
   let aiQueries: string[]
   try {
-    const response = await getClient().chat.completions.create({
-      model: QUERY_GEN_MODEL,
-      messages: [{ role: "user", content: prompt }],
-      response_format: { type: "json_object" },
-      temperature: 1.1,
-      max_tokens: 4000,
-    })
-    const text = response.choices[0]?.message?.content ?? "{}"
-    const parsed = JSON.parse(text)
-    aiQueries = Array.isArray(parsed) ? parsed : (parsed.queries ?? [])
-  } catch (openaiErr) {
-    console.warn("OpenAI generateQueries failed, falling back to Gemini:", openaiErr)
-    aiQueries = await generateWithGemini(prompt)
+    aiQueries = await judgeAndSelect(candidatePool, aiCount, companyName, niche, siteContext)
+  } catch (e) {
+    console.warn("[generateQueries] judge failed, falling back to interleaved selection:", e)
+    aiQueries = candidatePool.slice(0, aiCount)
   }
 
   // Merge: custom prompts first (they're the client's priority), then AI-generated
