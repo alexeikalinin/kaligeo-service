@@ -40,6 +40,7 @@ export const freemiumSequence = task({
 
     const { companyName, previewScore, niche } = scan
     const { landingUrl, appUrl, fromEmail } = getMarketConfig((scan.market as Market) ?? "ru")
+    const from = `KaliGEO <${fromEmail}>`
     const previewUrl = `${appUrl}/preview/${scanId}?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email1`
     const unsub = unsubLink(appUrl, scanId)
     const scoreEmoji = previewScore >= 60 ? "🟢" : previewScore >= 30 ? "🟡" : "🔴"
@@ -49,7 +50,7 @@ export const freemiumSequence = task({
 
     // Email 1 — сразу: результат скана
     await getResend().emails.send({
-      from: fromEmail,
+      from,
       to: email,
       subject: `${scoreEmoji} KaliGEO: ${companyName} — score ${previewScore}/100 · ${previewScore < 30 ? "AI вас почти не видит" : "есть потенциал роста"}`,
       html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(landingUrl, 1), unsub, platformScores }),
@@ -59,7 +60,7 @@ export const freemiumSequence = task({
     await wait.for({ hours: 24 })
     if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
-      from: fromEmail,
+      from,
       to: email,
       subject: `3 причины, почему ChatGPT не знает про ${companyName}`,
       html: emailTemplate2({ companyName, niche, auditUrl: auditLink(landingUrl, 2), unsub }),
@@ -71,7 +72,7 @@ export const freemiumSequence = task({
     if (!scan3?.emailCaptured) return
     const competitors3 = (scan3 as { suggestedCompetitors?: string[] }).suggestedCompetitors ?? []
     await getResend().emails.send({
-      from: fromEmail,
+      from,
       to: email,
       subject: competitors3.length > 0
         ? `${competitors3[0]} уже в топе AI-ответов. Как обогнать?`
@@ -83,7 +84,7 @@ export const freemiumSequence = task({
     await wait.for({ hours: 48 })
     if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
-      from: fromEmail,
+      from,
       to: email,
       subject: `⏳ Последний шанс: данные по ${companyName} удалятся через 48ч`,
       html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(landingUrl, 4), unsub }),
@@ -93,7 +94,7 @@ export const freemiumSequence = task({
     await wait.for({ days: 8 })
     if (!(await prisma.freemiumScan.findUnique({ where: { id: scanId } }))?.emailCaptured) return
     await getResend().emails.send({
-      from: fromEmail,
+      from,
       to: email,
       subject: `${companyName}: как меняется AI-видимость в вашей нише`,
       html: emailTemplate5({ companyName, niche, auditUrl: auditLink(landingUrl, 5), unsub }),
