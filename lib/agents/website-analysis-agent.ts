@@ -144,6 +144,13 @@ ${pageContent}
     model: google("gemini-2.5-flash"),
     prompt,
     maxOutputTokens: 4000,
+    // Это чистая экстракция полей, reasoning тут не нужен — а без явного
+    // отключения thinking иногда съедает большую часть maxOutputTokens
+    // (наблюдали 2106 из 4000 токенов на "мысли"), обрезая JSON-ответ до
+    // невалидного состояния и роняя весь анализ сайта в fallback-заглушку.
+    providerOptions: {
+      google: { thinkingConfig: { thinkingBudget: 0 } },
+    },
   })
 
   try {
