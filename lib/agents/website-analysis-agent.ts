@@ -148,7 +148,22 @@ ${pageContent}
 
   try {
     const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-    return JSON.parse(cleaned) as WebsiteAnalysisResult
+    const parsed = JSON.parse(cleaned)
+    // Gemini иногда возвращает прозу вместо массива (например
+    // suggestedCompetitors: "прямых конкурентов не выявлено") — `as` ничего
+    // не проверяет в рантайме, а такую строку потом ловит .join()/.slice()
+    // где-то downstream с крашем всего шага генерации вопросов.
+    const toArray = (v: unknown): string[] =>
+      Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : typeof v === "string" && v.trim() ? [v.trim()] : []
+    return {
+      companyName: typeof parsed.companyName === "string" ? parsed.companyName : "",
+      niche: typeof parsed.niche === "string" ? parsed.niche : "",
+      description: typeof parsed.description === "string" ? parsed.description : "",
+      services: toArray(parsed.services),
+      targetAudience: typeof parsed.targetAudience === "string" ? parsed.targetAudience : "",
+      keywords: toArray(parsed.keywords),
+      suggestedCompetitors: toArray(parsed.suggestedCompetitors),
+    }
   } catch {
     console.error(`[website-analysis-agent] JSON parse failed for ${websiteUrl}, finishReason=${finishReason}, raw text (${text.length} chars): ${text.slice(0, 2000)}`)
     return {
