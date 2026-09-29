@@ -1,8 +1,10 @@
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import Link from "next/link"
 import { getClientSession } from "@/lib/client-session"
 import { prisma } from "@/lib/prisma"
+import { marketFromHost } from "@/lib/market"
 import { SourcesAnalysis } from "@/components/report/SourcesAnalysis"
 
 export const metadata: Metadata = {
@@ -20,10 +22,13 @@ export default async function SourcesPage() {
   const clientId = await getClientSession()
   if (!clientId) redirect("/my/login")
 
+  const market = marketFromHost((await headers()).get("host"))
+
   // Get the latest STANDARD+ job with a sourcesReport
   const job = await prisma.auditJob.findFirst({
     where: {
       clientId,
+      market,
       status: "COMPLETED",
       tier: { in: ["STANDARD", "ADVANCED", "MONITOR_PRO", "MONITOR_AGENT"] },
     },

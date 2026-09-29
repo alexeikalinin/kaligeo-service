@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { FunnelCharts } from "@/components/admin/FunnelCharts"
+import { MarketTabs } from "@/components/admin/MarketTabs"
+
+type MarketFilter = "all" | "ru" | "by"
 
 const TIER_PRICE: Record<string, number> = {
   BASIC: 5000,
@@ -32,16 +35,25 @@ function weekLabel(date: Date): string {
   return date.toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
 }
 
-export default async function FunnelPage() {
+interface Props {
+  searchParams: Promise<{ market?: string }>
+}
+
+export default async function FunnelPage({ searchParams }: Props) {
+  const params = await searchParams
+  const market: MarketFilter = params.market === "ru" || params.market === "by" ? params.market : "all"
+  const marketWhere = market === "all" ? {} : { market }
+
   const now = new Date()
   const eightWeeksAgo = new Date(now.getTime() - 8 * 7 * 24 * 60 * 60 * 1000)
 
   const [allJobs, recentJobs] = await Promise.all([
     prisma.auditJob.findMany({
+      where: marketWhere,
       select: { tier: true, status: true, paidAt: true, createdAt: true },
     }),
     prisma.auditJob.findMany({
-      where: { createdAt: { gte: eightWeeksAgo } },
+      where: { ...marketWhere, createdAt: { gte: eightWeeksAgo } },
       select: { createdAt: true, status: true, tier: true, paidAt: true },
       orderBy: { createdAt: "asc" },
     }),
@@ -129,6 +141,9 @@ export default async function FunnelPage() {
           ← Заявки
         </Link>
         <h1 className="text-3xl font-bold">Аналитика</h1>
+        <div className="ml-auto">
+          <MarketTabs current={market} basePath="/admin/funnel" />
+        </div>
       </div>
 
       {/* Conversion funnel */}

@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { email, companyName, websiteUrl, niche, competitors } = parsed.data
+  const market = marketFromHost(req.headers.get("host"))
 
   // Найти или создать клиента
   let client = await prisma.client.findUnique({ where: { email } })
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest) {
       competitors,
       tier: "BASIC",
       source: "trial",
+      market,
       paidAt: new Date(),
       status: "PENDING",
     },
@@ -80,7 +82,7 @@ export async function POST(req: NextRequest) {
     data: { email, expiresAt: new Date(Date.now() + 30 * 60 * 1000) },
   })
 
-  const { appUrl, fromEmail } = getMarketConfig(marketFromHost(req.headers.get("host")))
+  const { appUrl, fromEmail } = getMarketConfig(market)
   const magicLinkUrl = `${appUrl}/api/client/auth/verify?token=${tokenRecord.token}&redirect=/my/dashboard`
 
   await sendMagicLinkEmail({ to: email, magicLinkUrl, fromEmail }).catch(console.error)

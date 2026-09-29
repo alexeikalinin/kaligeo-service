@@ -47,6 +47,7 @@ type Job = {
   clientEmail: string
   tier: string
   status: string
+  market: string
   paidAt: Date | null
   createdAt: Date
   report: { overallScore: number | null } | null
@@ -214,6 +215,7 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
                 Компания<SortIcon field="company" current={sortField} dir={sortDir} />
               </th>
               <th className="pb-4 pr-6 font-medium text-zinc-500">Email</th>
+              <th className="pb-4 pr-6 font-medium text-zinc-500">Домен</th>
               <th className={thClass("tier")} onClick={() => toggleSort("tier")}>
                 Тариф<SortIcon field="tier" current={sortField} dir={sortDir} />
               </th>
@@ -249,6 +251,11 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
                   </td>
                   <td className="py-4 pr-6 text-zinc-200 font-medium">{job.companyName}</td>
                   <td className="py-4 pr-6 text-zinc-400 text-sm">{job.clientEmail}</td>
+                  <td className="py-4 pr-6 text-sm">
+                    <span className={`px-2 py-0.5 rounded text-xs font-mono ${job.market === "by" ? "bg-red-900/20 text-red-300" : "bg-blue-900/20 text-blue-300"}`}>
+                      {job.market === "by" ? "BY" : "RU"}
+                    </span>
+                  </td>
                   <td className="py-4 pr-6 text-zinc-400 text-sm">{job.tier}</td>
                   <td className="py-4 pr-6">
                     <span className={`text-sm px-3 py-1 rounded-full ${cfg.cls}`}>{cfg.label}</span>

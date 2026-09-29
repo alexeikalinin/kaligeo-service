@@ -30,7 +30,8 @@ export default async function BillingPage() {
   if (!clientId) redirect("/my/login")
 
   const host = (await headers()).get("host")
-  const { fromEmail } = getMarketConfig(marketFromHost(host))
+  const market = marketFromHost(host)
+  const { fromEmail } = getMarketConfig(market)
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
@@ -38,7 +39,7 @@ export default async function BillingPage() {
   })
 
   const paidJobs = await prisma.auditJob.findMany({
-    where: { clientId, paidAt: { not: null } },
+    where: { clientId, market, paidAt: { not: null } },
     select: {
       id: true,
       tier: true,
@@ -58,7 +59,7 @@ export default async function BillingPage() {
   const tierConfig = currentTier ? TIER_CONFIG[currentTier] : null
 
   const subscription = await prisma.subscription.findFirst({
-    where: { clientId, status: { in: ["ACTIVE", "PAST_DUE", "PENDING_FIRST_PAYMENT", "CANCELED"] } },
+    where: { clientId, market, status: { in: ["ACTIVE", "PAST_DUE", "PENDING_FIRST_PAYMENT", "CANCELED"] } },
     orderBy: { createdAt: "desc" },
   })
 

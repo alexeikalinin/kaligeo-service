@@ -37,11 +37,13 @@ export const followUpScheduler = schedules.task({
         const followUp = await prisma.auditJob.create({
           data: {
             clientEmail: original.clientEmail,
+            clientId: original.clientId,
             websiteUrl: original.websiteUrl,
             companyName: original.companyName,
             niche: original.niche,
             competitors: original.competitors,
             tier: original.tier,
+            market: original.market,
             adminNotes: `Автоматический повторный аудит. Исходный аудит: ${original.id}`,
             baselineJobId: original.id,
             paidAt: now,

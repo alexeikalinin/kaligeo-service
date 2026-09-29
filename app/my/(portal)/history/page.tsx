@@ -1,7 +1,9 @@
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
+import { headers } from "next/headers"
 import { getClientSession } from "@/lib/client-session"
 import { prisma } from "@/lib/prisma"
+import { marketFromHost } from "@/lib/market"
 import AuditCard from "@/components/portal/AuditCard"
 import ScoreTrendChart from "@/components/portal/ScoreTrendChart"
 
@@ -28,8 +30,10 @@ export default async function HistoryPage() {
   const clientId = await getClientSession()
   if (!clientId) redirect("/my/login")
 
+  const market = marketFromHost((await headers()).get("host"))
+
   const jobs = await prisma.auditJob.findMany({
-    where: { clientId, status: "COMPLETED" },
+    where: { clientId, market, status: "COMPLETED" },
     include: {
       report: { select: { overallScore: true } },
     },

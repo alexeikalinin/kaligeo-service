@@ -2,6 +2,9 @@ import { prisma } from "@/lib/prisma"
 import Link from "next/link"
 import { ConfirmPaymentButton } from "@/components/admin/ConfirmPaymentButton"
 import { JobsTable } from "@/components/admin/JobsTable"
+import { MarketTabs } from "@/components/admin/MarketTabs"
+
+type MarketFilter = "all" | "ru" | "by"
 
 const TIER_PRICE: Record<string, number> = {
   BASIC: 5000,
@@ -20,7 +23,15 @@ const IN_PROGRESS_STATUSES = [
   "DELIVERING",
 ]
 
-export default async function AdminPage() {
+interface Props {
+  searchParams: Promise<{ market?: string }>
+}
+
+export default async function AdminPage({ searchParams }: Props) {
+  const params = await searchParams
+  const market: MarketFilter = params.market === "ru" || params.market === "by" ? params.market : "all"
+  const marketWhere = market === "all" ? {} : { market }
+
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
@@ -28,31 +39,34 @@ export default async function AdminPage() {
 
   const [jobs, counts, paidThisMonth, todayNew, stuckJobs, freemiumStats] = await Promise.all([
     prisma.auditJob.findMany({
+      where: marketWhere,
       orderBy: { createdAt: "desc" },
       take: 100,
       include: { report: { select: { overallScore: true } } },
     }),
     prisma.auditJob.groupBy({
       by: ["status"],
+      where: marketWhere,
       _count: { id: true },
     }),
     prisma.auditJob.findMany({
-      where: { paidAt: { gte: monthStart } },
+      where: { ...marketWhere, paidAt: { gte: monthStart } },
       select: { tier: true },
     }),
     prisma.auditJob.count({
-      where: { createdAt: { gte: todayStart } },
+      where: { ...marketWhere, createdAt: { gte: todayStart } },
     }),
     prisma.auditJob.findMany({
       where: {
+        ...marketWhere,
         status: { in: IN_PROGRESS_STATUSES as ("GENERATING_QUERIES" | "EXECUTING_QUERIES" | "ANALYZING" | "GENERATING_REPORT" | "DELIVERING")[] },
         updatedAt: { lt: stuckThreshold },
       },
       select: { id: true, companyName: true, status: true, updatedAt: true },
     }),
     Promise.all([
-      prisma.freemiumScan.count(),
-      prisma.freemiumScan.count({ where: { emailCaptured: { not: null } } }),
+      prisma.freemiumScan.count({ where: marketWhere }),
+      prisma.freemiumScan.count({ where: { ...marketWhere, emailCaptured: { not: null } } }),
     ]).then(([total, withEmail]) => ({ total, withEmail })),
   ])
 
@@ -71,7 +85,7 @@ export default async function AdminPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <h1 className="text-3xl font-bold">Заявки</h1>
         <div className="flex items-center gap-3">
           <Link
@@ -87,6 +101,10 @@ export default async function AdminPage() {
             + Новый аудит
           </Link>
         </div>
+      </div>
+
+      <div className="mb-8">
+        <MarketTabs current={market} />
       </div>
 
       {/* Pipeline status counters */}
