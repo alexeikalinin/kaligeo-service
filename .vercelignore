@@ -9,3 +9,5 @@ tests/
 Сертификаты доменов/
 /*.png
 /coverage/
+
+previews/
