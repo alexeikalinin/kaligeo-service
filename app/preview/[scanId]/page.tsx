@@ -2,10 +2,8 @@ import { prisma } from "@/lib/prisma"
 import { notFound } from "next/navigation"
 import Link from "next/link"
 import { EmailCaptureForm } from "@/components/freemium/EmailCaptureForm"
-import TrialForm from "@/components/portal/TrialForm"
-import { getMarketConfig, type Market } from "@/lib/market"
 
-// Full platform list shown in preview (blurred for paid)
+// Show every platform with recorded answers.
 const ALL_PLATFORMS = [
   { key: "CHATGPT",   name: "ChatGPT" },
   { key: "GEMINI",    name: "Gemini" },
@@ -71,13 +69,13 @@ export default async function PreviewPage({ params }: PageProps) {
   const scan = await prisma.freemiumScan.findUnique({ where: { id: scanId } })
   if (!scan) notFound()
 
-  const { landingUrl } = getMarketConfig((scan.market as Market) ?? "ru")
   const services = scan.services as string[]
   const platformScores = (scan.platformScores ?? {}) as unknown as Record<string, QuickCheckPlatformResult>
   const hasRealData = scan.quickCheckDone && Object.keys(platformScores).length > 0
 
-  // First platform with real data — shown unblurred as teaser
-  const firstRealPlatform = ALL_PLATFORMS.find((p) => platformScores[p.key])
+  // No measured platform is hidden behind an upgrade.
+  const realPlatforms = ALL_PLATFORMS.filter((p) => platformScores[p.key])
+  const evidence = scan.queryEvidence as { queries?: string[] } | null
 
   return (
     <div className="min-h-screen flex flex-col" style={{ background: "var(--bone)", color: "var(--ink)" }}>
@@ -88,11 +86,11 @@ export default async function PreviewPage({ params }: PageProps) {
       >
         <span className="font-mono text-xs font-bold tracking-widest uppercase">KaliGEO</span>
         <Link
-          href={`${landingUrl}/#pricing`}
+          href="#full-audit"
           className="text-xs px-3 py-1.5 rounded font-medium"
           style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
         >
-          Запустить полный аудит →
+          Выбрать расширенный аудит →
         </Link>
       </header>
 
@@ -133,7 +131,7 @@ export default async function PreviewPage({ params }: PageProps) {
               </p>
             ) : (
               <p className="text-xs px-2 py-1 rounded inline-block" style={{ background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
-                Средний конкурент в вашей нише — 61/100
+                Ответы AI не получены — оценка видимости не подтверждена
               </p>
             )}
           </div>
@@ -143,18 +141,19 @@ export default async function PreviewPage({ params }: PageProps) {
         <div className="mb-8">
           <p className="t-eyebrow mb-4">Результаты по платформам</p>
 
-          {/* Teaser: show 1 real platform score */}
-          {firstRealPlatform && (
+          {/* All measured platforms */}
+          {realPlatforms.map((platform) => (
             <div
+              key={platform.key}
               className="rounded-lg px-4 py-3 mb-2 flex items-center justify-between"
               style={{ border: "1px solid var(--rule)", background: "var(--bone-2)" }}
             >
-              <span className="text-sm font-medium w-28">{firstRealPlatform.name}</span>
+              <span className="text-sm font-medium w-28">{platform.name}</span>
               <MiniBar
-                score={platformScores[firstRealPlatform.key].score}
+                score={platformScores[platform.key].score}
                 color={
-                  platformScores[firstRealPlatform.key].score >= 60 ? "#22c55e"
-                  : platformScores[firstRealPlatform.key].score >= 30 ? "#f59e0b"
+                  platformScores[platform.key].score >= 60 ? "#22c55e"
+                  : platformScores[platform.key].score >= 30 ? "#f59e0b"
                   : "#ef4444"
                 }
               />
@@ -165,43 +164,27 @@ export default async function PreviewPage({ params }: PageProps) {
                 реальные данные
               </span>
             </div>
-          )}
+          ))}
 
-          {/* Remaining platforms — blurred */}
-          <div className="space-y-2 relative">
-            <div
-              className="absolute inset-0 z-10 flex flex-col items-center justify-center rounded-xl"
-              style={{ backdropFilter: "blur(8px)", background: "rgba(250,250,247,0.75)" }}
-            >
-              <p className="font-semibold text-sm mb-1" style={{ color: "var(--ink)" }}>
-                Данные по всем 9 платформам — в полном отчёте
-              </p>
-              <p className="text-xs mb-4" style={{ color: "var(--ink-3)" }}>
-                ChatGPT · Claude · Gemini · Perplexity · DeepSeek · YandexGPT · GigaChat · Алиса · Grok
-              </p>
-              <Link
-                href={`${landingUrl}/#pricing`}
-                className="px-4 py-2 rounded font-medium text-sm"
-                style={{ background: "var(--accent)", color: "var(--accent-ink)" }}
-              >
-                Получить полный отчёт
-              </Link>
-            </div>
-            {ALL_PLATFORMS.filter((p) => p.key !== firstRealPlatform?.key).slice(0, 6).map((p) => (
-              <div
-                key={p.key}
-                className="flex items-center justify-between rounded-lg px-4 py-3"
-                style={{ border: "1px solid var(--rule)" }}
-              >
-                <span className="text-sm font-medium w-28">{p.name}</span>
-                <div className="flex-1 h-2 rounded-full" style={{ background: "var(--rule)" }} />
-                <span className="text-xs w-8 text-right ml-3" style={{ color: "var(--ink-3)" }}>
-                  —
-                </span>
-              </div>
-            ))}
-          </div>
+          <p className="text-sm mt-4" style={{ color: "var(--ink-3)" }}>
+            Показаны все полученные результаты. Остальные платформы не проверены или не ответили.
+            Расширенный аудит — отдельная проверка; число платформ зависит от тарифа.
+          </p>
         </div>
+
+        <section className="rounded-xl p-5 mb-8" style={{ border: "1px solid var(--rule)" }}>
+          <h2 className="t-eyebrow mb-3">Ниша и вопросы проверки</h2>
+          <p className="text-sm mb-3">Определённая ниша: {scan.niche}</p>
+          {evidence?.queries?.length ? (
+            <ol className="list-decimal pl-5 space-y-2 text-sm">
+              {evidence.queries.map((query, i) => <li key={i}>{query}</li>)}
+            </ol>
+          ) : <p className="text-sm">В этой старой проверке тексты вопросов не сохранялись.</p>}
+          <p className="text-xs mt-3" style={{ color: "var(--ink-3)" }}>
+            Вопрос о компании проверяет знание бренда, остальные — рекомендации в нише.
+            Это малая выборка, а не полная оценка рынка. Если ниша определена неверно, сообщите нам.
+          </p>
+        </section>
 
         {/* Email capture */}
         {!scan.emailCaptured && (
@@ -236,7 +219,7 @@ export default async function PreviewPage({ params }: PageProps) {
             </div>
             <div className="flex items-start gap-2">
               <span style={{ color: "var(--ink)" }}>→</span>
-              <span><strong style={{ color: "var(--ink)" }}>Wikipedia и базы знаний</strong> — ChatGPT получает 40–48% данных оттуда</span>
+              <span><strong style={{ color: "var(--ink)" }}>Wikipedia и базы знаний</strong> — помогают проверить сведения о компании</span>
             </div>
             <div className="flex items-start gap-2">
               <span style={{ color: "var(--ink)" }}>→</span>
@@ -249,22 +232,17 @@ export default async function PreviewPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* CTA */}
-        <div className="rounded-xl p-6 text-center" style={{ border: "1px solid var(--rule)" }}>
-          <p className="text-lg font-bold mb-2" style={{ fontFamily: "var(--font-serif)" }}>
-            Попробуйте первый аудит бесплатно
-          </p>
+        <section id="full-audit" className="rounded-xl p-6 text-center" style={{ border: "1px solid var(--rule)" }}>
+          <h2 className="text-lg font-bold mb-2">Перейти к расширенному аудиту</h2>
           <p className="text-sm mb-5" style={{ color: "var(--ink-3)" }}>
-            Пробный BASIC: 3 платформы · 15 запросов · слабые места вашего сайта
+            Быстрая проверка завершена. Расширенный аудит проверяет больше вопросов
+            и даёт подробный анализ; состав отчёта зависит от выбранного тарифа.
           </p>
-          <TrialForm />
-          <p className="text-xs mt-4" style={{ color: "var(--ink-3)" }}>
-            или{" "}
-            <Link href={`${landingUrl}/#pricing`} style={{ color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
-              выберите тариф →
-            </Link>
-          </p>
-        </div>
+          <Link href={`/pricing?scanId=${encodeURIComponent(scan.id)}`} className="inline-block px-4 py-2 rounded font-medium"
+            style={{ background: "var(--accent)", color: "var(--accent-ink)" }}>
+            Посмотреть тарифы расширенного аудита →
+          </Link>
+        </section>
       </main>
     </div>
   )

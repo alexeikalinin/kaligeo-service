@@ -1,3 +1,5 @@
+import { namedCompetitors } from "../lib/analysis/competitor-names"
+import { resolveAuditBrand } from "../lib/brand-identity"
 import { task, tasks } from "@trigger.dev/sdk/v3"
 import { postAuditSequence } from "./post-audit-sequence"
 import { prisma } from "../lib/prisma"
@@ -25,6 +27,8 @@ import { getMarketConfig, type Market } from "../lib/market"
 
 export interface AuditPayload {
   jobId: string
+  resume?: boolean // QA-only recovery: retain completed questions and answers.
+  validation?: boolean // Trusted SDK-only QA run; never accepted from public order forms.
 }
 
 export const auditPipeline = task({
@@ -37,15 +41,17 @@ export const auditPipeline = task({
 
     const job = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
 
+    if (payload.resume && !payload.validation) throw new Error("Resume is restricted to validation runs")
+    if (payload.validation && job.source !== "qa-acceptance") throw new Error("Validation requires a dedicated QA job")
     try {
-      return await runPipeline(job)
+      return await runPipeline(job, payload.validation === true, payload.resume === true || (job.status === "FAILED" && Array.isArray(job.generatedQueries) && job.generatedQueries.length === getTierConfig(job.tier as Tier).queryCount))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
       await prisma.auditJob.update({
         where: { id: jobId },
         data: { status: "FAILED", errorMessage },
       })
-      notifyAuditFailed({
+      if (!payload.validation) notifyAuditFailed({
         companyName: job.companyName,
         tier: job.tier,
         jobId,
@@ -56,19 +62,23 @@ export const auditPipeline = task({
   },
 })
 
-async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUniqueOrThrow>>) {
+async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUniqueOrThrow>>, validation = false, resume = false) {
     const jobId = job.id
     const tier = job.tier as Tier
     const baseTier = getBaseTier(tier)   // MONITOR_* → BASIC/STANDARD/ADVANCED
     const config = getTierConfig(tier)
     const isAdvanced = baseTier === "ADVANCED"
 
+    const submittedCompetitors = job.competitors
+    job.competitors = namedCompetitors(job.competitors)
+
     // ── Step 0: Website analysis — определяем нишу и компанию по URL ─────
     let siteContext: SiteContext | undefined
     if (job.websiteUrl) {
       try {
         const analysis = await runWebsiteAnalysisAgent(job.websiteUrl)
-        const updates: Record<string, unknown> = {}
+        const previousSnapshot = job.analysisSnapshot && typeof job.analysisSnapshot === "object" && !Array.isArray(job.analysisSnapshot) ? job.analysisSnapshot : {}
+        const updates: Record<string, unknown> = { analysisSnapshot: JSON.parse(JSON.stringify({ ...analysis, submittedCompanyName: previousSnapshot.submittedCompanyName ?? job.companyName, submittedCompetitors: previousSnapshot.submittedCompetitors ?? submittedCompetitors })) }
         // Обновляем нишу если она пустая или дефолтная
         if (analysis.niche && (!job.niche || job.niche === "Общее")) {
           updates.niche = analysis.niche
@@ -89,12 +99,10 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
             })
           }
         }
-        // Обновляем имя компании если оно выглядит как тест/мусор (< 4 символов или нет пробелов и букв)
-        const nameIsJunk = !job.companyName || job.companyName.length < 3 ||
-          /^[а-яёa-z]{2,6}$/i.test(job.companyName.trim()) && !/\s/.test(job.companyName)
-        if (analysis.companyName && nameIsJunk) {
-          updates.companyName = analysis.companyName
-          job.companyName = analysis.companyName
+        const effectiveBrand = resolveAuditBrand(job.companyName, analysis.companyName)
+        if (effectiveBrand && effectiveBrand !== job.companyName) {
+          updates.companyName = effectiveBrand
+          job.companyName = effectiveBrand
         }
         // Добавляем конкурентов если не заданы
         if (analysis.suggestedCompetitors?.length && job.competitors.length === 0) {
@@ -118,6 +126,10 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       }
     }
 
+    if (!job.niche?.trim() || job.niche.trim() === "Общее") {
+      throw new Error("Не определена ниша бизнеса. Укажите, какие товары или услуги предлагает компания, прежде чем запускать аудит.")
+    }
+
     // ── Step 1: Generate queries ──────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_QUERIES" } })
 
@@ -139,23 +151,28 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       return undefined
     })
 
-    const queries = await generateQueries(
+    const savedQueries = resume && Array.isArray(job.generatedQueries) && job.generatedQueries.every(q => typeof q === "string")
+      ? job.generatedQueries as string[] : null
+    const queries = savedQueries?.length ? savedQueries : await generateQueries(
       job.companyName,
       job.niche,
       job.competitors,
       baseTier,
       customPrompts,
       siteContext,
-      optimizerHints
+      optimizerHints,
+      validation ? ["GEMINI", "GIGACHAT"] : []
     )
 
     // ── Step 2: Execute queries — only platforms for this tier ────────────
-    await prisma.auditJob.update({ where: { id: jobId }, data: { status: "EXECUTING_QUERIES" } })
+    await prisma.auditJob.update({ where: { id: jobId }, data: { status: "EXECUTING_QUERIES", generatedQueries: queries } })
 
     // Идемпотентность при ретрае Trigger.dev (retry.maxAttempts: 2): если предыдущая
     // попытка успела частично или полностью выполнить запросы, но упала на более позднем
     // шаге (например PDF), без этой очистки повторная попытка задваивала бы QueryResult.
-    await prisma.queryResult.deleteMany({ where: { jobId } })
+    if (!resume) await prisma.queryResult.deleteMany({ where: { jobId } })
+    const savedResults = resume ? await prisma.queryResult.findMany({ where: { jobId }, select: { platform: true, query: true } }) : []
+    const missingQueries = (platform: string) => queries.filter(query => !savedResults.some(result => result.platform === platform && result.query === query))
 
     // Пересекаем тарифные платформы с теми у которых есть ключи
     const activePlatforms = getActivePlatforms()
@@ -163,28 +180,46 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     const basePlatforms = job.selectedPlatforms.length > 0
       ? job.selectedPlatforms.filter((p) => config.platforms.includes(p))
       : config.platforms
-    const tierPlatforms = basePlatforms.filter((p) => activePlatforms.includes(p))
+    const tierPlatforms = basePlatforms.filter((p) => activePlatforms.includes(p) && (!validation || !["GEMINI", "GIGACHAT"].includes(p)))
     const suspendedByKey = config.platforms.filter((p) => !activePlatforms.includes(p))
     if (suspendedByKey.length > 0) {
       console.warn(`[platforms] Приостановлены (нет ключей): ${suspendedByKey.join(", ")}`)
     }
 
-    const { platformsToUse, skippedPlatforms } = await assertCanStartAudit(tierPlatforms)
+    const { platformsToUse, skippedPlatforms } = tierPlatforms.some(p => missingQueries(p).length > 0)
+      ? await assertCanStartAudit(tierPlatforms.filter(p => missingQueries(p).length > 0)).catch(error => {
+          if (!savedResults.length) throw error
+          console.warn("[risk-agent] Remaining platforms unavailable; completing the saved partial audit")
+          return { platformsToUse: [], skippedPlatforms: tierPlatforms.filter(p => missingQueries(p).length > 0) }
+        })
+      : { platformsToUse: [], skippedPlatforms: [] }
     if (skippedPlatforms.length > 0) {
       console.warn(`[risk-agent] Пропущены из-за лимитов: ${skippedPlatforms.join(", ")}`)
     }
 
-    await Promise.allSettled(
+    await prisma.auditJob.update({ where: { id: jobId }, data: { selectedPlatforms: [...new Set([...savedResults.map(r => r.platform), ...platformsToUse])] as never } })
+
+    const executionOutcomes = await Promise.allSettled(
       platformsToUse.map((platform) =>
-        executeQueriesOnPlatform(jobId, queries, platform, job.companyName, job.websiteUrl, job.competitors)
+        executeQueriesOnPlatform(jobId, missingQueries(platform), platform, job.companyName, job.websiteUrl, job.competitors)
       )
     )
+
+    await prisma.auditJob.update({ where: { id: jobId }, data: {
+      executionDiagnostics: platformsToUse.map((platform, index) => {
+        const outcome = executionOutcomes[index]
+        return outcome.status === "fulfilled"
+          ? { platform, attempted: queries.length, answered: outcome.value.results.length, failures: outcome.value.failures }
+          : { platform, attempted: queries.length, answered: 0, failures: [{ error: "Platform execution failed" }] }
+      }),
+    } })
 
     // ── Step 3: Analysis ──────────────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "ANALYZING" } })
 
     const allResults = await prisma.queryResult.findMany({ where: { jobId } })
 
+    if (allResults.length === 0) throw new Error("Ни одна AI-платформа не вернула ответы. Отчёт не сформирован.")
     const platformScores = calculateVisibilityScores(allResults)
     const overallScore = calculateOverallScore(platformScores)
     const competitorMatrix = config.hasCompetitorMatrix
@@ -231,6 +266,9 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       contentRecommendationsRaw = contentRecs.status === "fulfilled" ? contentRecs.value : undefined
       competitorGaps         = gapsStructured.status === "fulfilled" ? gapsStructured.value : undefined
 
+      if (!gapsAnalysis || !sentimentAnalysis || !contentRecommendationsRaw) {
+        throw new Error("Не завершён расширенный анализ или контент-план. Сохранённые ответы будут использованы при повторной попытке.")
+      }
       contentRecommendations = contentRecommendationsRaw ? JSON.stringify(contentRecommendationsRaw, null, 2) : undefined
 
       if (semanticStats.status === "fulfilled") {
@@ -241,7 +279,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     // Персистится в Report.analysisNotes / Report.contentRecommendations / Report.competitorGaps —
     // раньше эти платные LLM-вызовы использовались только как контекст для growth-plan-agent и выбрасывались.
     const analysisNotes = (gapsAnalysis || sentimentAnalysis)
-      ? { gapsAnalysis: gapsAnalysis ?? "", sentimentAnalysis: sentimentAnalysis ?? "" }
+      ? { gapsAnalysis: gapsAnalysis ?? "", sentimentAnalysis: sentimentAnalysis ?? "", competitorAnalysis: competitorAnalysis ?? "" }
       : undefined
 
     // ── Step 5: Action Plan / Growth Plan ─────────────────────────────────
@@ -307,6 +345,11 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       await prisma.auditJob.update({ where: { id: jobId }, data: { pdfUrl } })
     }
 
+    if (validation) {
+      await prisma.auditJob.update({ where: { id: jobId }, data: { status: "COMPLETED", completedAt: new Date(), errorMessage: null } })
+      return { jobId, overallScore, pdfUrl, validation: true, delivered: false }
+    }
+
     // ── Step 7: Email delivery ────────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "DELIVERING" } })
 
@@ -351,7 +394,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     // ── Done ──────────────────────────────────────────────────────────────
     await prisma.auditJob.update({
       where: { id: jobId },
-      data: { status: "COMPLETED", completedAt: new Date() },
+      data: { status: "COMPLETED", completedAt: new Date(), errorMessage: null },
     })
 
     notifyAuditCompleted({

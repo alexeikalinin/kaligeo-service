@@ -113,3 +113,21 @@ describe("GET /api/report/[id]/download-html", () => {
     expect(text).toContain("Быстрые действия")
   })
 })
+
+
+it("exports a Cyrillic company name with a valid HTTP attachment header", async () => {
+  mockJobFindUnique.mockResolvedValue({ ...jobWithReport, companyName: "Игровой магазин", market: "by" })
+  const response = await callDownloadHtml("job-1", "valid-token")
+  expect(response.status).toBe(200)
+  expect(response.headers.get("Content-Disposition")).toContain("filename*=UTF-8''")
+  expect(await response.text()).toContain("kaligeo.by")
+})
+
+it("escapes company names and generated descriptions in the downloaded HTML", async () => {
+  mockJobFindUnique.mockResolvedValue({ ...jobWithReport, companyName: "<script>alert(1)</script>", report: { ...report, actionPlan: { ...report.actionPlan, strategy: "<img src=x onerror=alert(1)>" } } })
+  const response = await callDownloadHtml("job-1", "valid-token")
+  const html = await response.text()
+  expect(html).not.toContain("<script>alert(1)</script>")
+  expect(html).not.toContain("<img src=x")
+  expect(html).toContain("&lt;script&gt;")
+})

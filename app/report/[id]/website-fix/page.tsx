@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { use } from "react"
 import type { WebsiteFixResult, WebsiteFix } from "@/lib/agents/website-fix-agent"
 
@@ -113,6 +114,7 @@ interface PageProps {
 
 export default function WebsiteFixPage({ params }: PageProps) {
   const { id } = use(params)
+  const token = useSearchParams().get("token") ?? ""
   const [state, setState] = useState<"idle" | "loading" | "done" | "error">("idle")
   const [result, setResult] = useState<WebsiteFixResult | null>(null)
   const [errorMsg, setErrorMsg] = useState("")
@@ -121,7 +123,7 @@ export default function WebsiteFixPage({ params }: PageProps) {
     setState("loading")
     setErrorMsg("")
     try {
-      const res = await fetch(`/api/report/${id}/website-fix`, { method: "POST" })
+      const res = await fetch(`/api/report/${id}/website-fix?token=${encodeURIComponent(token)}`, { method: "POST" })
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
         throw new Error((body as { error?: string }).error ?? `HTTP ${res.status}`)
@@ -146,7 +148,7 @@ export default function WebsiteFixPage({ params }: PageProps) {
         style={{ borderColor: "var(--rule)" }}
       >
         <Link
-          href={`/report/${id}`}
+          href={`/report/${id}?token=${encodeURIComponent(token)}`}
           className="text-sm transition-colors hover:opacity-70"
           style={{ color: "var(--ink-3)" }}
         >

@@ -85,10 +85,10 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
             Спросить AI о вашем аудите
           </p>
           <p className="text-xs mb-4" style={{ color: "var(--ink-3)" }}>
-            Доступно на тарифах Standard и Advanced
+            Доступно на тарифах Профи, Агентский и соответствующих подписках
           </p>
           <a
-            href="https://kaligeo.vercel.app/#pricing"
+            href="/pricing"
             target="_blank"
             rel="noopener noreferrer"
             className="block w-full text-center py-2 rounded text-sm font-semibold transition-opacity hover:opacity-70"
@@ -202,16 +202,16 @@ export function ReportChatPanel({ jobId, token, companyName }: Props) {
                 style={{ border: "1px solid var(--rule)", background: "var(--bone-2)" }}
               >
                 <p className="text-sm mb-3" style={{ color: "var(--ink-2)" }}>
-                  Вы использовали все {limit} вопросов тарифа Standard
+                  Вы использовали все {limit} вопросов этого аудита
                 </p>
                 <a
-                  href="https://kaligeo.vercel.app/#pricing"
+                  href="/pricing"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-block px-4 py-2 rounded text-sm font-semibold transition-opacity hover:opacity-70"
                   style={{ background: "var(--ink)", color: "var(--bone)" }}
                 >
-                  Перейти на Advanced →
+                  Перейти на Агентский →
                 </a>
               </div>
             )}

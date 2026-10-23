@@ -21,7 +21,8 @@ vi.mock("@/lib/prisma", () => ({
 }))
 
 // Mock AI streaming — streamText() is NOT awaited in the route, it returns the object directly
-vi.mock("ai", () => ({
+vi.mock("ai", async (importOriginal) => ({
+  ...await importOriginal<typeof import("ai")>(),
   streamText: vi.fn().mockReturnValue({
     toUIMessageStreamResponse: vi.fn().mockReturnValue(
       new Response("mock stream", { status: 200 })
@@ -80,7 +81,7 @@ function makeJob(tier: string, chatMessagesUsed = 0, reportToken = "valid-token"
 
 const chatBody = {
   token:    "valid-token",
-  messages: [{ role: "user", content: "Как улучшить мою AI-видимость?" }],
+  messages: [{ id: "user-1", role: "user", parts: [{ type: "text", text: "Как улучшить мою AI-видимость?" }] }],
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -174,4 +175,27 @@ describe("POST /api/report/[id]/chat", () => {
     const res = await callChat("job-chat", chatBody)
     expect(res.status).toBe(403)
   })
+})
+
+
+describe("Chat allowance shown in the report", () => {
+  it.each([
+    ["BASIC", 0, false], ["MONITOR_START", 0, false],
+    ["STANDARD", 10, true], ["MONITOR_PRO", 10, true],
+    ["ADVANCED", null, true], ["MONITOR_AGENT", null, true],
+  ])("returns the actual limit for %s", async (tier, limit, canChat) => {
+    mockFindUnique.mockResolvedValue(makeJob(String(tier), 5))
+    const { GET } = await import("@/app/api/report/[id]/chat/route")
+    const { NextRequest } = await import("next/server")
+    const response = await GET(new NextRequest("https://app.kaligeo.by/api/report/job-chat/chat?token=valid-token"), { params: Promise.resolve({ id: "job-chat" }) })
+    expect(await response.json()).toMatchObject({ chatMessageLimit: limit, canChat })
+  })
+})
+
+
+it("rejects malformed UI messages before consuming the chat allowance", async () => {
+  mockUpdate.mockClear()
+  mockFindUnique.mockResolvedValue(makeJob("STANDARD"))
+  expect((await callChat("job-chat", { token: "valid-token", messages: [{ role: "user", content: "old shape" }] })).status).toBe(400)
+  expect(mockUpdate).not.toHaveBeenCalled()
 })

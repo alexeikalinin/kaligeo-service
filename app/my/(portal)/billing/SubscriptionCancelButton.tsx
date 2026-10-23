@@ -5,11 +5,14 @@ import { useRouter } from "next/navigation"
 
 export function SubscriptionCancelButton() {
   const router = useRouter()
+  const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [confirming, setConfirming] = useState(false)
 
   if (!confirming) {
     return (
+      <div>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       <button
         onClick={() => setConfirming(true)}
         style={{
@@ -25,6 +28,7 @@ export function SubscriptionCancelButton() {
       >
         Отменить подписку
       </button>
+      </div>
     )
   }
 
@@ -38,8 +42,12 @@ export function SubscriptionCancelButton() {
         onClick={async () => {
           setLoading(true)
           try {
-            await fetch("/api/client/subscription/cancel", { method: "POST" })
+            setError("")
+            const response = await fetch("/api/client/subscription/cancel", { method: "POST" })
+            if (!response.ok) throw new Error("Не удалось отменить подписку. Попробуйте ещё раз.")
             router.refresh()
+          } catch (reason) {
+            setError(reason instanceof Error ? reason.message : "Ошибка соединения")
           } finally {
             setLoading(false)
             setConfirming(false)

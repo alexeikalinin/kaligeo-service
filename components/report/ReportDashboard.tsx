@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { getTierConfig, type Tier } from "@/lib/gates"
+import { useState } from "react"
 import Link from "next/link"
 import { ScoreHero } from "./ScoreHero"
 import { PlatformScoresGrid } from "./PlatformScoresGrid"
@@ -71,6 +72,7 @@ interface ReportDashboardProps {
     websiteUrl: string
     niche: string
     tier: string
+    coverage?: { platform: string; answered: number; expected: number }[]
     pdfUrl: string | null
     completedAt: Date | null
     clientEmail?: string
@@ -150,25 +152,26 @@ function isTabLocked(tabAvailableFrom: string, userTier: string): boolean {
   return (TIER_ORDER[tabAvailableFrom] ?? 0) > (TIER_ORDER[userTier] ?? 0)
 }
 
+function isReportTabLocked(tab: (typeof TABS)[number], tier: string): boolean {
+  const config = getTierConfig(tier as Tier)
+  if (tab.key === "trends") return !config.hasHistoricalTrends
+  if (tab.key === "progress") return !config.hasComparison
+  return isTabLocked(tab.availableFrom, tier)
+}
+
 function getFirstAvailableTab(tier: string): TabKey {
-  return TABS.find((t) => !isTabLocked(t.availableFrom, tier))?.key ?? "overview"
+  return TABS.find((t) => !isReportTabLocked(t, tier))?.key ?? "overview"
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
 
 export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, nicheBenchmark, analysisNotes, contentRecommendations, comparison, sourcesReport, shareOfVoice, competitivePosition }: ReportDashboardProps) {
-  const [tab, setTab] = useState<TabKey>(() => getFirstAvailableTab(job.tier))
+  const [selectedTab, setTab] = useState<TabKey>(() => getFirstAvailableTab(job.tier))
+  const tabDef = TABS.find((t) => t.key === selectedTab)!
+  const tab = isReportTabLocked(tabDef, job.tier) ? getFirstAvailableTab(job.tier) : selectedTab
 
-  // Reset tab when tier changes (e.g. demo tier selector)
-  useEffect(() => {
-    const tabDef = TABS.find((t) => t.key === tab)
-    if (tabDef && isTabLocked(tabDef.availableFrom, job.tier)) {
-      setTab(getFirstAvailableTab(job.tier))
-    }
-  }, [job.tier]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const hasPdf = job.tier !== "BASIC" && !!job.pdfUrl
-  const hasWebsiteFix = job.tier === "ADVANCED"
+  const hasPdf = getTierConfig(job.tier as Tier).hasPdf && !!job.pdfUrl
+  const hasWebsiteFix = getTierConfig(job.tier as Tier).hasWebsiteFix
   // Скрываем блок, если бенчмарк не считался (BASIC) или в базе ещё мало аудитов по нише
   const benchmarkScore = nicheBenchmark && nicheBenchmark.samplesCount >= 5 ? nicheBenchmark.nicheMedian : undefined
   const hallucinations = report.hallucinationAudit ?? []
@@ -189,6 +192,9 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
 
   return (
     <div className="min-h-screen" style={{ background: "var(--bone)", color: "var(--ink)" }}>
+      <div className="max-w-5xl mx-auto px-4 pt-4 text-right text-sm">
+        <Link href="/my/dashboard" className="underline" style={{ color: "var(--ink-3)" }}>Личный кабинет →</Link>
+      </div>
       <ScoreHero
         companyName={job.companyName}
         websiteUrl={job.websiteUrl}
@@ -204,6 +210,13 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
         onGrowthPlanClick={!isTabLocked("STANDARD", job.tier) ? () => setTab("plan") : undefined}
       />
 
+      {job.coverage?.some((p) => p.answered < p.expected) && (
+        <div role="status" className="max-w-5xl mx-auto px-4 py-4 text-sm" style={{ color: "var(--warn)" }}>
+          Проверка выполнена частично. {job.coverage.filter((p) => p.answered < p.expected).map((p) => `${p.platform}: ${p.answered} из ${p.expected} ответов`).join("; ")}.
+          {" "}Оценка рассчитана только по полученным ответам. Сбой платформы не означает нулевую видимость бренда.
+        </div>
+      )}
+
       {/* Tab nav */}
       <div
         className="sticky top-0 z-10 border-b"
@@ -211,7 +224,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
       >
         <div className="max-w-5xl mx-auto px-4 flex items-center gap-0.5 overflow-x-auto">
           {TABS.map((t) => {
-            const locked = isTabLocked(t.availableFrom, job.tier)
+            const locked = isReportTabLocked(t, job.tier)
             const isActive = tab === t.key && !locked
             return (
               <button
@@ -251,7 +264,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
           <div className="ml-auto shrink-0 pl-4">
             {hasWebsiteFix ? (
               <Link
-                href={`/report/${job.id}/website-fix`}
+                href={`/report/${job.id}/website-fix?token=${encodeURIComponent(job.reportToken ?? "")}`}
                 className="monotag transition-colors"
                 style={{ background: "var(--accent)", borderColor: "var(--accent)", color: "var(--accent-ink)" }}
               >
@@ -471,7 +484,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                   Сайты, которые нейросети использовали как источники при формировании ответов
                 </p>
                 {sourcesReport ? (
-                  <SourcesAnalysis sourcesReport={sourcesReport as any} />
+                  <SourcesAnalysis sourcesReport={sourcesReport as React.ComponentProps<typeof SourcesAnalysis>["sourcesReport"]} />
                 ) : (
                   <div
                     className="rounded-xl p-8 text-center"
@@ -487,7 +500,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
         )}
 
         {tab === "trends" && (
-          isTabLocked("STANDARD", job.tier)
+          !getTierConfig(job.tier as Tier).hasHistoricalTrends
             ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="trends" />
             : (
               <div>
@@ -495,7 +508,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                   История видимости
                 </h2>
                 <p className="text-sm mb-6" style={{ color: "var(--ink-3)" }}>
-                  Динамика AI-видимости по всем аудитам компании {job.companyName}
+                  Динамика AI-видимости по аудитам компании {job.companyName}. При разном составе платформ и вопросов оценки не полностью сопоставимы.
                 </p>
                 <TrendsChart
                   jobId={job.id}
@@ -566,7 +579,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
         )}
 
         {tab === "progress" && (
-          isTabLocked("STANDARD", job.tier)
+          !getTierConfig(job.tier as Tier).hasComparison
             ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="progress" />
             : comparison
               ? (

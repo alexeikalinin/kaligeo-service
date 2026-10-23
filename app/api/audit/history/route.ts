@@ -22,20 +22,26 @@ export async function GET(req: NextRequest) {
   // Проверяем, что token принадлежит одному из аудитов этого клиента
   const tokenCheck = await prisma.auditJob.findFirst({
     where: { reportToken: token },
-    select: { clientEmail: true, companyName: true },
+    select: { clientEmail: true, companyName: true, websiteUrl: true, market: true, source: true },
   })
   if (!tokenCheck) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 })
   }
 
-  // Строим фильтр по email или названию компании
+  // Scope history to the report's owner, website and market, never caller-supplied identity.
+  if ((email && email.toLowerCase() !== tokenCheck.clientEmail.toLowerCase()) ||
+      (companyName && companyName !== tokenCheck.companyName)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  }
   const jobs = await prisma.auditJob.findMany({
     where: {
       status: "COMPLETED",
-      OR: [
-        email ? { clientEmail: email } : undefined,
-        companyName ? { companyName: { contains: companyName, mode: "insensitive" } } : undefined,
-      ].filter(Boolean) as any,
+      clientEmail: tokenCheck.clientEmail,
+      websiteUrl: tokenCheck.websiteUrl,
+      market: tokenCheck.market,
+      ...(tokenCheck.source === "qa-acceptance"
+        ? { source: "qa-acceptance" }
+        : { OR: [{ source: null }, { source: { not: "qa-acceptance" } }] }),
     },
     include: {
       report: {

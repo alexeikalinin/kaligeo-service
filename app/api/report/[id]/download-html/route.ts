@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { attachmentHeader, escapeHtml, escapeHtmlValues } from "@/lib/report/download-utils"
+import { getMarketConfig, type Market } from "@/lib/market"
 import { prisma } from "@/lib/prisma"
 
 export async function GET(
@@ -20,10 +22,13 @@ export async function GET(
     return NextResponse.json({ error: "Неверный токен" }, { status: 403 })
   }
 
-  const report = job.report
+  const displayName = escapeHtml(job.companyName)
+  const displayWebsite = escapeHtml(job.websiteUrl ?? "")
+  const landingHost = new URL(getMarketConfig((job.market ?? "ru") as Market).landingUrl).host
+  const report = escapeHtmlValues(job.report)
   type PS = { platform: string; score: number; citationRate: number; mentionCount: number; totalQueries: number }
   const scores = report.visibilityScores as Record<string, PS>
-  const weakPoints = report.weakPoints as { id: string; title: string; description: string; severity: string }[]
+  const weakPoints = report.weakPoints as { id: string; title: string; description: string; severity: string; detected?: boolean }[]
   const actionPlan = report.actionPlan as {
     strategy?: string
     quickWins?: { action: string; howTo: string; timeEstimate: string; impact: string }[]
@@ -47,7 +52,7 @@ export async function GET(
       </td>
     </tr>`).join("")
 
-  const weakRows = weakPoints.slice(0, 8).map((w) => `
+  const weakRows = weakPoints.filter(point => point.detected !== false).slice(0, 8).map((w) => `
     <div style="padding:14px 0;border-bottom:1px solid #f3f4f6">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
         <span style="font-size:11px;font-weight:600;color:${severityColor(w.severity)};text-transform:uppercase;letter-spacing:.06em">${w.severity}</span>
@@ -71,7 +76,7 @@ export async function GET(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>KaliGEO — ${job.companyName} — AI-аудит</title>
+<title>KaliGEO — ${displayName} — AI-аудит</title>
 <style>
   *{box-sizing:border-box}
   body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f9fafb;color:#111827;margin:0;padding:0}
@@ -88,8 +93,8 @@ export async function GET(
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:32px">
     <div>
       <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em;font-weight:600">KaliGEO · AI Search Visibility Audit</div>
-      <h1 style="margin:6px 0 0;font-size:28px">${job.companyName}</h1>
-      <p style="margin:4px 0 0;font-size:14px;color:#6b7280">${job.websiteUrl} · ${new Date(job.completedAt ?? job.createdAt).toLocaleDateString("ru-RU")}</p>
+      <h1 style="margin:6px 0 0;font-size:28px">${displayName}</h1>
+      <p style="margin:4px 0 0;font-size:14px;color:#6b7280">${displayWebsite} · ${new Date(job.completedAt ?? job.createdAt).toLocaleDateString("ru-RU")}</p>
     </div>
     <div style="text-align:right">
       <div style="font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:.1em">AI Score</div>
@@ -146,7 +151,7 @@ export async function GET(
   </div>` : ""}
 
   <div style="text-align:center;padding:32px 0;color:#9ca3af;font-size:13px">
-    Сгенерировано KaliGEO · kaligeo.ru · ${new Date().toLocaleDateString("ru-RU")}
+    Сгенерировано KaliGEO · ${landingHost} · ${new Date().toLocaleDateString("ru-RU")}
   </div>
 </div>
 </body>
@@ -155,7 +160,7 @@ export async function GET(
   return new NextResponse(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Content-Disposition": `attachment; filename="kaligeo-${job.companyName.replace(/[^a-zа-я0-9]/gi, "-")}-${new Date().toISOString().slice(0, 10)}.html"`,
+      "Content-Disposition": attachmentHeader(`kaligeo-${job.companyName}-${new Date().toISOString().slice(0, 10)}.html`, `kaligeo-${job.id}.html`),
     },
   })
 }

@@ -6,9 +6,12 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 
 // ── Mocks ─────────────────────────────────────────────────────────────────────
 
+const mockSession = vi.fn().mockResolvedValue(null)
+vi.mock("@/lib/client-session", () => ({ getClientSession: () => mockSession() }))
 const mockJobFindUnique = vi.fn()
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    report: { update: vi.fn().mockResolvedValue({}) },
     auditJob: {
       findUnique: (...a: unknown[]) => mockJobFindUnique(...a),
     },
@@ -69,6 +72,7 @@ const advancedJobWithReport = {
 describe("POST /api/report/[id]/website-fix", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockSession.mockResolvedValue(null)
     withAdminCookie()
     mockRunWebsiteFixAgent.mockResolvedValue({
       fixes: [{ type: "schema", title: "Add Organization schema", html: "<script>...</script>" }],
@@ -82,6 +86,32 @@ describe("POST /api/report/[id]/website-fix", () => {
     const json = await res.json()
     expect(json.fixes).toBeDefined()
     expect(json.fixes).toHaveLength(1)
+  })
+
+  it("allows the owning client on MONITOR_AGENT without an admin cookie", async () => {
+    withoutAdminCookie()
+    mockSession.mockResolvedValue("owner-1")
+    mockJobFindUnique.mockResolvedValue({ ...advancedJobWithReport, clientId: "owner-1", tier: "MONITOR_AGENT" })
+    expect((await callWebsiteFix("job-1")).status).toBe(200)
+  })
+
+  it("rejects another client's session", async () => {
+    withoutAdminCookie()
+    mockSession.mockResolvedValue("other-client")
+    mockJobFindUnique.mockResolvedValue({ ...advancedJobWithReport, clientId: "owner-1" })
+    expect((await callWebsiteFix("job-1")).status).toBe(401)
+    expect(mockRunWebsiteFixAgent).not.toHaveBeenCalled()
+  })
+
+  it("returns saved recommendations without another paid model call", async () => {
+    mockJobFindUnique.mockResolvedValue({ ...advancedJobWithReport, report: { ...advancedJobWithReport.report, websiteFix: { fixes: [{ code: "saved" }] } } })
+    expect((await callWebsiteFix("job-1")).status).toBe(200)
+    expect(mockRunWebsiteFixAgent).not.toHaveBeenCalled()
+  })
+
+  it("returns a retryable error when generation fails", async () => {
+    mockRunWebsiteFixAgent.mockRejectedValueOnce(new Error("model unavailable"))
+    expect((await callWebsiteFix("job-1")).status).toBe(502)
   })
 
   it("passes correct job data to website-fix agent", async () => {

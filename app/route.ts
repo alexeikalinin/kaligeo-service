@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFileSync } from 'fs'
 import path from 'path'
+import { marketFromHost } from '@/lib/market'
 
 interface RegionPatch {
   canonical: string
@@ -81,15 +82,31 @@ function patchHtml(html: string, region: string): string {
     )
   }
 
+  const isByn = region === 'by'
+  const currency = isByn ? 'BYN' : 'RUB'
+  const prices = isByn ? ['149', '449', '899', '99', '399', '699'] : ['4 900', '13 900', '27 900', '2 990', '9 990', '19 990']
+  let priceIndex = 0
+  result = result.replace(/<div class="amt">.*?<\/div>/g, () => {
+    const i = priceIndex++
+    return `<div class="amt"><span class="cur">${prices[i]}</span><span class="cur cur-suf">${isByn ? 'BYN' : '₽'}${i >= 3 ? '/мес' : ''}</span></div>`
+  })
+  let offerIndex = 0
+  result = result.replace(/"price": "[^"]+",\s*"priceCurrency": "USD"/g, () =>
+    `"price": "${prices[offerIndex++].replace(/ /g, '')}", "priceCurrency": "${currency}"`
+  )
+  result = result.replace('<span class="pay-currency">BYN</span>', `<span class="pay-currency">${isByn ? 'BYN' : '₽'}</span>`)
+  result = result.replace('Оплата производится только в валюте сайта: BYN на kaligeo.by, российские рубли на kaligeo.ru.',
+    isByn ? 'Оплата производится только в белорусских рублях (BYN).' : 'Оплата производится только в российских рублях (RUB).')
+
   return result
 }
 
 export async function GET(request: NextRequest) {
-  const region = request.headers.get('x-region') ?? 'default'
+  const region = marketFromHost(request.headers.get('host'))
 
   let html: string
   try {
-    const htmlPath = path.join(process.cwd(), 'landing', 'index.html')
+    const htmlPath = path.join(process.cwd(), 'landing', region, 'index.html')
     html = readFileSync(htmlPath, 'utf-8')
   } catch {
     return new NextResponse('Landing not found', { status: 404 })

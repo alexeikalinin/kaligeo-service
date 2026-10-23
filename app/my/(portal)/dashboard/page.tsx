@@ -3,13 +3,14 @@ import { redirect } from "next/navigation"
 import { headers } from "next/headers"
 import { getClientSession } from "@/lib/client-session"
 import { prisma } from "@/lib/prisma"
+import { getTierConfig, type Tier } from "@/lib/gates"
+import Link from "next/link"
 import { marketFromHost } from "@/lib/market"
 import CommandHero from "@/components/portal/CommandHero"
 import MetricPill from "@/components/portal/MetricPill"
 import AuditCard from "@/components/portal/AuditCard"
 import PlatformCoverageGrid from "@/components/portal/PlatformCoverageGrid"
 import QuickActions from "@/components/portal/QuickActions"
-import TrialForm from "@/components/portal/TrialForm"
 
 export const metadata: Metadata = {
   title: "Личный кабинет — KaliGEO",
@@ -23,11 +24,11 @@ export default async function DashboardPage() {
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { companyName: true, email: true },
+    select: { companyName: true, email: true, displayName: true },
   })
 
   const jobs = await prisma.auditJob.findMany({
-    where: { clientId, market, status: "COMPLETED" },
+    where: { clientId, market, status: "COMPLETED", OR: [{ source: null }, { source: { not: "qa-acceptance" } }] },
     include: {
       report: {
         select: {
@@ -41,27 +42,31 @@ export default async function DashboardPage() {
     take: 10,
   })
 
+  const [activeJobs, qaJobs, totalAudits] = await Promise.all([
+    prisma.auditJob.findMany({ where: { clientId, market, status: { not: "COMPLETED" }, OR: [{ source: null }, { source: { not: "qa-acceptance" } }] }, orderBy: { createdAt: "desc" }, take: 10 }),
+    prisma.auditJob.findMany({ where: { clientId, market, source: "qa-acceptance" }, include: { report: { select: { overallScore: true } } }, orderBy: { createdAt: "desc" }, take: 12 }),
+    prisma.auditJob.count({ where: { clientId, market, status: "COMPLETED", OR: [{ source: null }, { source: { not: "qa-acceptance" } }] } }),
+  ])
+
   const latestJob = jobs[0]
-  const previousJob = jobs[1]
+  const previousJob = jobs.slice(1).find((job) => job.websiteUrl.replace(/\/$/, "") === latestJob?.websiteUrl.replace(/\/$/, ""))
   const latestReport = latestJob?.report
   const latestScore = latestReport?.overallScore ?? null
   const previousScore = previousJob?.report?.overallScore ?? null
   const delta = latestScore !== null && previousScore !== null ? latestScore - previousScore : null
 
   // Compute metrics from latest report
-  type VisScore = { score: number; mentionCount: number; totalQueries: number; sentiment?: string }
+  type VisScore = { score: number; mentionCount: number; totalQueries: number; positiveCount?: number }
   const visScores = latestReport?.visibilityScores
     ? (latestReport.visibilityScores as Record<string, VisScore>)
     : null
 
-  const sentimentScore = visScores
-    ? Math.round(
-        Object.values(visScores).reduce((sum, s) => sum + s.score, 0) /
-          Math.max(1, Object.keys(visScores).length)
-      )
+  const mentionTotal = visScores ? Object.values(visScores).reduce((sum, value) => sum + value.mentionCount, 0) : 0
+  const sentimentScore = visScores && mentionTotal > 0
+    ? Math.round(Object.values(visScores).reduce((sum, value) => sum + (value.positiveCount ?? 0), 0) / mentionTotal * 100)
     : null
-
-  const platformCount = latestJob?.selectedPlatforms?.length ?? 0
+  const selectedPlatforms = latestJob ? (latestJob.selectedPlatforms.length ? latestJob.selectedPlatforms : getTierConfig(latestJob.tier as Tier).platforms) : []
+  const platformCount = selectedPlatforms.length
   const coveredCount = visScores
     ? Object.values(visScores).filter((s) => s.mentionCount > 0).length
     : 0
@@ -89,7 +94,7 @@ export default async function DashboardPage() {
               color: "var(--ink)",
             }}
           >
-            {client?.companyName ?? "Личный кабинет"}
+            {client?.displayName || "Личный кабинет"}
           </h1>
         </div>
         <span style={{ fontSize: "12px", color: "var(--ink-3)", flexShrink: 0 }}>{today}</span>
@@ -105,6 +110,8 @@ export default async function DashboardPage() {
           companyName={latestJob.companyName}
           weakPoints={latestReport?.weakPoints as { title: string; description: string }[] | null}
         />
+      ) : activeJobs.length > 0 ? (
+        <p className="text-sm">Ваш заказ принят. Текущий статус показан ниже; создавать новый заказ не нужно.</p>
       ) : (
         <EmptyHero />
       )}
@@ -128,13 +135,13 @@ export default async function DashboardPage() {
             <MetricPill
               label="Тональность"
               value={sentimentScore >= 60 ? "Позитив" : sentimentScore >= 30 ? "Нейтраль" : "Негатив"}
-              sub={`Ср. скор: ${sentimentScore}`}
+              sub={`${sentimentScore}% положительных упоминаний`}
               accent={sentimentScore >= 60}
             />
           )}
           <MetricPill
             label="Аудитов всего"
-            value={`${jobs.length}`}
+            value={`${totalAudits}`}
             sub={jobs.length > 1 ? "Сравнение доступно" : "Следующий покажет динамику"}
           />
         </div>
@@ -145,7 +152,7 @@ export default async function DashboardPage() {
         <section>
           <SectionTitle>Охват платформ</SectionTitle>
           <PlatformCoverageGrid
-            selectedPlatforms={latestJob.selectedPlatforms}
+            selectedPlatforms={selectedPlatforms}
             coveredPlatforms={
               visScores
                 ? Object.entries(visScores)
@@ -170,7 +177,7 @@ export default async function DashboardPage() {
           >
             {jobs.map((job, i) => {
               const score = job.report?.overallScore ?? 0
-              const prevScore = jobs[i + 1]?.report?.overallScore ?? null
+              const prevScore = jobs.slice(i + 1).find((older) => older.websiteUrl.replace(/\/$/, "") === job.websiteUrl.replace(/\/$/, ""))?.report?.overallScore ?? null
               const d = prevScore !== null ? score - prevScore : null
               return (
                 <AuditCard
@@ -190,6 +197,20 @@ export default async function DashboardPage() {
           </div>
         </section>
       )}
+
+      {activeJobs.length > 0 && <section>
+        <SectionTitle>Текущие заказы</SectionTitle>
+        <div className="space-y-3">{activeJobs.map(job => <Link key={job.id} href={`/audit/${job.id}`} className="block border rounded-lg p-4" style={{ borderColor: "var(--rule)" }}>
+          {job.companyName} · {job.tier} · {job.status === "FAILED" ? "Ошибка выполнения — повторная оплата не нужна" : job.status === "PENDING_PAYMENT" ? "Ожидает оплаты" : "Выполняется"}
+        </Link>)}</div>
+      </section>}
+      {qaJobs.length > 0 && <section>
+        <SectionTitle>Тестовые аудиты — без оплаты</SectionTitle>
+        <p className="text-sm mb-3">Проверка тарифов. Эти запуски не являются покупками и не входят в статистику обычных аудитов.</p>
+        <div className="space-y-3">{qaJobs.map(job => <Link key={job.id} href={job.status === "COMPLETED" ? `/my/audits/${job.id}` : `/audit/${job.id}`} className="block border rounded-lg p-4" style={{ borderColor: "var(--rule)" }}>
+          {job.companyName} · {job.tier} · {job.status === "COMPLETED" ? `${job.report?.overallScore ?? "—"}/100 — открыть отчёт` : job.status === "FAILED" ? "Ошибка проверки" : job.status === "PENDING" ? "Ожидает запуска" : "Проверка выполняется"}
+        </Link>)}</div>
+      </section>}
 
       {/* Quick actions */}
       <QuickActions hasAudits={jobs.length > 0} clientEmail={client?.email ?? ""} />
@@ -225,12 +246,10 @@ function EmptyHero() {
           Аудитов ещё нет
         </p>
         <p style={{ fontSize: "14px", color: "var(--ink-3)", margin: 0 }}>
-          Запустите первый бесплатный аудит или выберите тариф — результат за 8–10 минут.
+          Выберите тариф для полного аудита. Результаты и история будут доступны здесь.
         </p>
       </div>
 
-      {/* Trial form */}
-      <TrialForm />
 
       <div style={{ display: "flex", gap: "12px", flexWrap: "wrap", justifyContent: "center" }}>
         <a

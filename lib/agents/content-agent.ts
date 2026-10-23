@@ -1,4 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk"
+import { generateText, Output } from "ai"
+import { z } from "zod"
+import { getAdvancedAnalysisModel } from "../models"
 
 export interface ContentRecommendations {
   blogTopics: { title: string; angle: string; keywords: string[] }[]
@@ -10,7 +12,6 @@ export interface ContentRecommendations {
   entitySignalRecommendations?: { action: string; platform: string; impact: string }[]
 }
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function runContentAgent(params: {
   companyName: string
@@ -75,15 +76,16 @@ ${competitorStrengths.map((s) => `- ${s}`).join("\n")}
   * + остальные внешние площадки (Wikipedia, Wikidata, профильные каталоги)
 - Всё на русском языке, конкретно для ниши "${niche}"`
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 3000,
-    messages: [{ role: "user", content: prompt }],
+  const { output } = await generateText({
+    model: getAdvancedAnalysisModel(), prompt, maxOutputTokens: 10000,
+    output: Output.object({ schema: z.object({
+      blogTopics: z.array(z.object({ title: z.string(), angle: z.string(), keywords: z.array(z.string()) })),
+      faqStructure: z.array(z.object({ question: z.string(), answerOutline: z.string() })),
+      schemaSuggestions: z.array(z.object({ type: z.string(), description: z.string() })),
+      contentBriefs: z.array(z.object({ title: z.string(), goal: z.string(), format: z.string() })),
+      geoOptimizationBriefs: z.array(z.object({ title: z.string(), geoTarget: z.string(), queryTriggers: z.array(z.string()), format: z.string() })),
+      entitySignalRecommendations: z.array(z.object({ action: z.string(), platform: z.string(), impact: z.string() })),
+    }) }),
   })
-
-  const text = response.content[0].type === "text" ? response.content[0].text : ""
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error("Failed to parse content recommendations JSON")
-
-  return JSON.parse(jsonMatch[0]) as ContentRecommendations
+  return output
 }

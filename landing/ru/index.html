@@ -1658,12 +1658,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <button class="plan-tab" id="tab-monitor" onclick="setPlanTab('monitor')">Мониторинг&nbsp;—&nbsp;подписка <span style="background:#f59e0b;color:#0f1115;font-size:9px;font-weight:700;padding:1px 5px;border-radius:4px;vertical-align:middle;margin-left:4px">NEW</span></button>
       </div>
       <!-- Currency -->
-      <div class="currency-switcher">
-        <span class="currency-switcher-label">Валюта:</span>
-        <button id="btn-rub" class="cur-btn active" onclick="setCurrency('rub')">₽&nbsp;RUB</button>
-        <button id="btn-usd" class="cur-btn" onclick="setCurrency('usd')">$&nbsp;USD</button>
-        <button id="btn-byn" class="cur-btn" onclick="setCurrency('byn')">BYN</button>
-      </div>
     </div>
 
     <!-- ── ONE-TIME ────────────────────────────────────────────────────── -->
@@ -1671,7 +1665,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="price-grid">
         <div class="price">
           <div class="name">Базовый</div>
-          <div class="amt" id="amt-0"><span class="cur">$</span>50</div>
+          <div class="amt" id="amt-0">4 900<span class="cur cur-suf">₽</span></div>
           <div class="per">разовый аудит</div>
           <div class="desc">Быстрая проверка одной ниши. Пригодится до того, как вкладываться в SEO.</div>
           <ul>
@@ -1686,7 +1680,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="price feat">
           <div class="badge">Выбор большинства</div>
           <div class="name">Стандарт</div>
-          <div class="amt" id="amt-1"><span class="cur">$</span>150</div>
+          <div class="amt" id="amt-1">13 900<span class="cur cur-suf">₽</span></div>
           <div class="per">разовый аудит</div>
           <div class="desc">Полная картина: что AI говорит, кого называет вместо и что с этим делать.</div>
           <ul>
@@ -1700,7 +1694,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         <div class="price">
           <div class="name">Продвинутый</div>
-          <div class="amt" id="amt-2"><span class="cur">$</span>300<span class="amt-plus">+</span></div>
+          <div class="amt" id="amt-2">27 900<span class="cur cur-suf">₽</span></div>
           <div class="per">разовый аудит</div>
           <div class="desc">Для команд, готовых выиграть категорию. AI-агенты работают вместе с вами.</div>
           <ul>
@@ -1719,7 +1713,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
       <div class="price-grid">
         <div class="price">
           <div class="name">Старт</div>
-          <div class="amt" id="amt-m0"><span class="cur">$</span>35</div>
+          <div class="amt" id="amt-m0">2 990<span class="cur cur-suf">₽</span></div>
           <div class="per">в месяц · автоматически</div>
           <div class="desc">Ежемесячный автоаудит 3 платформ. Вы видите динамику, не занимаясь этим вручную.</div>
           <ul>
@@ -1735,7 +1729,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
         <div class="price feat">
           <div class="badge">Лучшее соотношение</div>
           <div class="name">Про</div>
-          <div class="amt" id="amt-m1"><span class="cur">$</span>110</div>
+          <div class="amt" id="amt-m1">9 990<span class="cur cur-suf">₽</span></div>
           <div class="per">в месяц · автоматически</div>
           <div class="desc">Полный аудит каждый месяц: 6 платформ, PDF, план и бенчмарк vs конкурентов по нише.</div>
           <ul>
@@ -1749,7 +1743,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
         <div class="price">
           <div class="name">Агент</div>
-          <div class="amt" id="amt-m2"><span class="cur">$</span>220</div>
+          <div class="amt" id="amt-m2">19 990<span class="cur cur-suf">₽</span></div>
           <div class="per">в месяц · автоматически</div>
           <div class="desc">Максимальное покрытие: все 9 платформ, AI-агенты и полная автоматика.</div>
           <ul>
@@ -2118,22 +2112,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
 
 <script>
 (function(){
-  /* ---------- Currency helpers ---------- */
-  window.setCurrency = function(c){
-    const prices = {usd:[50,150,300],byn:[149,449,899],rub:[4900,13900,27900]};
-    document.getElementById('btn-usd').classList.toggle('active', c==='usd');
-    document.getElementById('btn-byn').classList.toggle('active', c==='byn');
-    document.getElementById('btn-rub').classList.toggle('active', c==='rub');
-    [0,1,2].forEach(i=>{
-      const el = document.getElementById('amt-'+i);
-      if(!el) return;
-      const plus = i===2?'<span class="amt-plus">+</span>':'';
-      if(c==='usd') el.innerHTML = `<span class="cur">$</span>${prices.usd[i]}${plus}`;
-      else if(c==='byn') el.innerHTML = `${prices.byn[i]}<span class="cur cur-suf">BYN</span>${plus}`;
-      else el.innerHTML = `${prices.rub[i]}<span class="cur cur-suf">₽</span>${plus}`;
-    });
-  };
-
   window.selectPlan = function(p){
     const el = document.getElementById('cta-plan');
     if(el) el.value = p;
@@ -2545,89 +2523,9 @@ if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   });
 }
 
-/* ── Currency switcher ── */
-const PRICES = {
-  usd: [
-    '<span class="cur">$</span>50',
-    '<span class="cur">$</span>150',
-    '<span class="cur">$</span>300<span class="amt-plus">+</span>'
-  ],
-  byn: [
-    '149<span class="cur cur-suf">BYN</span>',
-    '449<span class="cur cur-suf">BYN</span>',
-    '899<span class="cur cur-suf">BYN</span><span class="amt-plus">+</span>'
-  ],
-  rub: [
-    '4&nbsp;900<span class="cur cur-suf">₽</span>',
-    '13&nbsp;900<span class="cur cur-suf">₽</span>',
-    '27&nbsp;900<span class="cur cur-suf">₽</span>'
-  ]
-};
-
-/* Цены мониторинга (подписка) */
-const PRICES_MONITOR = {
-  usd: [
-    '<span class="cur">$</span>35',
-    '<span class="cur">$</span>110',
-    '<span class="cur">$</span>220'
-  ],
-  byn: [
-    '99<span class="cur cur-suf">BYN</span>',
-    '399<span class="cur cur-suf">BYN</span>',
-    '699<span class="cur cur-suf">BYN</span>'
-  ],
-  rub: [
-    '2&nbsp;990<span class="cur cur-suf">₽</span>',
-    '9&nbsp;990<span class="cur cur-suf">₽</span>',
-    '19&nbsp;990<span class="cur cur-suf">₽</span>'
-  ]
-};
-
-const PLAN_LABELS = {
-  usd: ['Базовый ($50)', 'Стандарт ($150)', 'Продвинутый ($300+)'],
-  byn: ['Базовый (149 BYN)','Стандарт (449 BYN)','Продвинутый (899 BYN+)'],
-  rub: ['Базовый (4 900 ₽)', 'Стандарт (13 900 ₽)', 'Продвинутый (27 900 ₽)']
-};
-
-const PLAN_LABELS_MONITOR = {
-  usd: ['Мониторинг Старт ($35/мес)', 'Мониторинг Про ($110/мес)', 'Мониторинг Агент ($220/мес)'],
-  byn: ['Мониторинг Старт (99 BYN/мес)', 'Мониторинг Про (399 BYN/мес)', 'Мониторинг Агент (699 BYN/мес)'],
-  rub: ['Мониторинг Старт (2 990 ₽/мес)', 'Мониторинг Про (9 990 ₽/мес)', 'Мониторинг Агент (19 990 ₽/мес)']
-};
-
-/* kaligeo.ru — основная валюта рубли */
-let currentCurrency = 'rub';
-
-window.setCurrency = function(cur) {
-  currentCurrency = cur;
-  /* Разовые */
-  PRICES[cur].forEach((html, i) => {
-    const el = document.getElementById('amt-' + i);
-    if (el) el.innerHTML = html;
-  });
-  /* Мониторинг */
-  PRICES_MONITOR[cur].forEach((html, i) => {
-    const el = document.getElementById('amt-m' + i);
-    if (el) el.innerHTML = html;
-  });
-  document.getElementById('btn-usd').classList.toggle('active', cur === 'usd');
-  document.getElementById('btn-byn').classList.toggle('active', cur === 'byn');
-  document.getElementById('btn-rub').classList.toggle('active', cur === 'rub');
-  /* Обновляем badge если тариф уже выбран */
-  const badge = document.getElementById('plan-badge');
-  if (badge && badge.style.display !== 'none') {
-    const planField = document.getElementById('cta-plan').value;
-    if (planField && planField !== 'не выбран') {
-      const idxO = ['Базовый','Стандарт','Продвинутый'].findIndex(n => planField.startsWith(n));
-      if (idxO !== -1) { badge.textContent = '✓ Выбран тариф: ' + PLAN_LABELS[cur][idxO]; return; }
-      const idxM = ['Мониторинг Старт','Мониторинг Про','Мониторинг Агент'].findIndex(n => planField.startsWith(n));
-      if (idxM !== -1) badge.textContent = '✓ Выбран тариф: ' + PLAN_LABELS_MONITOR[cur][idxM];
-    }
-  }
-};
-
-/* kaligeo.ru — фиксированный RUB, без IP-детектора */
-window.setCurrency('rub');
+/* Fixed prices for this domain. */
+const PLAN_LABELS = ["Базовый (4 900 ₽)", "Стандарт (13 900 ₽)", "Продвинутый (27 900 ₽)"];
+const PLAN_LABELS_MONITOR = ["Мониторинг Старт (2 990 ₽/мес)", "Мониторинг Про (9 990 ₽/мес)", "Мониторинг Агент (19 990 ₽/мес)"];
 
 /* ── Plan type tab switcher ── */
 window.setPlanTab = function(tab) {
@@ -2645,8 +2543,8 @@ window.selectPlan = function(name) {
   const idxO = ['Базовый','Стандарт','Продвинутый'].indexOf(name);
   const idxM = ['Мониторинг Старт','Мониторинг Про','Мониторинг Агент'].indexOf(name);
   let label;
-  if (idxO !== -1) label = PLAN_LABELS[currentCurrency][idxO];
-  else if (idxM !== -1) label = PLAN_LABELS_MONITOR[currentCurrency][idxM];
+  if (idxO !== -1) label = PLAN_LABELS[idxO];
+  else if (idxM !== -1) label = PLAN_LABELS_MONITOR[idxM];
   else label = name;
   const planEl = document.getElementById('cta-plan');
   const subjectEl = document.getElementById('cta-subject');
@@ -2687,7 +2585,7 @@ if (ctaForm) {
     const planRaw = formData.get('plan') || '';
 
     // Определяем выбранный тариф
-    const PLAN_TIER_MAP = {'Базовый':'BASIC','Стандарт':'STANDARD','Продвинутый':'ADVANCED'};
+    const PLAN_TIER_MAP = {'Базовый':'BASIC','Стандарт':'STANDARD','Продвинутый':'ADVANCED','Мониторинг Старт':'MONITOR_START','Мониторинг Про':'MONITOR_PRO','Мониторинг Агент':'MONITOR_AGENT'};
     // planRaw может быть "Базовый (4 900 ₽)" — извлекаем ключ
     const planKey = Object.keys(PLAN_TIER_MAP).find(k => planRaw.startsWith(k));
     const tier = planKey ? PLAN_TIER_MAP[planKey] : null;
@@ -2756,7 +2654,7 @@ const LEGAL_DOCS = {
       <h3>2. Способы оплаты</h3>
       <ul>
         <li>Банковские карты Visa, Mastercard, Белкарт (внутренние и международные).</li>
-        <li>Оплата производится в белорусских рублях (BYN) или долларах США (USD) в зависимости от выбранного тарифа.</li>
+        <li>Оплата производится только в российских рублях (RUB).</li>
         <li>Сумма НДС включена в указанную стоимость услуги.</li>
         <li>Оплата счётом для юридических лиц — по запросу на hello@kaligeo.ru.</li>
       </ul>

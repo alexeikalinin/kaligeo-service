@@ -1,7 +1,6 @@
 "use client"
 
 import { useState } from "react"
-import { useSearchParams } from "next/navigation"
 import { ReportDashboard } from "@/components/report/ReportDashboard"
 import type { HallucinationItem } from "@/components/report/HallucinationAudit"
 import type { SourceEntry } from "@/components/report/SourceAuthority"
@@ -11,7 +10,7 @@ import type { ShareOfVoiceResult } from "@/lib/analysis/share-of-voice"
 import type { CompetitivePosition } from "@/lib/analysis/competitive-positioning"
 
 type Tier = "BASIC" | "STANDARD" | "ADVANCED"
-type Currency = "RUB" | "USD" | "BYN"
+type Currency = "RUB" | "BYN"
 
 // ── Competitor name mapping (anonymized) ─────────────────────────────────────
 const C1 = "Конкурент 1"
@@ -22,16 +21,10 @@ const C5 = "Конкурент 5"
 
 // ── Currency config ───────────────────────────────────────────────────────────
 
-const CURRENCIES: { key: Currency; label: string }[] = [
-  { key: "RUB", label: "₽ RUB" },
-  { key: "USD", label: "$ USD" },
-  { key: "BYN", label: "Br BYN" },
-]
-
 const TIER_PRICES: Record<Tier, Record<Currency, string>> = {
-  BASIC:    { RUB: "4 900 ₽",  USD: "$55",  BYN: "175 Br" },
-  STANDARD: { RUB: "13 900 ₽", USD: "$155", BYN: "495 Br" },
-  ADVANCED: { RUB: "27 900 ₽", USD: "$310", BYN: "995 Br" },
+  BASIC:    { RUB: "4 900 ₽",  BYN: "175 BYN" },
+  STANDARD: { RUB: "13 900 ₽", BYN: "495 BYN" },
+  ADVANCED: { RUB: "27 900 ₽", BYN: "995 BYN" },
 }
 
 // ── Платформы по тарифам ─────────────────────────────────────────────────────
@@ -477,7 +470,7 @@ const DOMAIN_CONFIG = {
   by: {
     ctaLabel: "Выбрать тариф →",
     ctaSub: "Результат за 48 часов · Аплата праз Альфа-Банк · Без падпіскі",
-    ctaUrl: "https://kaligeo.by/#pricing",
+    ctaUrl: "https://app.kaligeo.by/pricing",
     landingUrl: "https://kaligeo.by",
     landingLabel: "kaligeo.by",
   },
@@ -495,13 +488,12 @@ const TIERS: { key: Tier; label: string; accent: boolean; description: string }[
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function DemoReportClient() {
-  const searchParams = useSearchParams()
-  const from = (searchParams.get("from") ?? "ru") as DomainKey
+export function DemoReportClient({ market }: { market: DomainKey }) {
+  const from = market
   const domain = DOMAIN_CONFIG[from] ?? DOMAIN_CONFIG.ru
 
   const [tier, setTier] = useState<Tier>("BASIC")
-  const [currency, setCurrency] = useState<Currency>(from === "by" ? "BYN" : "RUB")
+  const currency: Currency = market === "by" ? "BYN" : "RUB"
 
   const isStandardPlus = tier !== "BASIC"
 
@@ -532,24 +524,6 @@ export function DemoReportClient() {
         {/* Тир-селектор */}
         <div className="max-w-3xl mx-auto px-4 py-3">
           <p className="t-eyebrow text-center mb-2">Выберите тариф — сравните глубину аудита</p>
-
-          {/* Переключатель валют */}
-          <div className="flex items-center justify-center gap-1.5 mb-3">
-            {CURRENCIES.map((c) => (
-              <button
-                key={c.key}
-                onClick={() => setCurrency(c.key)}
-                className="px-3 py-1 rounded-full text-xs font-mono font-semibold transition-all"
-                style={{
-                  background: currency === c.key ? "var(--ink)" : "transparent",
-                  color: currency === c.key ? "var(--bone)" : "var(--ink)",
-                  border: `1px solid ${currency === c.key ? "var(--ink)" : "var(--rule)"}`,
-                }}
-              >
-                {c.label}
-              </button>
-            ))}
-          </div>
 
           {/* Карточки тарифов */}
           <div className="grid grid-cols-3 gap-2">

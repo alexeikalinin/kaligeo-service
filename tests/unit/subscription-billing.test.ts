@@ -1,0 +1,45 @@
+import { beforeEach, describe, expect, it, vi } from "vitest"
+const m = vi.hoisted(() => ({ findSubs: vi.fn(), updateSub: vi.fn(), lastJob: vi.fn(), createJob: vi.fn(), trigger: vi.fn(), charge: vi.fn(), notify: vi.fn() }))
+vi.mock("@trigger.dev/sdk/v3", () => ({ schedules: { task: (config: unknown) => config }, tasks: { trigger: m.trigger }, task: (config: unknown) => config }))
+vi.mock("@/trigger/audit-pipeline", () => ({ auditPipeline: {} }))
+vi.mock("@/lib/prisma", () => ({ prisma: { subscription: { findMany: m.findSubs, update: m.updateSub }, auditJob: { findFirst: m.lastJob, create: m.createJob } } }))
+vi.mock("@/lib/billing/alfabank", () => ({ chargeBinding: m.charge, merchantForMarket: () => ({ userName: "test", password: "test" }) }))
+vi.mock("@/lib/billing/yookassa", () => ({ chargeSavedMethod: m.charge }))
+vi.mock("@/lib/notify", () => ({ notifySubscriptionCharged: m.notify, notifySubscriptionPastDue: m.notify, notifySubscriptionCanceled: m.notify }))
+import { subscriptionBilling } from "@/trigger/subscription-billing"
+const run = () => (subscriptionBilling as unknown as { run: () => Promise<unknown> }).run()
+const subscription = (tier = "MONITOR_PRO", failedChargeCount = 0) => ({ id: "sub-test", clientId: "client-test", market: "by", tier, provider: "alfabank", bindingId: "fake-binding", nextChargeAt: new Date("2026-10-01"), failedChargeCount, client: { email: "qa@example.com", companyName: "QA", websiteUrl: "https://example.com" } })
+describe("Subscription lifecycle without bank calls", () => {
+  beforeEach(() => {
+    vi.resetAllMocks()
+    m.findSubs.mockResolvedValueOnce([subscription()]).mockResolvedValueOnce([])
+    m.charge.mockResolvedValue({ ok: true })
+    m.lastJob.mockResolvedValue({ id: "previous", websiteUrl: "https://example.com", niche: "retail", competitors: [] })
+    m.createJob.mockResolvedValue({ id: "next-audit" })
+    m.updateSub.mockResolvedValue({}); m.trigger.mockResolvedValue({}); m.notify.mockResolvedValue(undefined)
+  })
+  it.each([["MONITOR_START", 9900], ["MONITOR_PRO", 39900], ["MONITOR_AGENT", 69900]])("uses BYN price and creates the next audit for %s", async (tier, amount) => {
+    m.findSubs.mockReset().mockResolvedValueOnce([subscription(String(tier))]).mockResolvedValueOnce([])
+    await run()
+    expect(m.charge).toHaveBeenCalledWith(expect.objectContaining({ amount, currency: "933", bindingId: "fake-binding" }))
+    expect(m.createJob).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ tier, baselineJobId: "previous", clientId: "client-test", subscriptionId: "sub-test", market: "by" }) }))
+    expect(m.trigger).toHaveBeenCalledWith("audit-pipeline", { jobId: "next-audit" })
+  })
+  it("does not launch an audit after a declined charge", async () => {
+    m.charge.mockResolvedValue({ ok: false, error: "declined" })
+    await run()
+    expect(m.createJob).not.toHaveBeenCalled(); expect(m.trigger).not.toHaveBeenCalled()
+    expect(m.updateSub).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ failedChargeCount: 1 }) }))
+  })
+  it("moves a subscription to past due after three declines", async () => {
+    m.findSubs.mockReset().mockResolvedValueOnce([subscription("MONITOR_PRO", 2)]).mockResolvedValueOnce([])
+    m.charge.mockResolvedValue({ ok: false, error: "declined" }); await run()
+    expect(m.updateSub).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "PAST_DUE", failedChargeCount: 3 }) }))
+    expect(m.trigger).not.toHaveBeenCalled()
+  })
+  it("selects only active due subscriptions and does not charge canceled subscriptions", async () => {
+    m.findSubs.mockReset().mockResolvedValue([]); await run()
+    expect(m.findSubs).toHaveBeenNthCalledWith(1, expect.objectContaining({ where: expect.objectContaining({ status: "ACTIVE", nextChargeAt: { lte: expect.any(Date) } }) }))
+    expect(m.charge).not.toHaveBeenCalled()
+  })
+})

@@ -7,6 +7,7 @@ export interface ContactScanPayload {
   websiteUrl: string
   email: string
   name: string
+  niche?: string
   market?: Market
 }
 
@@ -15,7 +16,7 @@ export const contactScan = task({
   maxDuration: 900,
   retry: { maxAttempts: 3, minTimeoutInMs: 3_000, maxTimeoutInMs: 20_000, factor: 2 },
 
-  run: async ({ websiteUrl, email, name, market = "ru" }: ContactScanPayload) => {
+  run: async ({ websiteUrl, email, name, niche, market = "ru" }: ContactScanPayload) => {
     const { appUrl } = getMarketConfig(market)
 
     // Reuse existing scan for THIS market if done within last 24h. Scoped by
@@ -26,6 +27,8 @@ export const contactScan = task({
         websiteUrl,
         market,
         quickCheckDone: true,
+        ...(niche ? { niche } : {}),
+        ...(name ? { companyName: name } : {}),
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
       orderBy: { createdAt: "desc" },
@@ -47,7 +50,7 @@ export const contactScan = task({
         resp = await fetch(`${appUrl}/api/freemium/scan`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ websiteUrl, source: "contact_form", market }),
+          body: JSON.stringify({ websiteUrl, companyName: name, niche, source: "contact_form", market }),
         })
       } catch (err) {
         throw new Error(`[contact-scan] freemium scan fetch failed for market=${market}: ${err instanceof Error ? err.message : String(err)}`)

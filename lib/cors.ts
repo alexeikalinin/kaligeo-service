@@ -4,6 +4,7 @@ export const ALLOWED_ORIGINS = [
   "https://kaligeo.ru",
   "https://www.kaligeo.ru",
   "https://app.kaligeo.ru",
+  "https://app.kaligeo.by",
   "http://localhost:3000",
 ]
 

@@ -51,7 +51,7 @@ describe("GET /api/audit/history", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // By default token is valid and belongs to client "alice@example.com"
-    mockFindFirst.mockResolvedValue({ clientEmail: "alice@example.com", companyName: "Alice Co" })
+    mockFindFirst.mockResolvedValue({ clientEmail: "alice@example.com", companyName: "Alice Co", websiteUrl: "https://alice.example", market: "by", source: null })
     mockFindMany.mockResolvedValue([
       completedJob("job-1", "alice@example.com", "Alice Co", 60),
       completedJob("job-2", "alice@example.com", "Alice Co", 75),
@@ -139,19 +139,21 @@ describe("GET /api/audit/history", () => {
   // ── Security: data isolation ─────────────────────────────────────────────────
 
   it("security: valid token from one client cannot see history via another email", async () => {
-    // Token belongs to alice, but request asks for bob's email.
-    // The route does NOT cross-check token owner vs requested email —
-    // it just validates the token exists. This test documents current behavior
-    // and ensures the token lookup is always performed.
-    mockFindFirst.mockResolvedValue({ clientEmail: "alice@example.com", companyName: "Alice Co" })
-    mockFindMany.mockResolvedValue([]) // bob has no audits matching query
-
     const res = await callHistory({ email: "bob@example.com", token: "alice-token" })
-    expect(res.status).toBe(200)
-    // findFirst is called to validate the token — this is the security gate
-    expect(mockFindFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { reportToken: "alice-token" } })
-    )
+    expect(res.status).toBe(403)
+    expect(mockFindMany).not.toHaveBeenCalled()
+  })
+
+  it("scopes results to the token owner's website and market", async () => {
+    await callHistory({ email: "alice@example.com", token: "alice-token" })
+    expect(mockFindMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ clientEmail: "alice@example.com", websiteUrl: "https://alice.example", market: "by" }),
+    }))
+  })
+
+  it("rejects a company search unrelated to the report", async () => {
+    expect((await callHistory({ companyName: "Other", token: "alice-token" })).status).toBe(403)
+    expect(mockFindMany).not.toHaveBeenCalled()
   })
 
   it("security: invalid token always returns 401 regardless of email param", async () => {

@@ -1,4 +1,4 @@
-import { AI_CLIENTS, ACTIVE_PLATFORMS } from "../../lib/ai-clients"
+import { AI_CLIENTS } from "../../lib/ai-clients"
 import { extractMentions } from "../../lib/analysis/extract-mentions"
 import { classifyMentionContext } from "../../lib/analysis/mention-extraction"
 import { prisma } from "../../lib/prisma"
@@ -21,13 +21,15 @@ export async function executeQueriesOnPlatform(
   companyName: string,
   websiteUrl: string,
   competitors: string[]
-): Promise<QueryExecutionResult[]> {
+): Promise<{ results: QueryExecutionResult[]; failures: { query: string; error: string }[] }> {
   const aiClient = AI_CLIENTS[platform]
   if (!aiClient) throw new Error(`Unknown platform: ${platform}`)
 
   const results: QueryExecutionResult[] = []
+  const failures: { query: string; error: string }[] = []
 
-  for (const query of queries) {
+  let consecutiveFailures = 0
+  for (const [queryIndex, query] of queries.entries()) {
     try {
       // Приоритет: queryWithSources (Perplexity native citations) > query() + regex fallback
       let response: string
@@ -40,6 +42,8 @@ export async function executeQueriesOnPlatform(
       } else {
         response = await aiClient.query(query)
       }
+
+      if (!response.trim()) throw new Error("Empty AI response")
 
       const mentions = extractMentions(response, companyName, websiteUrl, competitors, citationsFromApi)
 
@@ -79,16 +83,23 @@ export async function executeQueriesOnPlatform(
       })
 
       results.push(result)
+      consecutiveFailures = 0
 
       // Small delay to avoid rate limits
       await sleep(300)
     } catch (error) {
+      failures.push({ query, error: error instanceof Error ? `${error.name}: ${error.message}` : "Provider request failed" })
       console.error(`Error querying ${platform} for "${query}":`, error)
-      // Continue with other queries — don't fail the whole batch
+      consecutiveFailures++
+      // A broken connection or key should not cost one failed call per question.
+      if (consecutiveFailures >= 3) {
+        failures.push(...queries.slice(queryIndex + 1).map(query => ({ query, error: "Skipped after repeated provider failures" })))
+        break
+      }
     }
   }
 
-  return results
+  return { results, failures }
 }
 
 function sleep(ms: number) {

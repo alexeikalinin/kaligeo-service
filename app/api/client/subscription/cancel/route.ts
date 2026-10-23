@@ -1,3 +1,5 @@
+import { headers } from "next/headers"
+import { marketFromHost } from "@/lib/market"
 import { NextResponse } from "next/server"
 import { getClientSession } from "@/lib/client-session"
 import { prisma } from "@/lib/prisma"
@@ -6,8 +8,9 @@ export async function POST() {
   const clientId = await getClientSession()
   if (!clientId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const market = marketFromHost((await headers()).get("host"))
   const subscription = await prisma.subscription.findFirst({
-    where: { clientId, status: { in: ["ACTIVE", "PAST_DUE", "PENDING_FIRST_PAYMENT"] } },
+    where: { clientId, market, status: { in: ["ACTIVE", "PAST_DUE", "PENDING_FIRST_PAYMENT"] } },
     orderBy: { createdAt: "desc" },
   })
 
@@ -22,5 +25,5 @@ export async function POST() {
     data: { status: "CANCELED", canceledAt: new Date() },
   })
 
-  return NextResponse.json({ subscription: updated })
+  return NextResponse.json({ subscription: { id: updated.id, status: updated.status } })
 }

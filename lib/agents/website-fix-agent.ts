@@ -1,6 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk"
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+import { generateText, Output } from "ai"
+import { z } from "zod"
+import { getAdvancedAnalysisModel } from "../models"
 
 export interface WebsiteFix {
   type: "meta" | "content" | "structured-data" | "faq" | "about" | "home"
@@ -114,28 +114,16 @@ ${scoresText}
 - FAQ: минимум 5 вопросов, ответы 2-4 предложения, покрывают основные запросы в нише
 - Все тексты на русском языке`
 
-  const response = await client.messages.create({
-    model: "claude-sonnet-4-6",
-    max_tokens: 4000,
-    system: SYSTEM_PROMPT,
-    messages: [{ role: "user", content: prompt }],
-  })
-
-  const text = response.content[0].type === "text" ? response.content[0].text : "{}"
-
-  try {
-    const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-    const parsed = JSON.parse(cleaned) as Omit<WebsiteFixResult, "generatedAt">
-    return {
-      ...parsed,
-      generatedAt: new Date().toISOString(),
-    }
-  } catch {
-    return {
-      summary: "Ошибка при генерации рекомендаций",
-      fixes: [],
-      estimatedImpact: "—",
-      generatedAt: new Date().toISOString(),
-    }
+  const sections = ["structured-data", "meta", "faq", "about", "home"] as const
+  const results = await Promise.all(sections.map(type => generateText({
+    model: getAdvancedAnalysisModel(), system: SYSTEM_PROMPT,
+    prompt: `${prompt}\nСейчас верни ТОЛЬКО ОДНУ рекомендацию типа ${type}, отдельным объектом, без массива fixes и без остальных типов. Код до 2500 символов, описание до 30 слов. Для FAQ — 5 вопросов с ответами до 20 слов. Не повторяй данные аудита и исходный промпт.`,
+    maxOutputTokens: 4000,
+    output: Output.object({ schema: z.object({ type: z.literal(type), page: z.string(), title: z.string(), description: z.string(), code: z.string().min(1) }) }),
+  })))
+  return {
+    summary: "Подготовлены рекомендации по JSON-LD разметке, мета-тегам, FAQ, странице о компании и главной странице.",
+    estimatedImpact: "Проверяется повторным аудитом после внедрения",
+    fixes: results.map(result => result.output), generatedAt: new Date().toISOString(),
   }
 }

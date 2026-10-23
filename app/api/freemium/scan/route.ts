@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 import { prisma } from "@/lib/prisma"
 import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
 import { runFreemiumQuickCheck } from "@/lib/freemium/quick-check"
@@ -8,11 +9,13 @@ import { marketFromOrigin } from "@/lib/market"
 
 const ScanSchema = z.object({
   websiteUrl: z.string().url(),
+  companyName: z.string().trim().max(100).optional(),
+  niche: z.string().trim().max(200).optional(),
   source: z.string().max(64).optional(),
   market: z.enum(["by", "ru"]).optional(),
 })
 
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown"
   const allowed = await checkRateLimit(`rl:freemium:${ip}`, 10, 3600) // 10/hour
   if (!allowed) {
@@ -24,8 +27,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json()
-    const { websiteUrl, source, market: bodyMarket } = ScanSchema.parse(body)
+    const { websiteUrl, companyName: submittedName, niche: submittedNiche, source, market: bodyMarket } = ScanSchema.parse(body)
     const market = bodyMarket ?? marketFromOrigin(req.headers.get("origin"))
+
+    await prisma.serviceInquiry.create({ data: { kind: "freemium", payload: JSON.parse(JSON.stringify({ websiteUrl, submittedName, submittedNiche, source, market })) } })
 
     // Check for recent scan of same URL for THIS market (cache for 24h).
     // Scoped by market so a .ru and a .by lead for the same site never share
@@ -35,6 +40,8 @@ export async function POST(req: NextRequest) {
         websiteUrl,
         market,
         quickCheckDone: true,
+        ...(submittedNiche ? { niche: submittedNiche } : {}),
+        ...(submittedName ? { companyName: submittedName } : {}),
         createdAt: { gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       },
       orderBy: { createdAt: "desc" },
@@ -61,9 +68,15 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const companyName = analysis.companyName || new URL(websiteUrl).hostname
-    const niche = analysis.niche || "Общее"
+    const companyName = submittedName || analysis.companyName || new URL(websiteUrl).hostname
+    const niche = submittedNiche || analysis.niche?.trim()
+    if (!niche || niche === "Общее") {
+      return NextResponse.json({ error: "Не удалось определить нишу по сайту. Отправьте обращение через «Контакты»: укажите название компании, услуги и ссылку на сайт или соцсеть.", code: "NICHE_REQUIRED" }, { status: 422 })
+    }
     const keywords = analysis.keywords as string[]
+    // A legal entity may differ from the public brand used in AI recommendations.
+    const legalEntityName = /^(?:ИП|ООО|ОАО|ЗАО|АО|ЧУП|ОДО)(?:\s|[«"])/i.test(companyName)
+    const brandName = legalEntityName ? analysis.companyName?.trim() || companyName : companyName
 
     // ── Step 2: Real AI quick check (3 platforms × 3 queries) ────────────
     let quickCheck
@@ -72,7 +85,7 @@ export async function POST(req: NextRequest) {
     let quickCheckDone = false
 
     try {
-      quickCheck = await runFreemiumQuickCheck(companyName, niche, websiteUrl, keywords)
+      quickCheck = await runFreemiumQuickCheck(brandName, niche, websiteUrl, keywords)
       previewScore = quickCheck.overallScore
       platformScoresJson = quickCheck.platformScores
       quickCheckDone = quickCheck.queriesRun > 0
@@ -93,6 +106,8 @@ export async function POST(req: NextRequest) {
         websiteUrl,
         companyName,
         niche,
+        analysisSnapshot: JSON.parse(JSON.stringify(analysis)),
+        queryEvidence: quickCheck ? JSON.parse(JSON.stringify(quickCheck)) : undefined,
         services: asStringArray(analysis.services),
         keywords: asStringArray(analysis.keywords),
         suggestedCompetitors: asStringArray(analysis.suggestedCompetitors),
@@ -112,4 +127,15 @@ export async function POST(req: NextRequest) {
     console.error("Freemium scan error:", error)
     return NextResponse.json({ error: "Ошибка анализа сайта" }, { status: 500 })
   }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return corsOptionsResponse(req.headers.get("origin"))
+}
+
+export async function POST(req: NextRequest) {
+  const response = await handlePost(req)
+  new Headers(getCorsHeaders(req.headers.get("origin"))).forEach((value, key) => response.headers.set(key, value))
+  response.headers.set("Vary", "Origin")
+  return response
 }

@@ -1,3 +1,4 @@
+vi.mock("@/lib/prisma", () => ({ prisma: { serviceInquiry: { create: vi.fn().mockResolvedValue({ id: "inquiry-1" }) } } }))
 /**
  * Tests for POST /api/contact
  * Accepts JSON and FormData, sends email via Resend + Telegram notify.
@@ -86,6 +87,7 @@ describe("POST /api/contact", () => {
     const [adminCall] = mockResendSend.mock.calls
     const emailHtml = adminCall[0].html as string
     expect(emailHtml).toContain("kaligeo.by")
+    expect(mockResendSend.mock.calls[1][0].from).toBe('"hello@kaligeo.by" <hello@kaligeo.by>')
   })
 
   it("accepts FormData submission", async () => {

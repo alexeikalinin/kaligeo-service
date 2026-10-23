@@ -30,6 +30,7 @@ export default async function SourcesPage() {
       clientId,
       market,
       status: "COMPLETED",
+      OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
       tier: { in: ["STANDARD", "ADVANCED", "MONITOR_PRO", "MONITOR_AGENT"] },
     },
     include: {
@@ -70,7 +71,7 @@ export default async function SourcesPage() {
             Нет данных об источниках. Запустите аудит уровня Профи или выше.
           </p>
           <Link
-            href="/my/dashboard"
+            href="/pricing"
             style={{
               display: "inline-block",
               marginTop: "16px",

@@ -66,7 +66,7 @@ export function buildQueryGenPrompt(
   const otherCategoriesCount = Math.round(remainingCount / 6)
 
   const siteContextBlock = siteContext
-    ? `\nЧто реально делает компания (по анализу сайта, используй это как основной источник истины о нише — если он расходится со строкой "Ниша / отрасль" выше, доверяй этому блоку):
+    ? `\nДополнительные данные по анализу сайта. Ниша / отрасль выше определяет предмет аудита; не подменяй её другой деятельностью из текста сайта:
 Описание: ${siteContext.description}
 Услуги/продукты: ${siteContext.services.join(", ") || "не определены"}
 Целевая аудитория: ${siteContext.targetAudience || "не определена"}
@@ -116,7 +116,7 @@ ${siteContextBlock}${optimizerBlock}
 - НЕ генерируй запросы про саму компанию «${companyName}» — только про нишу в целом
 - Внутри каждой категории и между категориями запросы должны различаться грамматической конструкцией (не все начинаются с глагола в повелительном наклонении, не все — вопросом "Какой/Какая")
 - Каждый запрос должен быть уникальным и реалистичным
-- Используй конкретные детали ниши и то, чем реально занимается компания (см. блок выше), а не абстрактные шаблоны — если ниша заявлена неточно, ориентируйся на реальное описание сайта
+- Используй конкретные детали ниши и то, чем реально занимается компания (см. блок выше), а не абстрактные шаблоны — не выходи за рамки указанной ниши и не придумывай отсутствующие услуги
 
 Верни JSON-объект с единственным полем "queries" — массив строк (без меток категорий в тексте):
 {"queries": ["запрос 1", "запрос 2", ...]}`
@@ -244,7 +244,8 @@ export async function generateQueries(
   tier: "BASIC" | "STANDARD" | "ADVANCED",
   customPrompts: string[] = [],
   siteContext?: SiteContext,
-  optimizerHints?: QueryOptimizationHints
+  optimizerHints?: QueryOptimizationHints,
+  excludedPlatforms: string[] = []
 ): Promise<string[]> {
   const count = getQueryCountForTier(tier as Tier)
 
@@ -259,7 +260,7 @@ export async function generateQueries(
   // другая — к B2B), объединённый пул даёт судье реальный выбор.
   const [genA, genB] = await Promise.allSettled([
     generateWithOpenAI(prompt),
-    generateWithGemini(prompt),
+    excludedPlatforms.includes("GEMINI") ? Promise.resolve([]) : generateWithGemini(prompt),
   ])
 
   if (genA.status === "rejected") console.warn("[generateQueries] generator A (OpenAI) failed:", genA.reason)
@@ -274,8 +275,12 @@ export async function generateQueries(
     throw new Error("Both query generators failed — cannot generate audit queries")
   }
 
-  const filtered = filterCandidates(pool, companyName)
-  const candidatePool = filtered.length > 0 ? filtered : pool
+  let candidatePool = filterCandidates(pool, companyName)
+  for (let attempt = 0; candidatePool.length < aiCount && attempt < 2; attempt++) {
+    const extra = await generateWithOpenAI(`${prompt}\nДополнительная партия: нужны ещё ${aiCount - candidatePool.length} уникальных вопросов. Не повторяй следующие: ${candidatePool.join(" | ")}`)
+    candidatePool = filterCandidates([...candidatePool, ...extra], companyName)
+  }
+  if (candidatePool.length < aiCount) throw new Error(`Недостаточно качественных вопросов: ${candidatePool.length}/${aiCount}`)
 
   let aiQueries: string[]
   try {
@@ -286,6 +291,7 @@ export async function generateQueries(
   }
 
   // Merge: custom prompts first (they're the client's priority), then AI-generated
+  aiQueries = [...new Set([...aiQueries, ...candidatePool])].slice(0, aiCount)
   const merged = [...customEnabled, ...aiQueries].slice(0, count)
   return merged
 }

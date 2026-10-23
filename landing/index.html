@@ -1929,22 +1929,6 @@ function setPricingMode(isSubscription) {
 
 <script>
 (function(){
-  /* ---------- Currency helpers ---------- */
-  window.setCurrency = function(c){
-    const prices = {usd:[50,150,300],byn:[149,449,899],rub:[4900,13900,27900]};
-    document.getElementById('btn-usd').classList.toggle('active', c==='usd');
-    document.getElementById('btn-byn').classList.toggle('active', c==='byn');
-    document.getElementById('btn-rub').classList.toggle('active', c==='rub');
-    [0,1,2].forEach(i=>{
-      const el = document.getElementById('amt-'+i);
-      if(!el) return;
-      const plus = i===2?'<span class="amt-plus">+</span>':'';
-      if(c==='usd') el.innerHTML = `<span class="cur">$</span>${prices.usd[i]}${plus}`;
-      else if(c==='byn') el.innerHTML = `${prices.byn[i]}<span class="cur cur-suf">BYN</span>${plus}`;
-      else el.innerHTML = `${prices.rub[i]}<span class="cur cur-suf">₽</span>${plus}`;
-    });
-  };
-
   window.selectPlan = function(p){
     const el = document.getElementById('cta-plan');
     if(el) el.value = p;
@@ -2349,65 +2333,18 @@ if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   });
 }
 
-/* ── Currency switcher ── */
-const PRICES = {
-  usd: [
-    '<span class="cur">$</span>50',
-    '<span class="cur">$</span>150',
-    '<span class="cur">$</span>300<span class="amt-plus">+</span>'
-  ],
-  byn: [
-    '149<span class="cur cur-suf">BYN</span>',
-    '449<span class="cur cur-suf">BYN</span>',
-    '899<span class="cur cur-suf">BYN</span><span class="amt-plus">+</span>'
-  ],
-  rub: [
-    '4&nbsp;900<span class="cur cur-suf">₽</span>',
-    '14&nbsp;900<span class="cur cur-suf">₽</span>',
-    '29&nbsp;900<span class="cur cur-suf">₽</span><span class="amt-plus">+</span>'
-  ]
-};
-const PLAN_LABELS = {
-  usd: ['Базовый ($50)', 'Стандарт ($150)', 'Продвинутый ($300+)', 'Мониторинг Старт', 'Мониторинг Про', 'Мониторинг Агент'],
-  byn: ['Базовый (149 BYN)','Стандарт (449 BYN)','Продвинутый (899 BYN+)', 'Мониторинг Старт', 'Мониторинг Про', 'Мониторинг Агент'],
-  rub: ['Базовый (4 900 ₽)', 'Стандарт (13 900 ₽)', 'Продвинутый (27 900 ₽)', 'Мониторинг Старт (4 990 ₽/мес)', 'Мониторинг Про (9 990 ₽/мес)', 'Мониторинг Агент (19 990 ₽/мес)']
-};
-
-let currentCurrency = 'usd';
-
-window.setCurrency = function(cur) {
-  currentCurrency = cur;
-  PRICES[cur].forEach((html, i) => {
-    document.getElementById('amt-' + i).innerHTML = html;
-  });
-  document.getElementById('btn-usd').classList.toggle('active', cur === 'usd');
-  document.getElementById('btn-byn').classList.toggle('active', cur === 'byn');
-  document.getElementById('btn-rub').classList.toggle('active', cur === 'rub');
-  const badge = document.getElementById('plan-badge');
-  if (badge && badge.style.display !== 'none' && badge.textContent) {
-    const planField = document.getElementById('cta-plan').value;
-    if (planField && planField !== 'не выбран') {
-      const idx = ['Базовый','Стандарт','Продвинутый'].findIndex(n => planField.startsWith(n));
-      if (idx !== -1) badge.textContent = '✓ Выбран тариф: ' + PLAN_LABELS[cur][idx];
-    }
-  }
-};
-
-(async () => {
-  try {
-    const res = await fetch('https://ipapi.co/country_code/', { signal: AbortSignal.timeout(3000) });
-    const code = (await res.text()).trim();
-    window.setCurrency(code === 'RU' ? 'rub' : code === 'US' ? 'usd' : 'byn');
-  } catch {
-    window.setCurrency('byn');
-  }
-})();
+/* Prices are fixed by the landing domain, never by visitor location. */
+const isBelarus = document.querySelector('meta[name="x-region"]')?.content === 'by'
+  || location.hostname.endsWith('kaligeo.by');
+const PLAN_LABELS = isBelarus
+  ? ['Базовый (149 BYN)', 'Стандарт (449 BYN)', 'Продвинутый (899 BYN)', 'Мониторинг Старт (99 BYN/мес)', 'Мониторинг Про (399 BYN/мес)', 'Мониторинг Агент (699 BYN/мес)']
+  : ['Базовый (4 900 ₽)', 'Стандарт (13 900 ₽)', 'Продвинутый (27 900 ₽)', 'Мониторинг Старт (4 990 ₽/мес)', 'Мониторинг Про (9 990 ₽/мес)', 'Мониторинг Агент (19 990 ₽/мес)'];
 
 /* ── Plan selector ── */
 window.selectPlan = function(name) {
   const allPlans = ['Базовый','Стандарт','Продвинутый','Мониторинг Старт','Мониторинг Про','Мониторинг Агент'];
   const idx = allPlans.indexOf(name);
-  const label = idx !== -1 ? PLAN_LABELS[currentCurrency][idx] : name;
+  const label = idx !== -1 ? PLAN_LABELS[idx] : name;
   document.getElementById('cta-plan').value = label;
   document.getElementById('cta-subject').value = 'Заявка: ' + label + ' — KaliGEO';
   const badge = document.getElementById('plan-badge');
@@ -2463,7 +2400,7 @@ const LEGAL_DOCS = {
       <h3>2. Способы оплаты</h3>
       <ul>
         <li>Банковские карты Visa, Mastercard, Белкарт (внутренние и международные).</li>
-        <li>Оплата производится в белорусских рублях (BYN) или долларах США (USD) в зависимости от выбранного тарифа.</li>
+        <li>Оплата производится только в валюте сайта: BYN на kaligeo.by, российские рубли на kaligeo.ru.</li>
         <li>Сумма НДС включена в указанную стоимость услуги.</li>
         <li>Оплата счётом для юридических лиц — по запросу на hello@kaligeo.ru.</li>
       </ul>
@@ -2508,7 +2445,6 @@ const LEGAL_DOCS = {
       <ul>
         <li><strong>Web3Forms</strong> (web3forms.com) — доставка форм обратной связи.</li>
         <li><strong>ЗАО «Альфа-Банк»</strong> — процессинг платежей.</li>
-        <li><strong>ipapi.co</strong> — определение страны по IP (передаётся только IP, без иных данных).</li>
       </ul>
       <p>Передача данных за пределы Республики Беларусь осуществляется с принятием надлежащих мер защиты согласно гл. 8 Закона № 99-З.</p>
       <h3>5. Хранение данных</h3>

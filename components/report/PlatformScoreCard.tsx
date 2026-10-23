@@ -101,7 +101,6 @@ export function PlatformScoreCard({ score, benchmarkScore, trend, weakPoints, hi
   ) ?? (isDark ? weakPoints?.[0] : null)
 
   const bg = isDark ? "var(--ink-card)" : "var(--bone-2)"
-  const textColor = isDark ? "var(--bone)" : "var(--ink)"
   const mutedColor = isDark ? "rgba(245,245,240,0.5)" : "var(--ink-3)"
 
   return (
@@ -190,7 +189,7 @@ export function PlatformScoreCard({ score, benchmarkScore, trend, weakPoints, hi
               0
             </span>
             <span className="text-xs" style={{ color: mutedColor, fontFamily: "var(--font-mono)" }}>
-              лидер ~{benchmarkScore ?? 72}
+              {benchmarkScore !== undefined ? `Медиана ниши: ${benchmarkScore}` : "100"}
             </span>
           </div>
         </div>

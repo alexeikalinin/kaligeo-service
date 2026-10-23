@@ -38,7 +38,7 @@ export const postAuditSequence = task({
     const { appUrl, fromEmail } = getMarketConfig((job.market as Market) ?? "ru")
     const reportUrl = `${appUrl}/report/${jobId}?token=${job.reportToken}`
     const upgradeUrl = `${appUrl}/pricing`
-    const reauditUrl = `${appUrl}/chat?url=${encodeURIComponent(job.websiteUrl)}`
+    const reauditUrl = `${appUrl}/pricing`
     const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${jobId}`
 
     const getReport = async (): Promise<ReportData | null> => {
@@ -104,7 +104,7 @@ async function runTrialSequence({
   const report3 = await getReport()
   if (!report3) return
 
-  const topCompetitors = report3.competitorMatrix.slice(0, 3)
+  const topCompetitors = report3.competitorMatrix.filter(competitor => competitor.mentionCount > 0).slice(0, 3)
   if (topCompetitors.length > 0) {
     await getResend().emails.send({
       from: fromEmail,
@@ -120,7 +120,7 @@ async function runTrialSequence({
   await getResend().emails.send({
     from: fromEmail,
     to: job.clientEmail,
-    subject: `${job.companyName}: −20% на полный план роста (только 72 часа)`,
+    subject: `${job.companyName}: что входит в полный аудит и план роста`,
     html: templateTrialOffer({ job, report: await getReport() ?? report, upgradeUrl, unsub }),
   })
 }
@@ -387,13 +387,13 @@ function templateTrialOffer({
   const score = report.overallScore
 
   return base(`
-    ${eyebrow("День 10 · Специальное предложение")}
-    ${heading(`${job.companyName}: −20% на полный план роста`)}
+    ${eyebrow("День 10 · Полный аудит")}
+    ${heading(`${job.companyName}: полный аудит и план роста`)}
 
     <div style="background:#fef9f0;border:2px solid #f59e0b;border-radius:12px;padding:20px;margin:0 0 20px;text-align:center">
-      <p style="margin:0 0 6px;font-size:13px;color:#92400e;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Только 72 часа</p>
-      <p style="margin:0;font-size:28px;font-weight:700;color:#111827">Скидка 20% на STANDARD</p>
-      <p style="margin:6px 0 0;font-size:14px;color:#6b7280">13 900 ₽ → 11 120 ₽ · Промокод: <strong>TRIAL20</strong></p>
+      <p style="margin:0 0 6px;font-size:13px;color:#92400e;text-transform:uppercase;letter-spacing:.06em;font-weight:600">Углублённая проверка</p>
+      <p style="margin:0;font-size:28px;font-weight:700;color:#111827">Полный аудит STANDARD</p>
+      <p style="margin:6px 0 0;font-size:14px;color:#6b7280">Актуальная стоимость показана при выборе тарифа.</p>
     </div>
 
     <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 16px">
@@ -414,10 +414,10 @@ function templateTrialOffer({
         </tr>`).join("")}
     </table>
 
-    ${cta("Получить STANDARD со скидкой →", `${upgradeUrl}?promo=TRIAL20`, "#f59e0b")}
+    ${cta("Выбрать полный аудит →", upgradeUrl, "#f59e0b")}
 
     <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0">
-      Предложение действует 72 часа. После — стандартная цена.
+      Состав аудита и стоимость можно проверить перед оплатой.
     </p>
   `, unsub)
 }
@@ -657,8 +657,8 @@ function templateStandardReaudit({
     </div>
 
     <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 16px">
-      Если вы внедрили хотя бы 3 рекомендации из плана — score должен был вырасти на 8–20 пунктов.
-      Единственный способ узнать — провести новый аудит.
+      Повторный аудит покажет, как изменилась видимость после внедрения рекомендаций
+      и какие пробелы ещё остались.
     </p>
 
     <div style="background:#fef2f2;border-radius:10px;padding:14px 16px;margin:0 0 20px">
@@ -669,7 +669,7 @@ function templateStandardReaudit({
       </p>
     </div>
 
-    ${cta(`Запустить повторный аудит${score < 40 ? " (скидка 20%)" : ""} →`, `${reauditUrl}${score < 40 ? "&promo=REAUDIT20" : ""}`, "#111827")}
+    ${cta("Выбрать повторный аудит →", reauditUrl, "#111827")}
 
     <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0">
       ${highWeakPoints > 0 ? `В вашем аудите было ${highWeakPoints} критических пункта. Проверьте, закрыты ли они.` : "Хорошая динамика = правильная стратегия. Продолжайте."}

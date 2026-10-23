@@ -149,7 +149,7 @@ export default async function BillingPage() {
                   color: "var(--ink)",
                 }}
               >
-                {isTrial ? "Бесплатно" : tierConfig.priceLabel}
+                {isTrial ? "Бесплатно" : market === "by" ? tierConfig.priceLabelByn : tierConfig.priceLabel}
               </span>
               <a
                 href="/pricing"
@@ -326,7 +326,7 @@ export default async function BillingPage() {
                     {TIER_LABELS[job.tier] ?? job.tier}
                   </span>
                   <span style={{ fontFamily: "var(--font-mono)", fontSize: "14px", fontWeight: 600, color: "var(--ink)" }}>
-                    {job.source === "trial" ? "Бесплатно" : (tc?.priceLabel ?? "—")}
+                    {job.source === "trial" ? "Бесплатно" : ((market === "by" ? tc?.priceLabelByn : tc?.priceLabel) ?? "—")}
                   </span>
                   <span style={{ fontSize: "13px", color: "var(--ink-3)", whiteSpace: "nowrap" }}>
                     {formatDate(job.paidAt)}

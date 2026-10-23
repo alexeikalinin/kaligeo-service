@@ -1,4 +1,5 @@
-import { generateText } from "ai"
+import { generateText, Output } from "ai"
+import { z } from "zod"
 import { getAdvancedAnalysisModel } from "../models"
 import type { WeakPoint } from "../analysis/weak-points-checker"
 import type { PlatformScore } from "../analysis/calculate-scores"
@@ -102,7 +103,6 @@ export async function runGrowthPlanAgent(input: GrowthPlanInput): Promise<Growth
 
   // Risk gate: data_insufficient — не даём агенту домысливать при нехватке данных
   const totalResults = Object.values(input.platformScores).reduce((sum, s) => sum + s.totalQueries, 0)
-  const totalMentions = Object.values(input.platformScores).reduce((sum, s) => sum + s.mentionCount, 0)
   const platformsWithResults = Object.keys(input.platformScores).length
   const dataWarning = totalResults < 5
     ? `\n⚠️ ВНИМАНИЕ: данных аудита мало (${totalResults} запросов). Если для какого-либо вывода не хватает данных — явно напиши INSUFFICIENT_DATA:[причина] вместо домысла.\n`
@@ -205,10 +205,25 @@ ${contextBlocks}
 - Всё строго под нишу "${input.niche}", не общие советы
 - На русском языке`
 
-  const { text } = await generateText({ model, prompt, maxOutputTokens: 4000 })
-
-  const jsonMatch = text.match(/\{[\s\S]*\}/)
-  if (!jsonMatch) throw new Error("Growth plan: failed to parse JSON")
-
-  return JSON.parse(jsonMatch[0]) as GrowthPlan
+  const action = z.object({
+    title: z.string(), description: z.string(), effort: z.enum(["low", "medium", "high"]), impact: z.enum(["low", "medium", "high"]),
+    steps: z.array(z.string()), expectedResult: z.string(), tools: z.array(z.string()), owner: z.string(),
+  })
+  const metadataSchema = z.object({
+    strategy: z.string(),
+    quickWins: z.array(z.object({ action: z.string(), howTo: z.string(), timeEstimate: z.string(), impact: z.string() })),
+    contentCalendar: z.array(z.object({ week: z.number(), theme: z.string(), tasks: z.array(z.string()) })),
+    geoTacticsThisWeek: z.array(z.object({ tactic: z.string(), why: z.string(), expectedEffect: z.string() })),
+  })
+  const concise = "Все формулировки краткие: описание задачи до 30 слов, каждый шаг до 15 слов, ожидаемый эффект до 15 слов. Не повторяй исходный аудит."
+  const [metadata, ...periods] = await Promise.all([
+    generateText({ model, prompt: `${prompt}\nСейчас верни ТОЛЬКО strategy, quickWins, contentCalendar, geoTacticsThisWeek. Периоды 30d/60d/90d генерируются отдельно. ${concise}`,
+      maxOutputTokens: 6000, output: Output.object({ schema: metadataSchema }),
+    }),
+    ...(["30d", "60d", "90d"] as const).map(period => generateText({
+      model, prompt: `${prompt}\nСейчас подготовь ТОЛЬКО задачи периода ${period}. Верни объект {"items": [...]} с 3-4 задачами. Не включай стратегию, календарь и другие периоды. ${concise}`,
+      maxOutputTokens: 5000, output: Output.object({ schema: z.object({ items: z.array(action).min(1) }) }),
+    })),
+  ])
+  return { ...metadata.output, "30d": periods[0].output.items, "60d": periods[1].output.items, "90d": periods[2].output.items }
 }

@@ -49,7 +49,7 @@ export function EmailCaptureForm({ scanId }: Props) {
         style={{ border: "1px solid var(--accent)", background: "var(--bone-2)" }}
       >
         <p className="font-semibold text-sm mb-1" style={{ color: "var(--ink)" }}>
-          Отчёт отправлен — проверьте почту
+          Результаты отправляются — проверьте почту
         </p>
         <p className="text-xs" style={{ color: "var(--ink-3)" }}>
           Мы также пришлём вам рекомендации по улучшению видимости
@@ -65,7 +65,7 @@ export function EmailCaptureForm({ scanId }: Props) {
     >
       <p className="t-eyebrow mb-1">Получите результаты скана на email</p>
       <p className="text-sm mb-4" style={{ color: "var(--ink-3)" }}>
-        Score, данные ChatGPT и советы по улучшению — сразу на почту
+        Оценка и результаты всех ответивших платформ — на почту
       </p>
       <form onSubmit={handleSubmit} className="flex gap-2">
         <input

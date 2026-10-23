@@ -11,6 +11,7 @@ model Client {
   clientNumber    Int               @unique @default(autoincrement())
   email           String            @unique
   companyName     String
+  displayName     String?
   websiteUrl      String?
   trialUsed       Boolean           @default(false)
   createdAt       DateTime          @default(now())
@@ -87,6 +88,9 @@ model AuditJob {
   emailOptOut          Boolean       @default(false) // клиент отписался от email-рассылок (по clientEmail)
   subscriptionId       String?       // ссылка на Subscription — если этот аудит создан автосписанием
   subscription         Subscription? @relation(fields: [subscriptionId], references: [id])
+  analysisSnapshot    Json?
+  executionDiagnostics Json? // per-platform coverage and safe failure diagnostics
+  generatedQueries    Json?
   queryResults        QueryResult[]
   report              Report?
 
@@ -156,6 +160,7 @@ model Report {
   sourcesReport    Json?    // SourcesReport — top domains, by category, competitor advantage
   nicheBenchmark   Json?    // NicheBenchmark — percentile/медиана по нише (benchmark-agent)
   competitorGaps   Json?    // { name, score, theirSignals, yourSignals }[] — структурированный gap-анализ (ADVANCED)
+  websiteFix      Json?    // generated implementation recommendations
   analysisNotes    Json?    // { gapsAnalysis: string, sentimentAnalysis: string } — текстовый вывод analysis-agent (ADVANCED)
   contentRecommendations Json? // ContentRecommendations — вывод content-agent (ADVANCED)
   createdAt        DateTime @default(now())
@@ -174,6 +179,8 @@ model FreemiumScan {
   websiteUrl           String
   companyName          String
   niche                String
+  analysisSnapshot     Json?
+  queryEvidence        Json?
   services             Json
   keywords             Json
   suggestedCompetitors String[]
@@ -282,4 +289,14 @@ enum CampaignStatus {
   ACTIVE
   PAUSED
   COMPLETED
+}
+
+// Each accepted form submission is retained independently of scan caching.
+model ServiceInquiry {
+  id          String   @id @default(cuid())
+  kind        String
+  payload     Json
+  createdAt   DateTime @default(now())
+
+  @@index([kind, createdAt])
 }

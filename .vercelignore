@@ -1,5 +1,11 @@
-.claude/
-vault/
-.progress/
+.env*
+.agents/
+.git/
+.trigger/
 .playwright-mcp/
-*.log
+vault/
+docs/
+tests/
+Сертификаты доменов/
+/*.png
+/coverage/

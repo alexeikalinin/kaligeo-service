@@ -4,6 +4,7 @@ import { headers } from 'next/headers';
 import { getMarketConfig, marketFromHost, type Market } from '@/lib/market';
 
 interface LegalCtx {
+  market: Market;
   email: string;
   pricingUrl: string; // <landingUrl>/pricing
 }
@@ -21,9 +22,9 @@ const DOCS: Record<string, { title: string; date: string; body: (ctx: LegalCtx) 
 
         <h2>2. Тарифы и состав услуги</h2>
         <ul>
-          <li><strong>Базовый (149 BYN / 4 900 ₽ / $50):</strong> Аудит присутствия бренда в нескольких AI-системах. Аналитический отчёт с оценкой видимости, анализом упоминаний и базовыми рекомендациями.</li>
-          <li><strong>Стандарт (449 BYN / 13 900 ₽ / $150):</strong> Расширенный аудит в большем числе AI-платформ. Отчёт в формате PDF, сравнительный анализ с конкурентами, приоритизированный план действий на 30/60/90 дней. Возможность задать вопросы по результатам через чат.</li>
-          <li><strong>Продвинутый (899 BYN+ / 27 900 ₽+ / $300+):</strong> Полный аудит с максимальным охватом AI-платформ. Углублённый конкурентный анализ, персональный план роста, рекомендации по повышению AI-видимости бизнеса. Расширенный объём данных и инсайтов.</li>
+          <li><strong>Базовый ({ctx.market === "by" ? "149 BYN" : "4 900 ₽"}):</strong> Аудит присутствия бренда в нескольких AI-системах. Аналитический отчёт с оценкой видимости, анализом упоминаний и базовыми рекомендациями.</li>
+          <li><strong>Стандарт ({ctx.market === "by" ? "449 BYN" : "13 900 ₽"}):</strong> Расширенный аудит в большем числе AI-платформ. Отчёт в формате PDF, сравнительный анализ с конкурентами, приоритизированный план действий на 30/60/90 дней. Возможность задать вопросы по результатам через чат.</li>
+          <li><strong>Продвинутый ({ctx.market === "by" ? "899 BYN" : "27 900 ₽"}):</strong> Полный аудит с максимальным охватом AI-платформ. Углублённый конкурентный анализ, персональный план роста, рекомендации по повышению AI-видимости бизнеса. Расширенный объём данных и инсайтов.</li>
         </ul>
         <p>Актуальный перечень тарифов: <a href={ctx.pricingUrl}>{ctx.pricingUrl.replace('https://', '')}</a>. Цены могут быть изменены Исполнителем в одностороннем порядке; изменение не затрагивает уже оплаченные заказы.</p>
 
@@ -148,7 +149,7 @@ const DOCS: Record<string, { title: string; date: string; body: (ctx: LegalCtx) 
         <h2>1. Способы оплаты</h2>
         <ul>
           <li>Банковские карты Visa, Mastercard, Белкарт (внутренние и международные).</li>
-          <li>Оплата производится в белорусских рублях (BYN), российских рублях (RUB) или долларах США (USD) в зависимости от выбранного тарифа.</li>
+          <li>Оплата производится только в {ctx.market === "by" ? "белорусских рублях (BYN)" : "российских рублях (RUB)"}.</li>
           <li>Оплата счётом для юридических лиц — по запросу на <a href={`mailto:${ctx.email}`}>{ctx.email}</a>.</li>
         </ul>
 
@@ -185,7 +186,7 @@ export default async function LegalPage({ params }: { params: Promise<{ slug: st
   const host = (await headers()).get('host');
   const market: Market = marketFromHost(host);
   const { landingUrl, fromEmail } = getMarketConfig(market);
-  const ctx: LegalCtx = { email: fromEmail, pricingUrl: `${landingUrl}/pricing` };
+  const ctx: LegalCtx = { market, email: fromEmail, pricingUrl: `${landingUrl}/pricing` };
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--ink)' }}>

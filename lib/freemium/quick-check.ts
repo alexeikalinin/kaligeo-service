@@ -17,6 +17,7 @@ export interface QuickCheckPlatformResult {
   mentionCount: number
   totalQueries: number
   citationRate: number   // 0–100
+  responses?: { query: string; response: string; brandMentioned: boolean }[]
 }
 
 export interface QuickCheckResult {
@@ -24,6 +25,7 @@ export interface QuickCheckResult {
   platformScores: Record<string, QuickCheckPlatformResult>
   platformsChecked: string[]
   queriesRun: number
+  queries?: string[]
 }
 
 // These 3 platforms cover Russian + global reach and are always in BASIC tier
@@ -32,16 +34,17 @@ const FREEMIUM_PLATFORMS = ["CHATGPT", "GEMINI", "YANDEXGPT"]
 // Timeout per platform (ms) — freemium must respond within ~25s total
 const PLATFORM_TIMEOUT_MS = 18_000
 
-function buildQuickQueries(companyName: string, niche: string, keywords: string[], websiteUrl: string): string[] {
+export function buildQuickQueries(companyName: string, niche: string, keywords: string[], websiteUrl: string): string[] {
   const topKeyword = keywords[0] ?? niche.split(" ").slice(0, 3).join(" ")
   const hostname = new URL(websiteUrl).hostname.replace(/^www\./, "")
+  const category = niche.split(/(?<=[.!?])\s/)[0].replace(/[.!?]+$/, "")
   return [
     // Direct brand query — what does AI know about this domain/company?
-    `Что ты знаешь о компании ${companyName} (сайт ${hostname})? Чем они занимаются, какие услуги предлагают?`,
+    `Что ты знаешь о бренде ${companyName} (сайт ${hostname})? Какие товары или услуги он предлагает?`,
     // Category query — is this brand mentioned as a solution?
-    `Посоветуй лучшие компании для ${topKeyword}. Назови конкретные варианты.`,
+    `Какие компании порекомендуешь в категории «${category}»? Назови конкретные варианты.`,
     // Problem query — is this brand mentioned in the niche?
-    `Ищу надёжного исполнителя в сфере ${niche}. Какие компании порекомендуешь?`,
+    `Сравни варианты по запросу «${topKeyword}» в категории «${category}». Куда стоит обратиться и почему?`,
   ]
 }
 
@@ -71,6 +74,7 @@ async function checkPlatform(
     return { platform, score: 0, mentionCount: 0, totalQueries: 0, citationRate: 0 }
   }
 
+  const responses: NonNullable<QuickCheckPlatformResult["responses"]> = []
   let mentionCount = 0
   let positiveCount = 0
   let totalRun = 0
@@ -82,6 +86,7 @@ async function checkPlatform(
       if (!response) continue
 
       const mentions = extractMentions(response, companyName, websiteUrl, [], undefined)
+      responses.push({ query, response, brandMentioned: mentions.brandMentioned })
       if (mentions.brandMentioned) mentionCount++
       if (mentions.sentiment === "positive") positiveCount++
       totalRun++
@@ -90,7 +95,7 @@ async function checkPlatform(
       await new Promise((r) => setTimeout(r, 200))
     } catch {
       // Skip failed query, don't fail the whole platform
-      totalRun++
+      // Failed calls must not count as answers.
     }
   }
 
@@ -111,6 +116,7 @@ async function checkPlatform(
     mentionCount,
     totalQueries: totalRun,
     citationRate: Math.round(citationRate * 100),
+    responses,
   }
 }
 
@@ -169,5 +175,6 @@ export async function runFreemiumQuickCheck(
     platformScores,
     platformsChecked: Object.keys(platformScores),
     queriesRun,
+    queries,
   }
 }

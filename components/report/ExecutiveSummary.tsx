@@ -52,7 +52,7 @@ export function ExecutiveSummary({
       ? scores.reduce((a, b) => (a.score >= b.score ? a : b))
       : null
 
-  const topCompetitor = competitorMatrix[0] ?? null
+  const topCompetitor = [...competitorMatrix].filter(c => c.mentionCount > 0).sort((a, b) => b.mentionCount - a.mentionCount)[0] ?? null
 
   // Find best and second-best platform citation rates for the insight line
   const chatgptScore = platformScores["CHATGPT"]
@@ -103,7 +103,7 @@ export function ExecutiveSummary({
             {brandLabel(overallScore)}
           </p>
           <p className="text-xs" style={{ color: "var(--ink-3)" }}>
-            Так вас видят 7 AI-систем
+            По ответам проверенных платформ: {scores.length}
           </p>
         </div>
 
@@ -208,7 +208,7 @@ export function ExecutiveSummary({
       </div>
 
       {/* Insight line */}
-      {topCompetitor && chatgptScore && myMentionPct !== null && (
+      {topCompetitor?.platforms.includes("CHATGPT") && chatgptScore && myMentionPct !== null && (
         <div
           className="rounded-lg px-4 py-3 text-sm"
           style={{

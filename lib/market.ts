@@ -40,3 +40,9 @@ export function getMarketConfig(market: Market): MarketConfig {
     fromEmail: process.env.FROM_EMAIL_RU ?? process.env.FROM_EMAIL ?? "hello@kaligeo.ru",
   }
 }
+
+/** Use the full mailbox as the display name; keep fromEmail bare for mailto links. */
+export function emailSenderHeader(address: string): string {
+  const mailbox = (address.match(/<([^<>]+)>/)?.[1] ?? address).trim()
+  return `"${mailbox}" <${mailbox}>`
+}

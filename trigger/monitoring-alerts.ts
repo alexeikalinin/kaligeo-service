@@ -1,4 +1,5 @@
 import { schedules } from "@trigger.dev/sdk/v3"
+import { getMarketConfig, type Market } from "../lib/market"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 import { notifyScoreDrop } from "@/lib/notify"
@@ -43,6 +44,9 @@ export const monitoringAlerts = schedules.task({
       const previousJob = await prisma.auditJob.findFirst({
         where: {
           clientEmail: email,
+          market: latestJob.market,
+          websiteUrl: latestJob.websiteUrl,
+          OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
           status: "COMPLETED",
           id: { not: latestJob.id },
         },
@@ -66,7 +70,7 @@ export const monitoringAlerts = schedules.task({
       if (delta <= -ALERT_THRESHOLD) {
         console.log(`[monitoring-alerts] Score drop for ${email}: ${prevScore} → ${currentScore} (${delta})`)
 
-        const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://app.kaligeo.ru"
+        const { appUrl } = getMarketConfig(latestJob.market as Market)
         const reportUrl = `${appUrl}/report/${latestJob.id}?token=${latestJob.reportToken}`
         const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${latestJob.id}`
 

@@ -23,15 +23,14 @@ export async function activateSubscriptionForJob(params: {
 
   if (!SUBSCRIPTION_TIERS.has(tier)) return
 
-  const hasPaymentMethod = !!(bindingId || paymentMethodId)
-
   // One subscription per client+tier — reuse an existing non-canceled row if present
   // (e.g. retrying activation after a transient binding lookup failure).
   const existing = await prisma.subscription.findFirst({
-    where: { clientId, tier, status: { not: "CANCELED" } },
+    where: { clientId, tier, market, status: { not: "CANCELED" } },
     orderBy: { createdAt: "desc" },
   })
 
+  const hasPaymentMethod = !!(bindingId || paymentMethodId || existing?.bindingId || existing?.paymentMethodId)
   const nextChargeAt = new Date(Date.now() + ONE_MONTH_MS)
 
   const subscription = existing
@@ -59,6 +58,6 @@ export async function activateSubscriptionForJob(params: {
 
   await prisma.auditJob.update({
     where: { id: jobId },
-    data: { subscriptionId: subscription.id },
+    data: { subscriptionId: subscription.id, subscriptionTier: tier, subscriptionActiveUntil: nextChargeAt },
   })
 }

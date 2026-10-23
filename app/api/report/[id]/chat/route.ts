@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server"
-import { streamText, stepCountIs } from "ai"
+import { streamText, stepCountIs, validateUIMessages, convertToModelMessages, type ModelMessage } from "ai"
 import { createAnthropic } from "@ai-sdk/anthropic"
 import { prisma } from "@/lib/prisma"
-import { canUsePostAuditChat, isChatLimitReached, type Tier } from "@/lib/gates"
+import { canUsePostAuditChat, isChatLimitReached, getTierConfig, type Tier } from "@/lib/gates"
+
+export const maxDuration = 120
 
 const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
@@ -11,7 +13,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params
-  const { token, messages } = await req.json()
+  const { token, messages } = await req.json().catch(() => ({}))
 
   const job = await prisma.auditJob.findUnique({
     where: { id },
@@ -42,6 +44,15 @@ export async function POST(
     )
   }
 
+  let modelMessages: ModelMessage[]
+  try {
+    const validated = await validateUIMessages({ messages })
+    if (!validated.length || validated.some((message) => message.role === "system")) throw new Error("Invalid messages")
+    modelMessages = await convertToModelMessages(validated)
+  } catch {
+    return NextResponse.json({ error: "Некорректные сообщения" }, { status: 400 })
+  }
+
   // Increment usage counter before streaming (even if client disconnects)
   await prisma.auditJob.update({
     where: { id },
@@ -65,7 +76,7 @@ export async function POST(
     .map((w) => `[${w.severity.toUpperCase()}] ${w.title}: ${w.description}`)
     .join("\n")
 
-  const topActions = report.actionPlan["30d"]
+  const topActions = (report.actionPlan["30d"] ?? [])
     .map((a, i) => `${i + 1}. ${a.title} (усилия: ${a.effort}, эффект: ${a.impact})`)
     .join("\n")
 
@@ -102,7 +113,7 @@ ${topActions || "План не сгенерирован"}
   const result = streamText({
     model: anthropic("claude-sonnet-4-6"),
     system: SYSTEM_PROMPT,
-    messages,
+    messages: modelMessages,
     stopWhen: stepCountIs(1),
   })
 
@@ -128,7 +139,8 @@ export async function GET(
   }
 
   const tier = job.tier as Tier
-  const limit = tier === "ADVANCED" ? null : tier === "STANDARD" ? 10 : 0
+  const configuredLimit = getTierConfig(tier).chatMessageLimit
+  const limit = Number.isFinite(configuredLimit) ? configuredLimit : null
 
   return NextResponse.json({
     tier,

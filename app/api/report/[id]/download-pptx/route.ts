@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { attachmentHeader } from "@/lib/report/download-utils"
+import { getTierConfig, type Tier } from "@/lib/gates"
 import { prisma } from "@/lib/prisma"
 import { generatePptx } from "@/lib/report/pptx-gen"
 
@@ -19,6 +21,10 @@ export async function GET(
   }
   if (job.reportToken !== token) {
     return NextResponse.json({ error: "Неверный токен" }, { status: 403 })
+  }
+
+  if (!getTierConfig(job.tier as Tier).hasPdf) {
+    return NextResponse.json({ error: "upgrade_required" }, { status: 403 })
   }
 
   const report = job.report
@@ -51,7 +57,7 @@ export async function GET(
   return new NextResponse(new Uint8Array(buffer), {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-      "Content-Disposition": `attachment; filename="${filename}"`,
+      "Content-Disposition": attachmentHeader(filename, `kaligeo-${job.id}.pptx`),
     },
   })
 }

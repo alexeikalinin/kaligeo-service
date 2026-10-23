@@ -136,6 +136,8 @@ describe("POST /api/payment/create", () => {
     expect(capturedFetchParams?.get("amount")).toBe("14900")
     expect(capturedFetchParams?.get("currency")).toBe("933")  // BYN ISO
     expect(capturedFetchParams?.get("userName")).toBe("test-user-by")
+    expect(capturedFetchParams?.get("returnUrl")).toBe("https://app.kaligeo.by/audit/job-basic-by?paymentStatus=success")
+    expect(capturedFetchParams?.get("failUrl")).toBe("https://app.kaligeo.by/audit/job-basic-by?paymentStatus=fail")
   })
 
   it("sends correct RUB amount for BASIC tier (locale=ru)", async () => {
@@ -156,6 +158,7 @@ describe("POST /api/payment/create", () => {
     expect(capturedFetchParams?.get("amount")).toBe("490000")
     expect(capturedFetchParams?.get("currency")).toBe("643")  // RUB ISO
     expect(capturedFetchParams?.get("userName")).toBe("test-user-ru")
+    expect(capturedFetchParams?.get("returnUrl")).toBe("https://app.kaligeo.ru/audit/job-basic-ru?paymentStatus=success")
   })
 
   it("sends correct RUB amount for ADVANCED tier", async () => {

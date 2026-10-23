@@ -265,13 +265,14 @@ describe("POST /api/client/auth/trial", () => {
     mockTokenCreate.mockResolvedValue({ token: "magic-xyz" })
   })
 
-  it("returns 200 with jobId and magicLinkUrl for new user", async () => {
+  it("returns jobId without exposing the email authentication token", async () => {
     const res = await callTrial(validTrialBody)
     expect(res.status).toBe(200)
     const json = await res.json()
     expect(json.success).toBe(true)
     expect(json.jobId).toBe("job-1")
-    expect(json.magicLinkUrl).toContain("magic-xyz")
+    expect(json).not.toHaveProperty("magicLinkUrl")
+    expect(mockSendMagicLinkEmail).toHaveBeenCalledWith(expect.objectContaining({ magicLinkUrl: expect.stringContaining("magic-xyz") }))
   })
 
   it("creates job with tier=BASIC and source=trial", async () => {
@@ -340,7 +341,7 @@ describe("POST /api/client/auth/trial", () => {
 describe("POST /api/client/auth/logout", () => {
   it("clears client_session cookie and redirects", async () => {
     const res = await callLogout()
-    expect(res.status).toBe(307)
+    expect(res.status).toBe(303)
     const setCookie = res.headers.get("set-cookie")
     expect(setCookie).toContain("client_session=")
     expect(setCookie).toMatch(/max-age=0/i)

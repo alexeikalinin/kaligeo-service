@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
 import { prisma } from "@/lib/prisma"
 import { tasks } from "@trigger.dev/sdk/v3"
 import { z } from "zod"
@@ -9,7 +10,7 @@ const EmailSchema = z.object({
   email: z.string().email(),
 })
 
-export async function POST(req: NextRequest) {
+async function handlePost(req: NextRequest) {
   try {
     const body = await req.json()
     const { scanId, email } = EmailSchema.parse(body)
@@ -39,4 +40,15 @@ export async function POST(req: NextRequest) {
     console.error("Freemium email capture error:", error)
     return NextResponse.json({ error: "Ошибка сервера" }, { status: 500 })
   }
+}
+
+export async function OPTIONS(req: NextRequest) {
+  return corsOptionsResponse(req.headers.get("origin"))
+}
+
+export async function POST(req: NextRequest) {
+  const response = await handlePost(req)
+  new Headers(getCorsHeaders(req.headers.get("origin"))).forEach((value, key) => response.headers.set(key, value))
+  response.headers.set("Vary", "Origin")
+  return response
 }

@@ -11,15 +11,6 @@ export const metadata: Metadata = {
   title: "История аудитов — KaliGEO",
 }
 
-const TIER_LABELS: Record<string, string> = {
-  BASIC: "Старт",
-  STANDARD: "Профи",
-  ADVANCED: "Агентский",
-  MONITOR_START: "Мон. Старт",
-  MONITOR_PRO: "Мон. Профи",
-  MONITOR_AGENT: "Мон. Агент",
-}
-
 function scoreColor(score: number) {
   if (score >= 60) return "var(--success)"
   if (score >= 30) return "var(--warn)"
@@ -33,7 +24,7 @@ export default async function HistoryPage() {
   const market = marketFromHost((await headers()).get("host"))
 
   const jobs = await prisma.auditJob.findMany({
-    where: { clientId, market, status: "COMPLETED" },
+    where: { clientId, market, status: "COMPLETED", OR: [{ source: null }, { source: { not: "qa-acceptance" } }] },
     include: {
       report: { select: { overallScore: true } },
     },
@@ -79,8 +70,9 @@ export default async function HistoryPage() {
     )
   }
 
-  // Chart data (chronological)
-  const chartData = jobs.map((job) => ({
+  // Compare the latest website only; other brands stay in the audit list.
+  const trendJobs = jobs.filter((job) => job.websiteUrl.replace(/\/$/, "") === jobs[jobs.length - 1].websiteUrl.replace(/\/$/, ""))
+  const chartData = trendJobs.map((job) => ({
     date: job.completedAt
       ? new Date(job.completedAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })
       : "—",
@@ -92,8 +84,8 @@ export default async function HistoryPage() {
   const scores = jobs.map((j) => j.report?.overallScore ?? 0)
   const avgScore = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
   const bestScore = Math.max(...scores)
-  const latestScore = scores[scores.length - 1]
-  const firstScore = scores[0]
+  const latestScore = trendJobs[trendJobs.length - 1].report?.overallScore ?? 0
+  const firstScore = trendJobs[0].report?.overallScore ?? 0
   const totalDelta = latestScore - firstScore
 
   // Reverse for display (newest first)
@@ -130,7 +122,7 @@ export default async function HistoryPage() {
         <StatCard label="Средний скор" value={String(avgScore)} color={scoreColor(avgScore)} />
         <StatCard label="Лучший скор" value={String(bestScore)} color={scoreColor(bestScore)} />
         <StatCard
-          label="Рост за период"
+          label="Рост последнего сайта"
           value={totalDelta > 0 ? `+${totalDelta}` : String(totalDelta)}
           color={totalDelta > 0 ? "var(--success)" : totalDelta < 0 ? "var(--danger)" : "var(--ink-3)"}
         />
@@ -138,7 +130,7 @@ export default async function HistoryPage() {
 
       {/* Trend chart */}
       <section>
-        <SectionTitle>Динамика AI-скора</SectionTitle>
+        <SectionTitle>Динамика AI-скора: {trendJobs[0].companyName}</SectionTitle>
         <div
           style={{
             background: "var(--bone-2)",
@@ -157,7 +149,7 @@ export default async function HistoryPage() {
         <div style={{ borderRadius: "var(--radius-lg)", border: "1px solid var(--rule)", overflow: "hidden" }}>
           {jobsDesc.map((job, i) => {
             const score = job.report?.overallScore ?? 0
-            const prevJob = jobsDesc[i + 1]
+            const prevJob = jobsDesc.slice(i + 1).find((older) => older.websiteUrl.replace(/\/$/, "") === job.websiteUrl.replace(/\/$/, ""))
             const prevScore = prevJob?.report?.overallScore ?? null
             const delta = prevScore !== null ? score - prevScore : null
             return (

@@ -36,6 +36,7 @@ export const monitoringTask = schedules.task({
       where: {
         recurringFrequency: { in: ["weekly", "monthly", "quarterly"] },
         status: "COMPLETED",
+        OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
       },
       select: {
         id: true,

@@ -6,6 +6,11 @@ import {
   StyleSheet,
   Font,
 } from "@react-pdf/renderer"
+import path from "node:path"
+
+Font.register({ family: "PTSans", src: path.join(process.cwd(), "public/fonts/PTSans-Regular.ttf") })
+Font.register({ family: "PTSans-Bold", src: path.join(process.cwd(), "public/fonts/PTSans-Bold.ttf") })
+
 
 interface PlatformScore {
   platform: string
@@ -44,6 +49,7 @@ interface ActionPlan {
 }
 
 interface ReportData {
+  coverage?: { platform: string; answered: number; expected: number }[]
   companyName: string
   websiteUrl: string
   niche: string
@@ -58,7 +64,7 @@ interface ReportData {
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
+    fontFamily: "PTSans",
     backgroundColor: "#ffffff",
     paddingTop: 40,
     paddingBottom: 40,
@@ -67,15 +73,15 @@ const styles = StyleSheet.create({
     color: "#1a1a1a",
   },
   coverPage: {
-    fontFamily: "Helvetica",
+    fontFamily: "PTSans",
     backgroundColor: "#0f172a",
     paddingTop: 80,
     paddingBottom: 80,
     paddingHorizontal: 64,
     color: "#ffffff",
   },
-  brand: { fontSize: 14, fontFamily: "Helvetica-Bold", color: "#94a3b8", letterSpacing: 2 },
-  coverTitle: { fontSize: 32, fontFamily: "Helvetica-Bold", color: "#ffffff", marginTop: 48 },
+  brand: { fontSize: 14, fontFamily: "PTSans-Bold", color: "#94a3b8", letterSpacing: 2 },
+  coverTitle: { fontSize: 32, fontFamily: "PTSans-Bold", color: "#ffffff", marginTop: 48 },
   coverSubtitle: { fontSize: 14, color: "#94a3b8", marginTop: 8 },
   scoreCircle: {
     marginTop: 48,
@@ -86,12 +92,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  scoreBig: { fontSize: 48, fontFamily: "Helvetica-Bold", color: "#ffffff" },
+  scoreBig: { fontSize: 48, fontFamily: "PTSans-Bold", color: "#ffffff" },
   scoreLabel: { fontSize: 11, color: "#94a3b8", marginTop: 4 },
   coverMeta: { marginTop: 48, color: "#64748b", fontSize: 10 },
   sectionTitle: {
     fontSize: 14,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "PTSans-Bold",
     color: "#0f172a",
     marginBottom: 16,
     paddingBottom: 8,
@@ -108,7 +114,7 @@ const styles = StyleSheet.create({
     borderColor: "#e2e8f0",
   },
   cardTitle: { fontSize: 9, color: "#64748b", marginBottom: 4 },
-  cardValue: { fontSize: 18, fontFamily: "Helvetica-Bold", color: "#0f172a" },
+  cardValue: { fontSize: 18, fontFamily: "PTSans-Bold", color: "#0f172a" },
   cardSub: { fontSize: 8, color: "#94a3b8", marginTop: 2 },
   tableHeader: {
     flexDirection: "row",
@@ -124,7 +130,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#f1f5f9",
   },
   tableCell: { flex: 1, fontSize: 9, color: "#374151" },
-  tableCellBold: { flex: 1, fontSize: 9, fontFamily: "Helvetica-Bold", color: "#111827" },
+  tableCellBold: { flex: 1, fontSize: 9, fontFamily: "PTSans-Bold", color: "#111827" },
   badge: {
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -142,12 +148,12 @@ const styles = StyleSheet.create({
   },
   weakPointHigh: { borderLeftColor: "#ef4444", backgroundColor: "#fff5f5" },
   weakPointLow: { borderLeftColor: "#22c55e", backgroundColor: "#f0fdf4" },
-  weakTitle: { fontSize: 10, fontFamily: "Helvetica-Bold", color: "#1a1a1a", marginBottom: 3 },
+  weakTitle: { fontSize: 10, fontFamily: "PTSans-Bold", color: "#1a1a1a", marginBottom: 3 },
   weakDesc: { fontSize: 9, color: "#6b7280", lineHeight: 1.4 },
   planCol: { flex: 1, marginRight: 8 },
   planHeader: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "PTSans-Bold",
     color: "#0f172a",
     marginBottom: 8,
     paddingBottom: 6,
@@ -160,7 +166,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     borderRadius: 4,
   },
-  planTitle: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#1a1a1a", marginBottom: 3 },
+  planTitle: { fontSize: 9, fontFamily: "PTSans-Bold", color: "#1a1a1a", marginBottom: 3 },
   planDesc: { fontSize: 8, color: "#6b7280", lineHeight: 1.4 },
   planMeta: { fontSize: 7, color: "#94a3b8", marginTop: 3 },
   footer: {
@@ -205,6 +211,9 @@ function CoverPage({ data }: { data: ReportData }) {
       <Text style={styles.coverMeta}>Сайт: {data.websiteUrl}</Text>
       <Text style={styles.coverMeta}>Тариф: {data.tier}</Text>
       <Text style={[styles.coverMeta, { marginTop: 24 }]}>{date}</Text>
+      {data.coverage?.some(p => p.answered < p.expected) && <Text style={[styles.coverMeta, { color: "#fbbf24", marginTop: 16 }]}>
+        Проверка выполнена частично: {data.coverage.filter(p => p.answered < p.expected).map(p => `${p.platform}: ${p.answered}/${p.expected}`).join("; ")}. Оценка рассчитана только по полученным ответам.
+      </Text>}
     </Page>
   )
 }
@@ -251,7 +260,7 @@ function CompetitorMatrixPage({ data }: { data: ReportData }) {
         <Text style={[styles.tableCellBold, { flex: 2 }]}>Платформы</Text>
       </View>
       {data.competitorMatrix.map((c, i) => (
-        <View key={i} style={styles.tableRow}>
+        <View key={i} style={styles.tableRow} wrap={false}>
           <Text style={[styles.tableCell, { flex: 2 }]}>{c.name}</Text>
           <Text style={styles.tableCell}>{c.mentionCount}</Text>
           <Text style={[styles.tableCell, { flex: 2 }]}>{c.platforms.join(", ")}</Text>
@@ -274,6 +283,7 @@ function WeakPointsPage({ data }: { data: ReportData }) {
         .map((w) => (
           <View
             key={w.id}
+            wrap={false}
             style={[
               styles.weakPointItem,
               ...(w.severity === "high" ? [styles.weakPointHigh] : []),
@@ -306,7 +316,7 @@ function ActionPlanPage({ data }: { data: ReportData }) {
               {period === "30d" ? "30 дней" : period === "60d" ? "60 дней" : "90 дней"}
             </Text>
             {data.actionPlan[period].map((item, i) => (
-              <View key={i} style={styles.planItem}>
+              <View key={i} style={styles.planItem} wrap={false}>
                 <Text style={styles.planTitle}>{item.title}</Text>
                 <Text style={styles.planDesc}>{item.description}</Text>
                 <Text style={styles.planMeta}>

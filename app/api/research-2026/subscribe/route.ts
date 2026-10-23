@@ -5,7 +5,7 @@ import type { researchNurtureSequence } from "@/trigger/research-nurture-sequenc
 import { z } from "zod"
 
 const Schema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().toLowerCase().email(),
   company: z.string().max(200).optional(),
 })
 
@@ -19,29 +19,20 @@ export async function POST(req: NextRequest) {
   const { email, company } = parsed.data
   const companyName = company?.trim() || email.split("@")[0]
 
-  // Дедупликация: не запускаем серию повторно для одного email
-  const existing = await prisma.lead.findFirst({
-    where: { email, source: "research-2026" },
-  })
-  if (existing) {
-    return NextResponse.json({ success: true })
-  }
-
-  const lead = await prisma.lead.create({
-    data: {
+  try {
+    const existing = await prisma.lead.findFirst({ where: { email, source: "research-2026" } })
+    const lead = existing ?? await prisma.lead.create({
+      data: { email, companyName, source: "research-2026", status: "NEW" },
+    })
+    // A queue failure can be retried without sending a duplicate sequence.
+    await tasks.trigger<typeof researchNurtureSequence>("send-research-nurture-sequence", {
+      leadId: lead.id,
       email,
-      companyName,
-      source: "research-2026",
-      status: "NEW",
-    },
-  })
-
-  // Запускаем nurture-серию (письмо 1 — PDF — уходит немедленно внутри задачи)
-  await tasks.trigger<typeof researchNurtureSequence>("send-research-nurture-sequence", {
-    leadId: lead.id,
-    email,
-    companyName,
-  })
+      companyName: lead.companyName ?? companyName,
+    }, { idempotencyKey: `research-${lead.id}` })
+  } catch {
+    return NextResponse.json({ error: "Не удалось принять заявку. Попробуйте ещё раз." }, { status: 503 })
+  }
 
   return NextResponse.json({ success: true })
 }

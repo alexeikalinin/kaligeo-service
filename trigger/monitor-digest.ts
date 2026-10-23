@@ -122,6 +122,9 @@ export const monitorDigest = schedules.task({
         const prevJob = await prisma.auditJob.findFirst({
           where: {
             clientEmail: email,
+            market: latestJob.market,
+            websiteUrl: latestJob.websiteUrl,
+            OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
             status: "COMPLETED",
             completedAt: { lte: thirtyDaysAgo },
           },

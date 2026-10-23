@@ -1,3 +1,6 @@
+import ProfileForm from "@/components/portal/ProfileForm"
+import { headers } from "next/headers"
+import { marketFromHost } from "@/lib/market"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { getClientSession } from "@/lib/client-session"
@@ -13,20 +16,26 @@ export default async function SettingsPage() {
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { email: true, companyName: true },
+    select: { email: true, companyName: true, displayName: true },
   })
   if (!client) redirect("/my/login")
+
+  const market = marketFromHost((await headers()).get("host"))
+  const subscription = await prisma.subscription.findFirst({
+    where: { clientId, market, status: { in: ["ACTIVE", "PAST_DUE"] } },
+    orderBy: { createdAt: "desc" },
+  })
 
   // Последний MONITOR-аудит
   const monitorJob = await prisma.auditJob.findFirst({
     where: {
-      clientId,
+      clientId, market,
       subscriptionActiveUntil: { gt: new Date() },
     },
     orderBy: { completedAt: "desc" },
   })
 
-  const isMonitor = monitorJob && MONITOR_TIERS.has(monitorJob.subscriptionTier ?? "")
+  const isMonitor = !!subscription || !!(monitorJob && MONITOR_TIERS.has(monitorJob.subscriptionTier ?? ""))
   const nextAlertDate = (() => {
     const d = new Date()
     // Следующая пятница
@@ -70,16 +79,16 @@ export default async function SettingsPage() {
           <h2 style={{ margin: "2px 0 0", fontSize: "16px", fontWeight: 600 }}>Текущий план</h2>
         </div>
         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-          {isMonitor && monitorJob ? (
+          {isMonitor ? (
             <>
-              <Row label="Тариф" value={monitorJob.subscriptionTier ?? "—"} />
+              <Row label="Тариф" value={subscription?.tier ?? monitorJob?.subscriptionTier ?? "—"} />
               <Row
                 label="Активен до"
-                value={monitorJob.subscriptionActiveUntil
-                  ? new Date(monitorJob.subscriptionActiveUntil).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
+                value={(subscription?.nextChargeAt ?? monitorJob?.subscriptionActiveUntil)
+                  ? new Date((subscription?.nextChargeAt ?? monitorJob?.subscriptionActiveUntil)!).toLocaleDateString("ru-RU", { day: "numeric", month: "long", year: "numeric" })
                   : "—"}
               />
-              <Row label="Последний аудит" value={monitorJob.companyName} />
+              <Row label="Последний аудит" value={monitorJob?.companyName ?? client.companyName} />
             </>
           ) : (
             <div style={{ padding: "20px", textAlign: "center" }}>
@@ -105,14 +114,15 @@ export default async function SettingsPage() {
         </div>
         <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
           <Row label="Email" value={client.email} />
-          <Row label="Компания" value={client.companyName} />
+          <ProfileForm displayName={client.displayName ?? ""} companyName={client.companyName} />
           <div style={{ paddingTop: "8px", borderTop: "1px solid var(--rule)" }}>
-            <a
-              href="/api/client/auth/logout"
+            <form action="/api/client/auth/logout" method="post">
+            <button type="submit"
               style={{ fontSize: "13px", color: "var(--ink-3)", textDecoration: "underline", textUnderlineOffset: "2px" }}
             >
               Выйти из аккаунта
-            </a>
+            </button>
+            </form>
           </div>
         </div>
       </div>

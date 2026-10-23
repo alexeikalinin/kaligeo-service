@@ -26,6 +26,7 @@ export async function renderAndUploadPdf(jobId: string): Promise<string> {
 
   const { url } = await put(`reports/${jobId}.pdf`, pdfBuffer, {
     access: "public",
+    addRandomSuffix: true,
     contentType: "application/pdf",
   })
 

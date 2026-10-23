@@ -2,7 +2,7 @@ import { Metadata } from "next"
 import Link from "next/link"
 import { headers } from "next/headers"
 import { TIER_CONFIG } from "@/lib/gates"
-import { getMarketConfig, marketFromHost } from "@/lib/market"
+import { marketFromHost } from "@/lib/market"
 
 export const metadata: Metadata = {
   title: "Тарифы — KaliGEO",
@@ -46,10 +46,11 @@ function isTicked(val: unknown): boolean {
   return false
 }
 
-export default async function PricingPage() {
+export default async function PricingPage({ searchParams }: { searchParams: Promise<{ scanId?: string }> }) {
+  const { scanId } = await searchParams
+  const orderLink = (tier: string) => `/order?tier=${tier}${scanId ? `&scanId=${encodeURIComponent(scanId)}` : ""}`
   const host = (await headers()).get("host")
   const market = marketFromHost(host)
-  const { landingUrl } = getMarketConfig(market)
   const isByn = market === "by"
 
   return (
@@ -240,7 +241,7 @@ export default async function PricingPage() {
                   </ul>
 
                   <Link
-                    href={`${landingUrl}/#pricing`}
+                    href={orderLink(tier)}
                     style={{
                       display: "block",
                       textAlign: "center",
@@ -370,7 +371,7 @@ export default async function PricingPage() {
                   </ul>
 
                   <Link
-                    href="/my/login"
+                    href={orderLink(tier)}
                     style={{
                       display: "block",
                       textAlign: "center",

@@ -1,3 +1,4 @@
+import { prisma } from "@/lib/prisma"
 /**
  * POST /api/contact
  *
@@ -18,9 +19,8 @@ import { Resend } from "resend"
 import { tasks } from "@trigger.dev/sdk/v3"
 import { tg } from "@/lib/telegram"
 import type { contactScan } from "@/trigger/contact-scan"
-import { marketFromDomain, getMarketConfig } from "@/lib/market"
+import { marketFromDomain, getMarketConfig, emailSenderHeader } from "@/lib/market"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM    = process.env.FROM_EMAIL ?? "hello@kaligeo.ru"
 const ADMIN   = process.env.ADMIN_EMAIL ?? "1alexeikalinin1@gmail.com"
 const ADMIN_TG = process.env.ADMIN_TELEGRAM_CHAT_ID ?? ""
@@ -46,11 +46,12 @@ export async function POST(req: NextRequest) {
   const headers = corsHeaders(reqOrigin)
 
   // Accept both JSON and FormData
-  let name = "", email = "", website = "", phone = "", plan = "", origin = ""
+  let name = "", email = "", website = "", phone = "", plan = "", origin = "", niche = ""
 
   const ct = req.headers.get("content-type") ?? ""
   if (ct.includes("application/json")) {
     const body = await req.json()
+    niche   = typeof body.niche === "string" ? body.niche.trim().slice(0, 200) : ""
     name    = body.name    ?? ""
     email   = body.email   ?? ""
     website = body.website ?? ""
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     origin  = body.origin  ?? req.headers.get("origin") ?? ""
   } else {
     const fd = await req.formData()
+    niche   = String(fd.get("niche") ?? "").trim().slice(0, 200)
     name    = String(fd.get("name")    ?? "")
     email   = String(fd.get("email")   ?? "")
     website = String(fd.get("website") ?? "")
@@ -81,6 +83,9 @@ export async function POST(req: NextRequest) {
   const planLabel = plan || "не выбран"
 
   try {
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    await prisma.serviceInquiry.create({ data: { kind: "contact", payload: { name, email, website, phone, plan, origin, niche, market } } })
+
     // 1. Email уведомление администратору
     const { error: adminErr } = await resend.emails.send({
       from: FROM,
@@ -118,7 +123,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Подтверждение клиенту
     const { error: clientErr } = await resend.emails.send({
-      from: marketConfig.fromEmail,
+      from: emailSenderHeader(marketConfig.fromEmail),
       to: email,
       subject: "Запускаем AI-скан вашего сайта — KaliGEO",
       html: `
@@ -161,6 +166,7 @@ export async function POST(req: NextRequest) {
           websiteUrl: url.toString(),
           email,
           name,
+          niche,
           market,
         })
       } catch (e) {

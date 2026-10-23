@@ -58,6 +58,7 @@ export async function runBenchmarkAgent(
       job: {
         niche: { contains: nicheKeyword, mode: "insensitive" },
         status: "COMPLETED",
+        OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
       },
     },
     select: { overallScore: true },

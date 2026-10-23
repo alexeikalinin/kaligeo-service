@@ -11,6 +11,7 @@ export async function GET(
     where: { id },
     select: {
       id: true,
+      source: true,
       status: true,
       tier: true,
       companyName: true,
@@ -28,6 +29,7 @@ export async function GET(
 
   return NextResponse.json({
     ...job,
+    testRun: job.source === "qa-acceptance",
     // Report URL is delivered via email; do not expose here
     reportUrl: null,
   })

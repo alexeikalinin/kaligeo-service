@@ -1,14 +1,14 @@
 import { task, wait } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
-import { getMarketConfig, type Market } from "../lib/market"
+import { getMarketConfig, emailSenderHeader, type Market } from "../lib/market"
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
 
-function auditLink(landingUrl: string, emailNum: number) {
-  return `${landingUrl}/#pricing?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email${emailNum}`
+function auditLink(appUrl: string, scanId: string, emailNum: number) {
+  return `${appUrl}/pricing?scanId=${encodeURIComponent(scanId)}&utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email${emailNum}`
 }
 
 function unsubLink(appUrl: string, scanId: string) {
@@ -40,7 +40,7 @@ export const freemiumSequence = task({
 
     const { companyName, previewScore, niche } = scan
     const { landingUrl, appUrl, fromEmail } = getMarketConfig((scan.market as Market) ?? "ru")
-    const from = `KaliGEO <${fromEmail}>`
+    const from = emailSenderHeader(fromEmail)
     const previewUrl = `${appUrl}/preview/${scanId}?utm_source=email&utm_medium=email&utm_campaign=freemium&utm_content=email1`
     const unsub = unsubLink(appUrl, scanId)
     const scoreEmoji = previewScore >= 60 ? "🟢" : previewScore >= 30 ? "🟡" : "🔴"
@@ -53,7 +53,7 @@ export const freemiumSequence = task({
       from,
       to: email,
       subject: `${scoreEmoji} KaliGEO: ${companyName} — score ${previewScore}/100 · ${previewScore < 30 ? "AI вас почти не видит" : "есть потенциал роста"}`,
-      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(landingUrl, 1), unsub, platformScores }),
+      html: emailTemplate1({ companyName, previewScore, previewUrl, auditUrl: auditLink(appUrl, scanId, 1), unsub, platformScores }),
     })
 
     // Email 2 — +24ч: образовательный
@@ -63,7 +63,7 @@ export const freemiumSequence = task({
       from,
       to: email,
       subject: `3 причины, почему ChatGPT не знает про ${companyName}`,
-      html: emailTemplate2({ companyName, niche, auditUrl: auditLink(landingUrl, 2), unsub }),
+      html: emailTemplate2({ companyName, niche, auditUrl: auditLink(appUrl, scanId, 2), unsub }),
     })
 
     // Email 3 — +72ч: конкуренты
@@ -77,7 +77,7 @@ export const freemiumSequence = task({
       subject: competitors3.length > 0
         ? `${competitors3[0]} уже в топе AI-ответов. Как обогнать?`
         : `Конкурент в вашей нише уже в топе AI-ответов`,
-      html: emailTemplate3({ companyName, niche, previewScore, auditUrl: auditLink(landingUrl, 3), unsub, suggestedCompetitors: competitors3 }),
+      html: emailTemplate3({ companyName, niche, previewScore, auditUrl: auditLink(appUrl, scanId, 3), unsub, suggestedCompetitors: competitors3 }),
     })
 
     // Email 4 — +48ч (6й день): urgency
@@ -86,8 +86,8 @@ export const freemiumSequence = task({
     await getResend().emails.send({
       from,
       to: email,
-      subject: `⏳ Последний шанс: данные по ${companyName} удалятся через 48ч`,
-      html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(landingUrl, 4), unsub }),
+      subject: `${companyName}: следующий шаг после быстрой проверки`,
+      html: emailTemplate4({ companyName, previewScore, auditUrl: auditLink(appUrl, scanId, 4), unsub }),
     })
 
     // Email 5 — +8 дней (14й день): re-engagement
@@ -97,7 +97,7 @@ export const freemiumSequence = task({
       from,
       to: email,
       subject: `${companyName}: как меняется AI-видимость в вашей нише`,
-      html: emailTemplate5({ companyName, niche, auditUrl: auditLink(landingUrl, 5), unsub }),
+      html: emailTemplate5({ companyName, niche, landingUrl, auditUrl: auditLink(appUrl, scanId, 5), unsub }),
     })
   },
 })
@@ -168,17 +168,17 @@ function emailTemplate1({
 
   <p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 16px">
     Мы проверили <strong>${companyName}</strong> в AI-поисковиках.
-    Когда клиенты спрашивают ChatGPT, Gemini или Perplexity о вашей нише — вот что нашли:
+    Ниже — результаты платформ, которые ответили на наши вопросы:
   </p>
 
   ${platformTable}
 
   <div style="text-align:center;margin:24px 0;">
-    <a href="${auditUrl}" style="display:inline-block;background:#0f172a;color:white;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
-      Получить полный отчёт →
+    <a href="${previewUrl}" style="display:inline-block;background:#0f172a;color:white;padding:13px 28px;border-radius:8px;text-decoration:none;font-weight:600;font-size:15px;">
+      Посмотреть результаты проверки →
     </a>
     <p style="margin:12px 0 0;font-size:12px;color:#9ca3af">
-      <a href="${previewUrl}" style="color:#9ca3af;text-decoration:underline;">Посмотреть предварительные результаты</a>
+      <a href="${previewUrl}" style="color:#9ca3af;text-decoration:underline;">Вопросы и результаты по платформам</a>
     </p>
   </div>
 
@@ -291,15 +291,15 @@ function emailTemplate4({
 }) {
   return emailWrapper(`
   <h2 style="font-size:20px;font-weight:700;margin:0 0 4px;">Последнее письмо про ${companyName}</h2>
-  <p style="color:#9ca3af;font-size:13px;margin:0 0 20px;">Ваши данные скоро удалятся</p>
+  <p style="color:#9ca3af;font-size:13px;margin:0 0 20px;">Результаты быстрой проверки сохранены</p>
 
   <div style="background:#fef2f2;border-radius:8px;padding:20px;margin:16px 0;text-align:center;">
-    <p style="margin:0;font-size:14px;color:#dc2626;font-weight:600;">⏳ Данные скана удалятся через 48 часов</p>
-    <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">AI Score ${previewScore}/100 и список проблем будут недоступны</p>
+    <p style="margin:0;font-size:14px;color:#dc2626;font-weight:600;">Ваш скан доступен по ссылке из первого письма</p>
+    <p style="margin:8px 0 0;font-size:13px;color:#6b7280;">AI Score ${previewScore}/100 — результат быстрой проверки</p>
   </div>
 
   <p style="font-size:14px;color:#374151;line-height:1.6;">
-    Если хотите получить полный отчёт с анализом конкурентов, конкретными рекомендациями и 30/60/90-дневным планом — это последний шанс.
+    Если хотите получить полный отчёт с анализом конкурентов, конкретными рекомендациями и 30/60/90-дневным планом — выберите подходящий тариф.
   </p>
 
   <div style="text-align:center;margin:24px 0;">
@@ -314,10 +314,11 @@ function emailTemplate4({
 }
 
 function emailTemplate5({
-  companyName, niche, auditUrl, unsub,
+  companyName, niche, landingUrl, auditUrl, unsub,
 }: {
   companyName: string
   niche: string
+  landingUrl: string
   auditUrl: string
   unsub: string
 }) {
@@ -354,6 +355,6 @@ function emailTemplate5({
   </div>
 
   <p style="font-size:12px;color:#9ca3af;text-align:center;margin:16px 0 0">
-    Это последнее письмо в этой серии. Если передумаете — всегда рады видеть вас на kaligeo.ru
+    Это последнее письмо в этой серии. Если передумаете — всегда рады видеть вас на <a href="${landingUrl}" style="color:#9ca3af;text-decoration:underline;">${new URL(landingUrl).hostname}</a>
   </p>`, unsub)
 }

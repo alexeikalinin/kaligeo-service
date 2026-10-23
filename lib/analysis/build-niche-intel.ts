@@ -26,6 +26,7 @@ export function buildNicheIntel(
   if (competitorMatrix.length === 0) return undefined
 
   const top = [...competitorMatrix].sort((a, b) => b.mentionCount - a.mentionCount)[0]
+  if (top.mentionCount <= 0) return undefined
   const totalMentions = Object.values(visibilityScores).reduce((sum, s) => sum + s.mentionCount, 0)
 
   return {

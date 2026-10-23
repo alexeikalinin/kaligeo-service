@@ -25,6 +25,7 @@ export const followUpScheduler = schedules.task({
         followUpScheduledAt: { lte: now },
         followUpSentAt: null,
         status: "COMPLETED",
+        OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
         subscriptionId: null,
       },
     })
@@ -70,6 +71,7 @@ export const followUpScheduler = schedules.task({
     const upsellCandidates = await prisma.auditJob.findMany({
       where: {
         status: "COMPLETED",
+        OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
         recurringFrequency: null,
         followUpSentAt: null,
         subscriptionId: null,
@@ -86,7 +88,7 @@ export const followUpScheduler = schedules.task({
       try {
         const { appUrl, fromEmail } = getMarketConfig((job.market as Market) ?? "ru")
         const reportUrl = `${appUrl}/report/${job.id}?token=${job.reportToken}`
-        const monitoringUrl = `${appUrl}/`
+        const monitoringUrl = `${appUrl}/pricing`
         const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${job.id}`
 
         await getResend().emails.send({

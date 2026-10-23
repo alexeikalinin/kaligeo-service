@@ -1,3 +1,5 @@
+import { isCompetitorCategory, namedCompetitors } from "@/lib/analysis/competitor-names"
+import Link from "next/link"
 import { notFound } from "next/navigation"
 import { prisma } from "@/lib/prisma"
 import { ReportDashboard } from "@/components/report/ReportDashboard"
@@ -16,12 +18,13 @@ interface PageProps {
   searchParams: Promise<{ token?: string }>
 }
 
-function ReportPending({ status }: { status: string }) {
+function ReportPending({ status, jobId }: { status: string; jobId: string }) {
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
+    <div className="min-h-screen bg-[var(--bone)] flex items-center justify-center">
       <div className="text-center">
-        <p className="text-zinc-400 text-sm mb-2">Аудит в процессе</p>
-        <p className="text-zinc-600 text-xs">Статус: {status}</p>
+        <p className="text-[var(--ink-3)] text-sm mb-2">{status === "FAILED" ? "Аудит остановлен" : "Аудит в процессе"}</p>
+        <p className="text-[var(--ink-3)] text-xs">Статус: {status}</p>
+        <Link className="inline-block mt-5 underline" href={`/audit/${jobId}`}>Открыть страницу статуса →</Link>
       </div>
     </div>
   )
@@ -55,7 +58,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   if (!job || job.reportToken !== token) notFound()
 
   if (job.status !== "COMPLETED" || !job.report) {
-    return <ReportPending status={job.status} />
+    return <ReportPending status={job.status} jobId={id} />
   }
 
   const report = job.report as unknown as {
@@ -73,6 +76,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     }
   }
 
+  report.competitorMatrix = report.competitorMatrix.filter(competitor => !isCompetitorCategory(competitor.name))
   const tierConfig = getTierConfig(job.tier as Tier)
   const comparison =
     tierConfig.hasComparison && job.baselineJob?.report
@@ -100,7 +104,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   const reportJson = job.report as unknown as Record<string, any>
   const sourcesReport = reportJson.sourcesReport ?? null
   const nicheBenchmark = reportJson.nicheBenchmark ?? null
-  const competitorGaps = reportJson.competitorGaps ?? null
+  const competitorGaps = Array.isArray(reportJson.competitorGaps) ? reportJson.competitorGaps.filter((entry: { name: string }) => !isCompetitorCategory(entry.name)) : undefined
   const analysisNotes = reportJson.analysisNotes ?? null
   const contentRecommendations = reportJson.contentRecommendations ?? null
 
@@ -116,8 +120,8 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     // queryResults уже загружены, но без sources — делаем отдельный запрос
     const fullResults = await prisma.queryResult.findMany({ where: { jobId: id } })
     if (fullResults.length > 0) {
-      shareOfVoice = calculateShareOfVoice(fullResults, job.companyName, job.competitors)
-      competitivePosition = calculateCompetitivePosition(fullResults, job.competitors)
+      shareOfVoice = calculateShareOfVoice(fullResults, job.companyName, namedCompetitors(job.competitors))
+      competitivePosition = calculateCompetitivePosition(fullResults, namedCompetitors(job.competitors))
     }
   }
 
@@ -130,6 +134,11 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           websiteUrl: job.websiteUrl,
           niche: job.niche,
           tier: job.tier,
+          coverage: getTierConfig(job.tier as Tier).platforms.map((platform) => ({
+            platform,
+            expected: Array.isArray(job.generatedQueries) ? job.generatedQueries.length : getTierConfig(job.tier as Tier).queryCount,
+            answered: job.queryResults.filter((result) => result.platform === platform).length,
+          })),
           pdfUrl: job.pdfUrl,
           completedAt: job.completedAt,
           clientEmail: job.clientEmail,

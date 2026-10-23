@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
 import { checkRateLimit } from "@/lib/rate-limit"
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const getResend = () => new Resend(process.env.RESEND_API_KEY)
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "unknown"
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     })
     .join("")
 
-  await resend.emails.send({
+  await getResend().emails.send({
     from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
     to: email,
     subject: "Ваши отчёты KaliGEO",

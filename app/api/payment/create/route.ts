@@ -20,6 +20,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { getCorsHeaders, corsOptionsResponse } from "@/lib/cors"
+import { getMarketConfig } from "@/lib/market"
 import type { Tier } from "@/lib/gates"
 import { registerOrder, merchantForMarket, bindingEnabled } from "@/lib/billing/alfabank"
 import { createPayment as createYooKassaPayment } from "@/lib/billing/yookassa"
@@ -120,7 +121,7 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  const siteUrl = isRu ? "https://kaligeo.ru" : "https://kaligeo.by"
+  const { appUrl } = getMarketConfig(locale)
   const description = `KaliGEO — аудит видимости ${job.companyName}, тариф ${tier}`
   const provider = resolveProvider(locale)
 
@@ -129,7 +130,7 @@ export async function POST(req: NextRequest) {
       amount,
       currency: "RUB",
       description,
-      returnUrl: `${siteUrl}/?paymentStatus=success&jobId=${job.id}`,
+      returnUrl: `${appUrl}/audit/${job.id}?paymentStatus=success`,
       savePaymentMethod: isSubscription,
       metadata: { jobId: job.id },
       idempotenceKey: job.id,
@@ -157,8 +158,8 @@ export async function POST(req: NextRequest) {
       amount,
       currency,
       orderNumber: job.id,
-      returnUrl: `${siteUrl}/?paymentStatus=success&jobId=${job.id}`,
-      failUrl: `${siteUrl}/?paymentStatus=fail&jobId=${job.id}`,
+      returnUrl: `${appUrl}/audit/${job.id}?paymentStatus=success`,
+      failUrl: `${appUrl}/audit/${job.id}?paymentStatus=fail`,
       description,
       // Only ask the bank to bind the card once it has confirmed it supports this —
       // otherwise clientId is simply ignored by register.do with no side effects.

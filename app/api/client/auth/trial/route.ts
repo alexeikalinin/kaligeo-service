@@ -14,7 +14,7 @@ import { getMarketConfig, marketFromHost } from "@/lib/market"
 import { z } from "zod"
 
 const TrialSchema = z.object({
-  email: z.string().email(),
+  email: z.string().trim().email().transform(value => value.toLowerCase()),
   companyName: z.string().min(1).max(100),
   websiteUrl: z.string().url(),
   niche: z.string().max(200).default(""),
@@ -87,5 +87,5 @@ export async function POST(req: NextRequest) {
 
   await sendMagicLinkEmail({ to: email, magicLinkUrl, fromEmail }).catch(console.error)
 
-  return NextResponse.json({ success: true, jobId: job.id, magicLinkUrl })
+  return NextResponse.json({ success: true, jobId: job.id })
 }

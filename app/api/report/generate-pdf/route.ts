@@ -1,6 +1,8 @@
+import { isCompetitorCategory } from "@/lib/analysis/competitor-names"
 import { NextRequest, NextResponse } from "next/server"
 import { renderToBuffer } from "@react-pdf/renderer"
 import { createElement } from "react"
+import { getTierConfig, type Tier } from "@/lib/gates"
 import { prisma } from "@/lib/prisma"
 import { ReportPDFDocument } from "@/components/pdf/ReportPDFDocument"
 
@@ -8,7 +10,7 @@ export const maxDuration = 60
 
 export async function POST(req: NextRequest) {
   const internalSecret = req.headers.get("x-internal-secret")
-  if (internalSecret !== process.env.INTERNAL_SECRET) {
+  if (!process.env.INTERNAL_SECRET || internalSecret !== process.env.INTERNAL_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -17,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const job = await prisma.auditJob.findUnique({
     where: { id: jobId },
-    include: { report: true },
+    include: { report: true, queryResults: { select: { platform: true } } },
   })
 
   if (!job || !job.report) {
@@ -32,7 +34,13 @@ export async function POST(req: NextRequest) {
     overallScore: number
   }
 
+  report.competitorMatrix = report.competitorMatrix.filter(competitor => !isCompetitorCategory(competitor.name))
   const data = {
+    coverage: getTierConfig(job.tier as Tier).platforms.map(platform => ({
+      platform,
+      expected: Array.isArray(job.generatedQueries) ? job.generatedQueries.length : getTierConfig(job.tier as Tier).queryCount,
+      answered: job.queryResults.filter(result => result.platform === platform).length,
+    })),
     companyName: job.companyName,
     websiteUrl: job.websiteUrl,
     niche: job.niche,

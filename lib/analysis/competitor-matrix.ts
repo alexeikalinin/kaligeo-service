@@ -1,3 +1,4 @@
+import { namedCompetitors } from "./competitor-names"
 import type { QueryResult } from "@prisma/client"
 
 export interface CompetitorEntry {
@@ -13,7 +14,7 @@ export function buildCompetitorMatrix(
 ): CompetitorEntry[] {
   const matrix: Record<string, CompetitorEntry> = {}
 
-  for (const competitor of competitors) {
+  for (const competitor of namedCompetitors(competitors)) {
     matrix[competitor] = {
       name: competitor,
       platforms: [],
@@ -23,7 +24,7 @@ export function buildCompetitorMatrix(
   }
 
   for (const result of results) {
-    const foundCompetitors = result.competitors as string[]
+    const foundCompetitors = namedCompetitors(result.competitors as string[])
     for (const comp of foundCompetitors) {
       if (!matrix[comp]) {
         matrix[comp] = { name: comp, platforms: [], mentionCount: 0, queries: [] }

@@ -114,6 +114,8 @@ export const subscriptionBilling = schedules.task({
             market: sub.market,
             clientId: sub.clientId,
             subscriptionId: sub.id,
+            subscriptionTier: sub.tier,
+            subscriptionActiveUntil: new Date(now.getTime() + ONE_MONTH_MS),
             baselineJobId: lastJob?.id,
             adminNotes: `Автосписание по подписке ${sub.id}`,
             paidAt: now,

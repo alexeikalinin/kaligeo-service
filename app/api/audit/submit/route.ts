@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { marketFromHost } from "@/lib/market"
 import { z } from "zod"
 import { Redis } from "@upstash/redis"
 import { notifyNewAuditRequest } from "@/lib/notify"
@@ -19,11 +20,11 @@ const SubmitSchema = z.object({
   companyName: z.string().min(1).max(100),
   niche: z.string().max(200).default(""),
   competitors: z.array(z.string()).max(10).default([]),
-  // tier is intentionally excluded — jobs always start as BASIC; admin sets real tier at confirm
+  tier: z.enum(["BASIC", "STANDARD", "ADVANCED", "MONITOR_START", "MONITOR_PRO", "MONITOR_AGENT"]).default("BASIC"),
   selectedPlatforms: z.array(z.enum(PLATFORMS)).optional(),
   baselineJobId: z.string().optional(),
   followUpScheduledAt: z.string().datetime().optional(),
-  source: z.string().max(64).optional(),
+  source: z.string().max(64).refine(value => value !== "qa-acceptance", "Reserved source").optional(),
 })
 
 const RATE_LIMIT = 3
@@ -66,15 +67,23 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const data = SubmitSchema.parse(body)
+    await prisma.serviceInquiry.create({ data: { kind: "audit", payload: JSON.parse(JSON.stringify(data)) } })
 
     const email = data.clientEmail.toLowerCase().trim()
 
-    // Upsert client — создаём если новый, иначе обновляем имя компании
+    const market = req.headers.get("origin") ? detectMarket(req.headers.get("origin")) : marketFromHost(req.headers.get("host"))
+
+    // Create the client without replacing profile data on later public orders.
     const client = await prisma.client.upsert({
       where: { email },
-      update: { companyName: data.companyName, websiteUrl: data.websiteUrl },
+      update: {}, // An unauthenticated order must never overwrite account settings.
       create: { email, companyName: data.companyName, websiteUrl: data.websiteUrl },
     })
+
+    if (data.baselineJobId) {
+      const baseline = await prisma.auditJob.findFirst({ where: { id: data.baselineJobId, clientId: client.id, market, websiteUrl: data.websiteUrl }, select: { id: true } })
+      if (!baseline) return NextResponse.json({ error: "Предыдущий аудит этого сайта не найден" }, { status: 400, headers: corsHeaders })
+    }
 
     // Если у клиента есть BrandProfile для этого домена — берём конкурентов и нишу из него
     const brandProfile = await prisma.brandProfile.findFirst({
@@ -95,9 +104,9 @@ export async function POST(req: NextRequest) {
         companyName: data.companyName,
         niche: effectiveNiche,
         competitors: effectiveCompetitors,
-        tier: "BASIC", // always starts as BASIC; admin sets real tier at confirm
+        tier: data.tier, // Price is calculated server-side from this validated tier.
         status: "PENDING_PAYMENT",
-        market: detectMarket(req.headers.get("origin")),
+        market,
         ...(data.selectedPlatforms?.length ? { selectedPlatforms: data.selectedPlatforms } : {}),
         ...(data.baselineJobId ? { baselineJobId: data.baselineJobId } : {}),
         ...(data.followUpScheduledAt ? { followUpScheduledAt: new Date(data.followUpScheduledAt) } : {}),
@@ -111,7 +120,7 @@ export async function POST(req: NextRequest) {
       companyName: data.companyName,
       clientEmail: email,
       websiteUrl: data.websiteUrl,
-      tier: "BASIC",
+      tier: data.tier,
       clientNumber: client.clientNumber,
       jobId: job.id,
     }).catch(console.error)

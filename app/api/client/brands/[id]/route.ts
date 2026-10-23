@@ -1,3 +1,4 @@
+import { brandProfileSchema } from "@/lib/brand-profile-schema"
 import { NextRequest, NextResponse } from "next/server"
 import { getClientSession } from "@/lib/client-session"
 import { prisma } from "@/lib/prisma"
@@ -19,20 +20,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  const body = await req.json()
-  const { companyName, websiteUrl, niche, alternativeNames, competitors, customPrompts } = body
-
-  const brand = await prisma.brandProfile.update({
-    where: { id },
-    data: {
-      ...(companyName !== undefined && { companyName: String(companyName) }),
-      ...(websiteUrl !== undefined && { websiteUrl: String(websiteUrl) }),
-      ...(niche !== undefined && { niche: String(niche) }),
-      ...(alternativeNames !== undefined && { alternativeNames: alternativeNames.map(String) }),
-      ...(competitors !== undefined && { competitors: competitors.map(String) }),
-      ...(customPrompts !== undefined && { customPrompts }),
-    },
-  })
+  const parsed = brandProfileSchema.partial().safeParse(await req.json().catch(() => null))
+  if (!parsed.success) return NextResponse.json({ error: "Проверьте поля профиля" }, { status: 400 })
+  const brand = await prisma.brandProfile.update({ where: { id }, data: parsed.data })
   return NextResponse.json({ brand })
 }
 

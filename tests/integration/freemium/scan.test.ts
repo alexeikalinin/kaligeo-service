@@ -12,6 +12,7 @@ const mockCreate    = vi.fn()
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    serviceInquiry: { create: vi.fn().mockResolvedValue({ id: "inquiry-1" }) },
     freemiumScan: {
       findFirst: (...a: unknown[]) => mockFindFirst(...a),
       create:    (...a: unknown[]) => mockCreate(...a),
@@ -27,6 +28,11 @@ vi.mock("@/lib/agents/website-analysis-agent", () => ({
 const mockCheckRateLimit = vi.fn().mockResolvedValue(true)
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: (...a: unknown[]) => mockCheckRateLimit(...a),
+}))
+
+const mockQuickCheck = vi.fn()
+vi.mock("@/lib/freemium/quick-check", () => ({
+  runFreemiumQuickCheck: (...args: unknown[]) => mockQuickCheck(...args),
 }))
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -61,6 +67,7 @@ describe("POST /api/freemium/scan", () => {
     vi.resetModules()
     mockCheckRateLimit.mockResolvedValue(true)
     mockFindFirst.mockResolvedValue(null)    // no cached scan by default
+    mockQuickCheck.mockResolvedValue({ overallScore: 20, platformScores: {}, platformsChecked: [], queriesRun: 0, queries: [] })
     mockWebsiteAnalysis.mockResolvedValue(defaultAnalysis)
     mockCreate.mockResolvedValue({ id: "scan-new-123" })
   })
@@ -100,34 +107,37 @@ describe("POST /api/freemium/scan", () => {
     expect(res.status).toBe(200)
     expect(json.scanId).toBe("scan-new-123")
     expect(mockWebsiteAnalysis).toHaveBeenCalledWith("https://newsite.com")
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ analysisSnapshot: defaultAnalysis }) }))
   })
 
-  it("falls back gracefully when analysis agent fails", async () => {
+  it("requires clarification instead of scanning an unknown niche when analysis fails", async () => {
     mockWebsiteAnalysis.mockRejectedValue(new Error("Agent timeout"))
 
     const res = await callScan({ websiteUrl: "https://broken.com" })
     const json = await res.json()
 
-    // Should still succeed with fallback empty analysis
-    expect(res.status).toBe(200)
-    expect(json.scanId).toBeDefined()
-    expect(mockCreate).toHaveBeenCalled()
+    expect(res.status).toBe(422)
+    expect(json.code).toBe("NICHE_REQUIRED")
+    expect(mockCreate).not.toHaveBeenCalled()
   })
 
-  it("preview score is always ≤ 42 (to show room for improvement)", async () => {
-    // Even with ideal analysis, score capped at 42
-    mockWebsiteAnalysis.mockResolvedValue({
-      ...defaultAnalysis,
-      niche:    "AI-driven автоматизация и нейро-оптимизация",
-      services: ["s1", "s2", "s3", "s4", "s5"],
-      keywords: ["k1", "k2", "k3", "k4", "k5", "k6"],
-    })
-    mockCreate.mockImplementation(async ({ data }) => {
-      expect(data.previewScore).toBeLessThanOrEqual(42)
-      return { id: "scan-cap-test" }
-    })
+  it("uses the client's brand and niche when the site cannot be analyzed", async () => {
+    mockWebsiteAnalysis.mockRejectedValue(new Error("Site unavailable"))
+    const response = await callScan({ websiteUrl: "https://example.com", companyName: "Nike", niche: "Спортивная одежда" })
+    expect(response.status).toBe(200)
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ companyName: "Nike", niche: "Спортивная одежда" }) }))
+  })
 
+  it("preserves the measured score without an artificial sales cap", async () => {
+    mockQuickCheck.mockResolvedValue({ overallScore: 98, platformScores: { CHATGPT: { score: 98 } }, platformsChecked: ["CHATGPT"], queriesRun: 3, queries: ["query"] })
     await callScan({ websiteUrl: "https://perfect.com" })
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ previewScore: 98, quickCheckDone: true }) }))
+  })
+
+  it("uses the detected public brand for a legal entity and keeps the submitted name", async () => {
+    await callScan({ websiteUrl: "https://example.com", companyName: "ИП БОНДАРЕНКО" })
+    expect(mockQuickCheck).toHaveBeenCalledWith("TestCo", defaultAnalysis.niche, "https://example.com", defaultAnalysis.keywords)
+    expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ companyName: "ИП БОНДАРЕНКО", analysisSnapshot: defaultAnalysis }) }))
   })
 
   it("passes source to DB if provided", async () => {

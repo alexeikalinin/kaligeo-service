@@ -10,12 +10,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 
 const mockClientUpsert       = vi.fn()
 const mockJobCreate          = vi.fn()
+const mockBaselineFind = vi.fn().mockResolvedValue({ id: "prev-job-id" })
 const mockBrandProfileFind   = vi.fn().mockResolvedValue(null)
 
 vi.mock("@/lib/prisma", () => ({
   prisma: {
+    serviceInquiry: { create: vi.fn().mockResolvedValue({ id: "inquiry-test" }) },
     client:       { upsert: (...a: unknown[]) => mockClientUpsert(...a) },
-    auditJob:     { create: (...a: unknown[]) => mockJobCreate(...a) },
+    auditJob:     { findFirst: (...a: unknown[]) => mockBaselineFind(...a), create: (...a: unknown[]) => mockJobCreate(...a) },
     brandProfile: { findFirst: (...a: unknown[]) => mockBrandProfileFind(...a) },
   },
 }))
@@ -89,14 +91,20 @@ describe("POST /api/audit/submit", () => {
     expect(json.jobId).toBe("job-new-123")
   })
 
-  it("creates job with tier=BASIC regardless of input", async () => {
+  it("preserves the selected tier for server-side payment pricing", async () => {
     await callSubmit({ ...validBody, tier: "ADVANCED" })
 
     expect(mockJobCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ tier: "BASIC" }),
+        data: expect.objectContaining({ tier: "ADVANCED" }),
       })
     )
+  })
+
+  it("rejects unknown tiers instead of creating a differently priced order", async () => {
+    const res = await callSubmit({ ...validBody, tier: "FREE" })
+    expect(res.status).toBe(400)
+    expect(mockJobCreate).not.toHaveBeenCalled()
   })
 
   it("creates job with PENDING_PAYMENT status", async () => {
@@ -107,6 +115,11 @@ describe("POST /api/audit/submit", () => {
         data: expect.objectContaining({ status: "PENDING_PAYMENT" }),
       })
     )
+  })
+
+  it("does not overwrite account details when an order is submitted", async () => {
+    await callSubmit(validBody)
+    expect(mockClientUpsert).toHaveBeenCalledWith(expect.objectContaining({ update: {} }))
   })
 
   it("normalises email to lowercase", async () => {
@@ -177,4 +190,12 @@ describe("POST /api/audit/submit", () => {
       })
     )
   })
+})
+
+
+it("rejects a previous audit belonging to another client or website", async () => {
+  mockBaselineFind.mockResolvedValueOnce(null)
+  mockJobCreate.mockClear()
+  expect((await callSubmit({ ...validBody, baselineJobId: "other-job" })).status).toBe(400)
+  expect(mockJobCreate).not.toHaveBeenCalled()
 })

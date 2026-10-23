@@ -281,9 +281,14 @@ export default function BrandProfileEditor({ brand }: Props) {
   async function handleDelete() {
     if (!brand) return
     if (!confirm("Удалить профиль?")) return
-    await fetch(`/api/client/brands/${brand.id}`, { method: "DELETE" })
-    router.push("/my/brands")
-    router.refresh()
+    try {
+      const response = await fetch(`/api/client/brands/${brand.id}`, { method: "DELETE" })
+      if (!response.ok) throw new Error("Не удалось удалить профиль. Попробуйте ещё раз.")
+      router.push("/my/brands")
+      router.refresh()
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Ошибка удаления")
+    }
   }
 
   return (

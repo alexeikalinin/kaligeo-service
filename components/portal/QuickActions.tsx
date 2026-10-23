@@ -17,7 +17,7 @@ export default function QuickActions({ hasAudits }: Props) {
     >
       <QuickBtn href="/tools/domain-check" label="Проверить домен" variant="secondary" />
       {hasAudits && (
-        <QuickBtn href="/my/dashboard" label="Сравнить аудиты" variant="secondary" />
+        <QuickBtn href="/my/history" label="История и динамика" variant="secondary" />
       )}
     </div>
   )

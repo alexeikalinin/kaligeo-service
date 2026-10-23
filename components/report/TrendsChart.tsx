@@ -67,8 +67,8 @@ export function TrendsChart({ jobId, token, clientEmail, companyName }: TrendsCh
       .then((data) => {
         if (data.points && data.points.length > 0) {
           setPoints(data.points)
-          // Определяем платформы из первой точки
-          const platforms = Object.keys(data.points[0].platformScores ?? {})
+          // Include platforms that appeared in later audits too.
+          const platforms = [...new Set<string>((data.points as TrendPoint[]).flatMap(point => Object.keys(point.platformScores ?? {})))]
           setActivePlatforms(platforms)
           setVisiblePlatforms(new Set(platforms.slice(0, 4))) // показываем 4 платформы по умолчанию
         }

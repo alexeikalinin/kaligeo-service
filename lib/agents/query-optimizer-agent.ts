@@ -49,6 +49,7 @@ export async function runQueryOptimizerAgent(
       niche: { contains: nicheKeyword, mode: "insensitive" },
       companyName: { not: companyName },  // исключаем текущую компанию
       status: "COMPLETED",
+        OR: [{ source: null }, { source: { not: "qa-acceptance" } }],
     },
     select: { id: true },
     take: 10,

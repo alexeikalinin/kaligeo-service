@@ -35,6 +35,10 @@ export default function MagicLinkForm({ error }: Props) {
         return
       }
 
+      if (!res.ok) {
+        setFormError("Не удалось отправить ссылку. Попробуйте ещё раз.")
+        return
+      }
       router.push("/my/login?sent=1")
     } catch {
       setFormError("Ошибка сети. Попробуйте ещё раз.")

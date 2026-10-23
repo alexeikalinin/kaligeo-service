@@ -1,3 +1,5 @@
+import { TIER_CONFIG } from "@/lib/gates"
+
 const LOCKED_COPY: Record<string, { title: string; description: string }> = {
   competitors: {
     title: "Матрица конкурентов",
@@ -15,11 +17,6 @@ const LOCKED_COPY: Record<string, { title: string; description: string }> = {
     title: "Сравнительный анализ прогресса",
     description: "Динамика видимости бренда с момента предыдущего аудита — рост score, исправленные проблемы, изменения по платформам и конкурентам.",
   },
-}
-
-const TIER_PRICE: Record<string, string> = {
-  STANDARD: "Standard — $150",
-  ADVANCED: "Advanced — $300",
 }
 
 interface Props {
@@ -78,12 +75,12 @@ export function LockedTabPlaceholder({ requiredTier, tabKey }: Props) {
         >
           Доступно в тарифе{" "}
           <span className="font-semibold" style={{ color: "var(--ink)" }}>
-            {TIER_PRICE[requiredTier]}
+            {TIER_CONFIG[requiredTier].displayName}
           </span>
         </div>
 
         <a
-          href="/#pricing"
+          href="/pricing"
           className="px-6 py-2.5 rounded text-sm font-semibold transition-opacity hover:opacity-80"
           style={{ background: "var(--ink)", color: "var(--bone)" }}
         >
