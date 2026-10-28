@@ -1,3 +1,4 @@
+import {ensurePlatformsReady,PlatformPreflightError} from "../lib/ai-clients/preflight"
 import { withInternalUsage } from "../lib/analysis/internal-usage"
 import { measureEntities,measurementVersion,projectEntityAnswers } from "../lib/analysis/entity-visibility"
 import { reviewFeedback } from "../lib/questions/review-feedback"
@@ -18,7 +19,7 @@ import { extractMentions } from "../lib/analysis/extract-mentions"
 import type { SiteEvidence } from "../lib/analysis/site-evidence"
 import { namedCompetitors } from "../lib/analysis/competitor-names"
 import { resolveAuditBrand } from "../lib/brand-identity"
-import { task, tasks } from "@trigger.dev/sdk/v3"
+import { task, tasks, AbortTaskRunError } from "@trigger.dev/sdk/v3"
 import { postAuditSequence } from "./post-audit-sequence"
 import { prisma } from "../lib/prisma"
 import { runWebsiteAnalysisAgent, type WebsiteAnalysisResult } from "../lib/agents/website-analysis-agent"
@@ -77,6 +78,7 @@ export const auditPipeline = task({
         jobId,
         errorMessage,
       }).catch(console.error)
+      if(err instanceof PlatformPreflightError)throw new AbortTaskRunError(errorMessage)
       throw err
     }
   },
@@ -114,6 +116,12 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       await prisma.auditJob.update({where:{id:jobId},data:{generatedQueries:queries,selectedPlatforms:baseline.selectedPlatforms,analysisSnapshot:JSON.parse(JSON.stringify(inherited))}})
       job.generatedQueries=queries;job.selectedPlatforms=baseline.selectedPlatforms;job.analysisSnapshot=JSON.parse(JSON.stringify(inherited));resume=true
     }
+
+    // Real inference, not just key presence, before spending on site/question analysis.
+    const requestedPlatforms=(job.selectedPlatforms.length?job.selectedPlatforms:config.platforms).filter(p=>config.platforms.includes(p)&&!excludedPlatforms.includes(p))
+    const dependencies=[...new Set([...requestedPlatforms,"CHATGPT","GEMINI"])]
+    await withInternalUsage(jobId,"preflight",()=>ensurePlatformsReady(jobId,dependencies))
+    job.analysisSnapshot=(await prisma.auditJob.findUniqueOrThrow({where:{id:jobId},select:{analysisSnapshot:true}})).analysisSnapshot
 
     const submittedCompetitors = job.competitors
     job.competitors = namedCompetitors(job.competitors)
@@ -286,6 +294,9 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     if (skippedPlatforms.length > 0) {
       console.warn(`[risk-agent] Пропущены из-за лимитов: ${skippedPlatforms.join(", ")}`)
     }
+
+    // Human review may take hours: check again if the successful probe has expired.
+    if(platformsToUse.length)await withInternalUsage(jobId,"preflight-before-survey",()=>ensurePlatformsReady(jobId,[...new Set([...platformsToUse,"CHATGPT","GEMINI"])]))
 
     await prisma.auditJob.update({ where: { id: jobId }, data: { selectedPlatforms: expectedPlatforms as never } })
 

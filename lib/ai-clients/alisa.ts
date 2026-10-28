@@ -1,5 +1,5 @@
 import { captureAiUsage } from "../analysis/ai-meter"
-import type { AIClient } from "./types"
+import type { AIClient,QueryOptions } from "./types"
 import { AUDIT_SYSTEM_PROMPT } from "./types"
 
 // Алиса использует тот же YandexGPT API, но с моделью YandexGPT Lite
@@ -8,7 +8,7 @@ import { AUDIT_SYSTEM_PROMPT } from "./types"
 export const alisaClient: AIClient = {
   name: "Alisa",
   isConfigured: () => !!(process.env.YANDEX_RELAY_URL && process.env.YANDEX_RELAY_SECRET),
-  async query(prompt: string, systemPrompt = AUDIT_SYSTEM_PROMPT): Promise<string> {
+  async query(prompt: string, systemPrompt = AUDIT_SYSTEM_PROMPT,options?:QueryOptions): Promise<string> {
     const relayUrl = process.env.YANDEX_RELAY_URL
     const relaySecret = process.env.YANDEX_RELAY_SECRET
 
@@ -16,6 +16,7 @@ export const alisaClient: AIClient = {
 
     const response = await fetch(relayUrl, {
       method: "POST",
+      signal:options?.signal,
       headers: {
         "X-Relay-Secret": relaySecret,
         "Content-Type": "application/json",

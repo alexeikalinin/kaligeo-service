@@ -6,7 +6,7 @@ import { AUDIT_SYSTEM_PROMPT } from "./types"
 export const deepseekClient: AIClient = {
   name: "DeepSeek",
   isConfigured: () => !!process.env.DEEPSEEK_API_KEY,
-  async query(prompt, systemPrompt = AUDIT_SYSTEM_PROMPT) {
+  async query(prompt, systemPrompt = AUDIT_SYSTEM_PROMPT, options) {
     const client = new OpenAI({ maxRetries:0,
       apiKey: process.env.DEEPSEEK_API_KEY,
       baseURL: "https://api.deepseek.com",
@@ -18,7 +18,7 @@ export const deepseekClient: AIClient = {
         { role: "user", content: prompt },
       ],
       max_tokens: 1000,
-    })
+    },{signal:options?.signal})
     captureAiUsage({inputTokens:response.usage?.prompt_tokens,outputTokens:response.usage?.completion_tokens})
     return response.choices[0]?.message?.content ?? ""
   },

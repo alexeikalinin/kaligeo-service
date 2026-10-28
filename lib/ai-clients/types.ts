@@ -1,13 +1,14 @@
+export interface QueryOptions { signal?:AbortSignal }
 export interface AIClient {
   name: string
   /** Проверяет наличие необходимых env-переменных. Если false — платформа пропускается в аудите. */
   isConfigured(): boolean
-  query(prompt: string, systemPrompt?: string): Promise<string>
+  query(prompt: string, systemPrompt?: string, options?:QueryOptions): Promise<string>
   /**
    * Опциональный метод для платформ, возвращающих структурированные citations (например Perplexity).
    * Если не реализован — execute-queries использует query() + regex-fallback.
    */
-  queryWithSources?(prompt: string, systemPrompt?: string): Promise<{
+  queryWithSources?(prompt: string, systemPrompt?: string,options?:QueryOptions): Promise<{
     response: string
     citations: string[] // проверенные URL-источники, которые ИИ реально использовал
   }>

@@ -1,12 +1,13 @@
+vi.mock("@/lib/ai-clients/preflight",()=>({ensurePlatformsReady:(...args:unknown[])=>state.ready(...args),PlatformPreflightError:class extends Error{}}))
 vi.mock("@/lib/analysis/entity-visibility", async original => ({ ...await original<typeof import("@/lib/analysis/entity-visibility")>(),projectEntityAnswers:(rows:unknown[])=>rows }))
 vi.mock("@/lib/questions/review-notification", () => ({ notifyReviewReady: async () => undefined }))
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { beforeEach, describe, expect, it, vi } from "vitest"
-const state = vi.hoisted(() => ({ job: {} as any, rows: [] as any[], execute: vi.fn(), generate: vi.fn(), report: vi.fn(), approved: vi.fn() }))
+const state = vi.hoisted(() => ({ ready:vi.fn(),job: {} as any, rows: [] as any[], execute: vi.fn(), generate: vi.fn(), report: vi.fn(), approved: vi.fn() }))
 vi.mock("@/lib/questions/review", async (original) => ({ ...await original<typeof import("@/lib/questions/review")>(), isQuestionSetApproved: (...args: any[]) => state.approved(...args) }))
 vi.mock("@/lib/agents/question-review-agent", () => ({ reviewQuestions: async () => [] }))
 vi.mock("@/lib/questions/question-cards", async original => ({ ...await original<typeof import("@/lib/questions/question-cards")>(), assertCardsApproved: () => undefined }))
-vi.mock("@trigger.dev/sdk/v3", () => ({ task: (options: any) => options, tasks: { trigger: vi.fn() } }))
+vi.mock("@trigger.dev/sdk/v3", () => ({ AbortTaskRunError:class extends Error{},task: (options: any) => options, tasks: { trigger: vi.fn() } }))
 vi.mock("@/trigger/post-audit-sequence", () => ({ postAuditSequence: {} }))
 vi.mock("@/lib/prisma", () => ({ prisma: {
   $executeRaw:vi.fn().mockResolvedValue(1),
@@ -29,6 +30,7 @@ vi.mock("@/trigger/steps/render-pdf", () => ({ renderAndUploadPdf: vi.fn().mockR
 vi.mock("@/trigger/steps/deliver", () => ({ sendReportEmail: vi.fn(), sendFollowUpEmail: vi.fn() }))
 vi.mock("@/lib/notify", () => ({ notifyAuditCompleted: vi.fn(), notifyAuditFailed: vi.fn() }))
 vi.mock("@/lib/report/action-plan-gen", () => ({ generateActionPlan: vi.fn() }))
+import {PlatformPreflightError} from "@/lib/ai-clients/preflight"
 import { mapHash } from "@/lib/questions/business-map"
 import { auditPipeline } from "@/trigger/audit-pipeline"
 const run = (auditPipeline as any).run
@@ -37,11 +39,13 @@ const queries = Array.from({ length: 15 }, (_, i) => `q${i}`)
 const answer = (q: string) => ({ id: q, jobId: "j", query: q, platform: "CHATGPT", response: "No match", brandMentioned: false, sources: [], competitors: [], sentiment: "absent", positionScore: 0, sourceCategories: {} })
 beforeEach(() => {
   vi.clearAllMocks()
+  state.ready.mockResolvedValue([])
   state.approved.mockReturnValue(true)
   state.job = { id: "j", source: "qa-acceptance", status: "FAILED", tier: "BASIC", companyName: "Brand", niche: "Games", websiteUrl: "https://brand.example", market: "by", competitors: [], selectedPlatforms: ["CHATGPT"], generatedQueries: queries, analysisSnapshot: { businessMap:testMap,businessMapReview:{state:"approved",hash:mapHash(testMap)},questionSetVersion: "2026-10-entity-v4" } }
   state.rows = []
 })
 describe("Pipeline completeness and recovery", () => {
+  it("blocks all paid preparation and survey calls when the real preflight fails",async()=>{state.ready.mockRejectedValueOnce(new PlatformPreflightError([]));await expect(run({jobId:"j",validation:true})).rejects.toThrow();expect(state.generate).not.toHaveBeenCalled();expect(state.execute).not.toHaveBeenCalled();expect(state.report).not.toHaveBeenCalled();expect(state.job.status).toBe("FAILED")})
   it("stops before paid platform calls without approval", async () => {
     state.approved.mockReturnValue(false)
     const result = await run({jobId:"j",validation:true})

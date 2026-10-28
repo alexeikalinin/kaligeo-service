@@ -1,5 +1,5 @@
 import { captureAiUsage } from "../analysis/ai-meter"
-import type { AIClient } from "./types"
+import type { AIClient,QueryOptions } from "./types"
 import { AUDIT_SYSTEM_PROMPT } from "./types"
 
 interface GigaChatToken {
@@ -9,7 +9,7 @@ interface GigaChatToken {
 
 let cachedToken: GigaChatToken | null = null
 
-async function getAccessToken(): Promise<string> {
+async function getAccessToken(signal?:AbortSignal): Promise<string> {
   if (cachedToken && Date.now() < cachedToken.expiresAt - 60_000) {
     return cachedToken.value
   }
@@ -30,6 +30,7 @@ async function getAccessToken(): Promise<string> {
   try {
     const res = await fetch("https://ngw.devices.sberbank.ru:9443/api/v2/oauth", {
       method: "POST",
+      signal,
       headers: {
         Authorization: `Basic ${credentials}`,
         "Content-Type": "application/x-www-form-urlencoded",
@@ -60,13 +61,14 @@ async function getAccessToken(): Promise<string> {
 export const gigachatClient: AIClient = {
   name: "GigaChat",
   isConfigured: () => !!(process.env.GIGACHAT_CLIENT_ID && process.env.GIGACHAT_CLIENT_SECRET),
-  async query(prompt: string, systemPrompt = AUDIT_SYSTEM_PROMPT): Promise<string> {
-    const token = await getAccessToken()
+  async query(prompt: string, systemPrompt = AUDIT_SYSTEM_PROMPT,options?:QueryOptions): Promise<string> {
+    const token = await getAccessToken(options?.signal)
 
     const response = await fetch(
       "https://gigachat.devices.sberbank.ru/api/v1/chat/completions",
       {
         method: "POST",
+        signal:options?.signal,
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
