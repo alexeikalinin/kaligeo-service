@@ -1,3 +1,4 @@
+import { cachedInternalStep } from "../analysis/stage-cache"
 import { generateText, Output } from "ai"
 import { z } from "zod"
 import { getAdvancedAnalysisModel } from "../models"
@@ -115,15 +116,15 @@ ${scoresText}
 - Все тексты на русском языке`
 
   const sections = ["structured-data", "meta", "faq", "about", "home"] as const
-  const results = await Promise.all(sections.map(type => generateText({
+  const results = await Promise.all(sections.map(type => cachedInternalStep(type,prompt,async()=> (await generateText({ maxRetries: 0,
     model: getAdvancedAnalysisModel(), system: SYSTEM_PROMPT,
     prompt: `${prompt}\nСейчас верни ТОЛЬКО ОДНУ рекомендацию типа ${type}, отдельным объектом, без массива fixes и без остальных типов. Код до 2500 символов, описание до 30 слов. Для FAQ — 5 вопросов с ответами до 20 слов. Не повторяй данные аудита и исходный промпт.`,
     maxOutputTokens: 4000,
     output: Output.object({ schema: z.object({ type: z.literal(type), page: z.string(), title: z.string(), description: z.string(), code: z.string().min(1) }) }),
-  })))
+  })).output)))
   return {
     summary: "Подготовлены рекомендации по JSON-LD разметке, мета-тегам, FAQ, странице о компании и главной странице.",
     estimatedImpact: "Проверяется повторным аудитом после внедрения",
-    fixes: results.map(result => result.output), generatedAt: new Date().toISOString(),
+    fixes: results, generatedAt: new Date().toISOString(),
   }
 }

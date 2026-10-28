@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Metadata } from "next"
 import DomainCheckWidget from "@/components/portal/DomainCheckWidget"
 
@@ -26,7 +27,7 @@ export default function DomainCheckPage() {
           justifyContent: "space-between",
         }}
       >
-        <a
+        <Link
           href="/"
           style={{
             fontFamily: "var(--font-mono)",
@@ -39,8 +40,8 @@ export default function DomainCheckPage() {
           }}
         >
           KaliGEO
-        </a>
-        <a
+        </Link>
+        <Link
           href="/my/login"
           style={{
             fontSize: "13px",
@@ -52,7 +53,7 @@ export default function DomainCheckPage() {
           }}
         >
           Личный кабинет →
-        </a>
+        </Link>
       </header>
 
       {/* Main */}

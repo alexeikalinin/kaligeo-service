@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { getAvailableFrequencies, type RecurringFrequency } from "@/lib/gates"
+import { getAvailableFrequencies, type Tier, type RecurringFrequency } from "@/lib/gates"
 
 const FREQUENCY_DAYS: Record<RecurringFrequency, number> = {
   weekly: 7,
@@ -41,7 +41,7 @@ export async function POST(
   }
 
   // Проверяем, доступна ли такая частота для тарифа
-  const available = getAvailableFrequencies(job.tier as any)
+  const available = getAvailableFrequencies(job.tier as Tier)
   if (!available.includes(frequency)) {
     return NextResponse.json(
       { error: `Frequency '${frequency}' not available on ${job.tier} plan` },
@@ -128,6 +128,6 @@ export async function GET(
   return NextResponse.json({
     recurringFrequency: job.recurringFrequency,
     followUpScheduledAt: job.followUpScheduledAt,
-    availableFrequencies: getAvailableFrequencies(job.tier as any),
+    availableFrequencies: getAvailableFrequencies(job.tier as Tier),
   })
 }

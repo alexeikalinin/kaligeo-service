@@ -1,0 +1,12 @@
+import{expect,it}from"vitest"
+import{literalMention,measureEntities,measurementVersion}from"@/lib/analysis/entity-visibility"
+import type{BusinessMap}from"@/lib/questions/business-map"
+import type{QuestionCard}from"@/lib/questions/question-cards"
+const map:BusinessMap={entities:[{id:"p",name:"Product",kind:"product",attributes:[],sources:[],confidence:"supported"},{id:"s",name:"Shop",kind:"company",attributes:[],sources:[],confidence:"supported"}],relationships:[],audiences:[],geography:[],scope:[{entityId:"p",audienceId:"a",metric:"owned-product",rationale:"choice"},{entityId:"s",audienceId:"a",metric:"seller",rationale:"seller"}],unknowns:[]}
+const card=(entityId:string,metric:"owned-product"|"seller",query:string):QuestionCard=>({query,entityId,audienceId:"a",need:"choose",intent:"choice",rationale:"test",expectedAnswer:metric==="seller"?"sellers":"products",mentionRule:{metric,names:[entityId==="p"?"Product":"Shop"],explanation:"exact name"},evidence:[],decision:"accept",critique:"ok"})
+it("does not count substrings as named entities",()=>{expect(literalMention("Productive", "Product")).toBe(-1);expect(literalMention("Выберите Product.","Product")).toBeGreaterThan(0)})
+it("counts a product separately, never as the seller",()=>{const cards=[card("p","owned-product","q1"),card("s","seller","q2")];const rows=[{id:"1",query:"q1",platform:"AI",response:"Product is recommended"},{id:"2",query:"q2",platform:"AI",response:"Product is sold everywhere"}];const m=measureEntities(rows,cards,map);expect(m[0].mentions).toBe(1);expect(m[1].mentions).toBe(0);expect(m[0].evidence[0].answerId).toBe("1")})
+it("does not inflate counts with duplicate answers and returns unknown without measurements",()=>{const r={id:"1",query:"q1",platform:"AI",response:"Product Product"};const m=measureEntities([r,r],[card("p","owned-product","q1")],map);expect(m[0].answers).toBe(1);expect(m[0].mentions).toBe(1);expect(m[1].rate).toBeNull()})
+it("invalidates comparison when counting rules change",()=>{expect(measurementVersion(map,[card("p","owned-product","q1")])).not.toBe(measurementVersion(map,[card("p","owned-product","q2")]))})
+
+it("matches only the aliases explicitly supplied by the approved card",()=>{const cards=[{...card("p","owned-product","q1"),mentionRule:{metric:"owned-product" as const,names:["Продукт"],explanation:"approved Russian name"}}];const m=measureEntities([{id:"1",query:"q1",platform:"AI",response:"Попробуйте Продукт."}],cards,map);expect(m[0].mentions).toBe(1);expect(literalMention("anything","")).toBe(-1)})

@@ -30,7 +30,9 @@ async function callHistory(params: Record<string, string>) {
   return GET(new NextRequest(new Request(`http://localhost/api/audit/history?${qs}`)))
 }
 
+const measurement={generatedQueries:["q1"],selectedPlatforms:["CHATGPT"],analysisSnapshot:{entityMeasurementVersion:"m1",methodologyVersion:"v4"}}
 const completedJob = (id: string, email: string, company: string, score = 72) => ({
+  ...measurement,
   id,
   tier: "STANDARD",
   clientEmail: email,
@@ -51,7 +53,7 @@ describe("GET /api/audit/history", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // By default token is valid and belongs to client "alice@example.com"
-    mockFindFirst.mockResolvedValue({ clientEmail: "alice@example.com", companyName: "Alice Co", websiteUrl: "https://alice.example", market: "by", source: null })
+    mockFindFirst.mockResolvedValue({ ...measurement,clientEmail: "alice@example.com", companyName: "Alice Co", websiteUrl: "https://alice.example", market: "by", source: null })
     mockFindMany.mockResolvedValue([
       completedJob("job-1", "alice@example.com", "Alice Co", 60),
       completedJob("job-2", "alice@example.com", "Alice Co", 75),

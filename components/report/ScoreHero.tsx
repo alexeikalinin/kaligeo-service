@@ -17,6 +17,7 @@ interface BrandRoleStats {
 }
 
 interface Props {
+  measurementMode?: boolean
   companyName: string
   websiteUrl: string
   overallScore: number
@@ -44,6 +45,7 @@ function scoreAccent(score: number): string {
 }
 
 export function ScoreHero({
+  measurementMode,
   companyName,
   websiteUrl,
   overallScore,
@@ -70,10 +72,10 @@ export function ScoreHero({
   const narrative = topWeakPoint
     ? `Главная точка роста: ${topWeakPoint.title.toLowerCase()}. ${topWeakPoint.description}`
     : overallScore >= 60
-      ? `Бренд хорошо виден AI-ассистентам. Продолжайте поддерживать контент-стратегию.`
+      ? measurementMode ? `Индекс показывает долю ответов с целевой сущностью. Подробности по направлениям — выше.` : `Бренд хорошо виден AI-ассистентам. Продолжайте поддерживать контент-стратегию.`
       : overallScore >= 30
-        ? `Базовое присутствие есть, но есть серьёзные пробелы. Смотрите план роста.`
-        : `Бренд почти не упоминается в AI. В плане роста — приоритетные шаги.`
+        ? measurementMode ? `Индекс показывает частоту упоминаний в утверждённой выборке вопросов.` : `Базовое присутствие есть, но есть серьёзные пробелы. Смотрите план роста.`
+        : measurementMode ? `Индекс относится к выбранным направлениям и не доказывает причин отсутствия упоминаний.` : `Бренд почти не упоминается в AI. В плане роста — приоритетные шаги.`
 
   return (
     <div
@@ -107,7 +109,7 @@ export function ScoreHero({
               margin: 0,
             }}
           >
-            {scoreLabel(overallScore)}
+            {measurementMode ? "Индекс охвата выбранных сущностей" : scoreLabel(overallScore)}
           </p>
 
           {totalMentions !== undefined && totalQueries !== undefined && totalQueries > 0 && (

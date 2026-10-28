@@ -1,3 +1,4 @@
+import { meteredAiCall,captureAiUsage } from "../analysis/ai-meter"
 /**
  * GEO Research Agent
  *
@@ -37,6 +38,7 @@ const PLATFORM_QUERIES: Record<string, string> = {
 }
 
 async function fetchPerplexitySearch(query: string): Promise<{ text: string; citations: string[] }> {
+ return meteredAiCall("perplexity","sonar-pro",0.05,async()=>{
   const apiKey = process.env.PERPLEXITY_API_KEY
   if (!apiKey) throw new Error("PERPLEXITY_API_KEY not configured")
 
@@ -71,9 +73,11 @@ async function fetchPerplexitySearch(query: string): Promise<{ text: string; cit
   }
 
   const data = await response.json()
+  captureAiUsage({inputTokens:data.usage?.prompt_tokens,outputTokens:data.usage?.completion_tokens})
   const text: string = data.choices?.[0]?.message?.content ?? ""
   const citations: string[] = Array.isArray(data.citations) ? data.citations : []
   return { text, citations }
+ })
 }
 
 /**

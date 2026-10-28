@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Metadata } from "next"
 import Research2026Form from "./Research2026Form"
 
@@ -35,18 +36,18 @@ export default function Research2026Page() {
       {/* Nav */}
       <header style={{ borderBottom: "1px solid var(--rule)", padding: "16px 0" }}>
         <div style={{ maxWidth: "760px", margin: "0 auto", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <a
+          <Link
             href="/"
             style={{ fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: "13px", letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--ink)", textDecoration: "none" }}
           >
             KaliGEO
-          </a>
-          <a
+          </Link>
+          <Link
             href="/pricing"
             style={{ fontSize: "13px", color: "var(--ink-3)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}
           >
             Заказать аудит →
-          </a>
+          </Link>
         </div>
       </header>
 
@@ -162,15 +163,15 @@ export default function Research2026Page() {
             Это исследование — агрегат реальных данных от наших клиентов (анонимизированных).
           </p>
           <div style={{ marginTop: "20px", display: "flex", gap: "16px", flexWrap: "wrap" }}>
-            <a href="/" style={{ fontSize: "13px", color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
+            <Link href="/" style={{ fontSize: "13px", color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
               Главная →
-            </a>
-            <a href="/tools/domain-check" style={{ fontSize: "13px", color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
+            </Link>
+            <Link href="/tools/domain-check" style={{ fontSize: "13px", color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
               Бесплатная проверка сайта →
-            </a>
-            <a href="/pricing" style={{ fontSize: "13px", color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
+            </Link>
+            <Link href="/pricing" style={{ fontSize: "13px", color: "var(--ink)", textDecoration: "none", borderBottom: "1px solid var(--rule)" }}>
               Заказать полный аудит →
-            </a>
+            </Link>
           </div>
         </div>
       </main>

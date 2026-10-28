@@ -89,6 +89,7 @@ interface ReportDashboardProps {
       mentionQuality?: number | null
     }[]
   }
+  measurementMode?: boolean
   report: {
     overallScore: number
     visibilityScores: Record<string, PlatformScore>
@@ -137,7 +138,7 @@ const TABS = [
   { key: "overview",    label: "Обзор",        availableFrom: "BASIC"    },
   { key: "platforms",   label: "Платформы",     availableFrom: "BASIC"    },
   { key: "sov",         label: "SoV",           availableFrom: "STANDARD" },
-  { key: "competitors", label: "Конкуренты",    availableFrom: "STANDARD" },
+  { key: "competitors", label: "Конкуренты",    availableFrom: "BASIC" },
   { key: "sources",     label: "Источники",     availableFrom: "STANDARD" },
   { key: "trends",      label: "История",       availableFrom: "STANDARD" },
   { key: "weakpoints",  label: "Слабые места",  availableFrom: "BASIC"    },
@@ -154,6 +155,7 @@ function isTabLocked(tabAvailableFrom: string, userTier: string): boolean {
 
 function isReportTabLocked(tab: (typeof TABS)[number], tier: string): boolean {
   const config = getTierConfig(tier as Tier)
+  if (tab.key === "competitors") return !config.hasCompetitorMatrix
   if (tab.key === "trends") return !config.hasHistoricalTrends
   if (tab.key === "progress") return !config.hasComparison
   return isTabLocked(tab.availableFrom, tier)
@@ -165,7 +167,7 @@ function getFirstAvailableTab(tier: string): TabKey {
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, nicheBenchmark, analysisNotes, contentRecommendations, comparison, sourcesReport, shareOfVoice, competitivePosition }: ReportDashboardProps) {
+export function ReportDashboard({ measurementMode, job, report, nicheIntel, sources, verbatimQuotes, platformInsights, competitorGaps, nicheBenchmark, analysisNotes, contentRecommendations, comparison, sourcesReport, shareOfVoice, competitivePosition }: ReportDashboardProps) {
   const [selectedTab, setTab] = useState<TabKey>(() => getFirstAvailableTab(job.tier))
   const tabDef = TABS.find((t) => t.key === selectedTab)!
   const tab = isReportTabLocked(tabDef, job.tier) ? getFirstAvailableTab(job.tier) : selectedTab
@@ -178,7 +180,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
 
   const totalMentions = Object.values(report.visibilityScores).reduce((a, s) => a + s.mentionCount, 0)
   const totalQueries = Object.values(report.visibilityScores).reduce((a, s) => a + s.totalQueries, 0)
-  const brandRoleStats = aggregateBrandRoles(job.queryResults)
+  const brandRoleStats = measurementMode ? null : aggregateBrandRoles(job.queryResults)
 
   // Build sparkline history: [prevScore, currScore] per platform from comparison platformDeltas
   const platformHistory: Record<string, number[]> | undefined = comparison
@@ -196,6 +198,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
         <Link href="/my/dashboard" className="underline" style={{ color: "var(--ink-3)" }}>Личный кабинет →</Link>
       </div>
       <ScoreHero
+        measurementMode={measurementMode}
         companyName={job.companyName}
         websiteUrl={job.websiteUrl}
         overallScore={report.overallScore}
@@ -284,7 +287,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
 
         {tab === "overview" && (
           <div className="space-y-10">
-            <ExecutiveSummary
+            {!measurementMode && <ExecutiveSummary
               companyName={job.companyName}
               overallScore={report.overallScore}
               platformScores={report.visibilityScores}
@@ -292,8 +295,8 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
               competitorMatrix={report.competitorMatrix}
               tier={job.tier}
               benchmarkScore={benchmarkScore}
-            />
-            {nicheIntel && (
+            />}
+            {!measurementMode && nicheIntel && (
               <NicheIntelligence
                 niche={job.niche}
                 overallScore={report.overallScore}
@@ -317,7 +320,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
               </h2>
               <WeakPointsList weakPoints={report.weakPoints.slice(0, 3)} />
             </section>
-            {(() => {
+            {!measurementMode && (() => {
               const crs = calculateCitationReadiness(report.weakPoints, report.visibilityScores)
               return (
                 <CitationReadinessCard
@@ -330,7 +333,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                 />
               )
             })()}
-            {job.tier === "BASIC" && (
+            {!measurementMode && job.tier === "BASIC" && (
               <section>
                 <p className="t-eyebrow mb-2">⚡ С чего начать</p>
                 <h2 className="text-lg font-bold mb-4" style={{ fontFamily: "var(--font-serif)", color: "var(--ink)" }}>
@@ -361,7 +364,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
             {job.reportToken && (
               <RecurringPanel jobId={job.id} token={job.reportToken} tier={job.tier} />
             )}
-            {verbatimQuotes && !isTabLocked("ADVANCED", job.tier) && (
+            {!measurementMode && verbatimQuotes && !isTabLocked("ADVANCED", job.tier) && (
               <VerbatimInsights quotes={verbatimQuotes} companyName={job.companyName} />
             )}
 
@@ -377,7 +380,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
               </h2>
               <PlatformScoresGrid scores={report.visibilityScores} weakPoints={report.weakPoints} benchmarkScore={benchmarkScore} platformHistory={platformHistory} />
             </div>
-            {platformInsights && platformInsights.length > 0 && (
+            {!measurementMode && platformInsights && platformInsights.length > 0 && (
               <PlatformIntelligence insights={platformInsights} />
             )}
           </div>
@@ -386,7 +389,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
         {tab === "sov" && (
           isTabLocked("STANDARD", job.tier)
             ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="sov" />
-            : shareOfVoice && competitivePosition
+            : !measurementMode && shareOfVoice && competitivePosition
               ? (
                 <ShareOfVoiceTab
                   companyName={job.companyName}
@@ -403,14 +406,14 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                     Нет данных для Share of Voice
                   </p>
                   <p className="text-sm" style={{ color: "var(--ink-3)" }}>
-                    Для расчёта SoV укажите конкурентов при следующем аудите.
+                    Сравнение долей голоса требует единого набора альтернатив и одинаковых правил зачёта. Оно не рассчитано для этой методики.
                   </p>
                 </div>
               )
         )}
 
         {tab === "competitors" && (
-          isTabLocked("STANDARD", job.tier)
+          !getTierConfig(job.tier as Tier).hasCompetitorMatrix
             ? <LockedTabPlaceholder requiredTier="STANDARD" tabKey="competitors" />
             : (
               <div className="space-y-10">
@@ -508,7 +511,7 @@ export function ReportDashboard({ job, report, nicheIntel, sources, verbatimQuot
                   История видимости
                 </h2>
                 <p className="text-sm mb-6" style={{ color: "var(--ink-3)" }}>
-                  Динамика AI-видимости по аудитам компании {job.companyName}. При разном составе платформ и вопросов оценки не полностью сопоставимы.
+                  Динамика AI-видимости компании {job.companyName}. Показаны только замеры с одинаковыми утверждёнными вопросами, целями и платформами. Копия исходного отчёта не считается новым замером.
                 </p>
                 <TrendsChart
                   jobId={job.id}

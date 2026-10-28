@@ -1,3 +1,4 @@
+import { EVIDENCE_RULES } from "../analysis/query-methodology"
 import { generateText, Output } from "ai"
 import { z } from "zod"
 import { getAdvancedAnalysisModel } from "../models"
@@ -14,6 +15,7 @@ export interface ContentRecommendations {
 
 
 export async function runContentAgent(params: {
+  verifiedEvidence?: unknown
   companyName: string
   niche: string
   weakPoints: string[]
@@ -21,7 +23,9 @@ export async function runContentAgent(params: {
 }): Promise<ContentRecommendations> {
   const { companyName, niche, weakPoints, competitorStrengths } = params
 
-  const prompt = `Ты — эксперт по GEO-контент-маркетингу (Generative Engine Optimization) 2026. Твоя задача — создать контент, который попадёт в ответы ChatGPT, Perplexity, Gemini, Claude и Яндекс Алисы как авторитетный источник.
+  const prompt = `${EVIDENCE_RULES}
+Проверки сайта: ${JSON.stringify(params.verifiedEvidence ?? "Не проверено")}. Не предлагай создать уже найденную статью Wikipedia.
+Ты — эксперт по GEO-контент-маркетингу (Generative Engine Optimization) 2026. Твоя задача — создать контент, который попадёт в ответы ChatGPT, Perplexity, Gemini, Claude и Яндекс Алисы как авторитетный источник.
 
 Компания: ${companyName}
 Ниша: ${niche}
@@ -50,33 +54,27 @@ ${competitorStrengths.map((s) => `- ${s}`).join("\n")}
     {
       "action": "Конкретное действие (например: Создать карточку компании на Wikidata)",
       "platform": "Wikidata / Wikipedia / Google Business / Яндекс.Справочник / отраслевой портал",
-      "impact": "Как это улучшит Entity Recognition в LLM через 1-3 месяца"
+      "impact": "Ожидаемый эффект как гипотеза и способ его проверки"
     }
   ]
 }
 
-ФОРМАТЫ КОНТЕНТА, КОТОРЫЕ AI ЦИТИРУЕТ ОХОТНЕЕ ВСЕГО (применяй в contentBriefs, faqStructure и geoOptimizationBriefs):
-1. Standalone definition — «[Бренд] — это [25-50 слов: год основания, категория, ключевое отличие].» — именно этот формат AI берёт в knowledge panels и Entity Graph
-2. Quotable statement — «[Должность] [Имя] утверждает: "[1-3 предложения + конкретная цифра]." ([источник, год])» — Perplexity-ready цитата с атрибуцией
-3. FAQ answer budget — ответ на FAQ-вопрос ≤60 слов → AI цитирует дословно; более длинные ответы AI переформулирует и теряет атрибуцию бренда
-4. Disambiguation note — если бренд может путаться с другим: «[Бренд] (не путать с [похожее]) — это...» — устраняет «confused» статус в AI
-5. "Ответ сначала" принцип — ключевой тезис в первом предложении абзаца, затем контекст — AI берёт первое предложение как цитату
-6. Specificity rule — заменяй «многие клиенты» на «83% клиентов (n=1 200, опрос 2025)» — AI предпочитает верифицируемые, датированные утверждения
+Рекомендации по ясности контента — гипотезы для проверки, без гарантии цитирования:
+- Краткое определение бренда, ответ в начале раздела, понятные FAQ и ссылки на источники.
+- Цитаты людей, статистика, даты и цифры — только из предоставленных проверяемых фактов. При отсутствии данных предложи собрать их; не выдумывай пример как факт.
+- Не обещай дословное цитирование, попадание в топ или фиксированный срок эффекта.
 
 Правила:
-- blogTopics: 5-7 тем, фокус на вопросах которые задают ChatGPT/Perplexity (формат "Лучший...", "Как выбрать...", "Топ...")
-- faqStructure: 5-8 FAQ с конкретными ответами которые AI будет цитировать — формат Question + Answer-outline
-- schemaSuggestions: 4-5 типов Schema.org (Organization, FAQPage, Product, LocalBusiness, Review, **Speakable** — специально для голосовых ассистентов: указывает Алисе и другим голосовым AI какие фрагменты зачитывать) — конкретно для этой ниши
-- contentBriefs: 3-5 материалов под конкретные пробелы аудита (лонгрид/кейс/сравнение/рейтинг). Каждый материал должен иметь FAQ-блок с ответами ≤60 слов — такой формат AI цитирует дословно.
-- geoOptimizationBriefs: 3-4 материала специально под GEO — страницы, которые попадут в "топ" и "лучший" запросы
-- entitySignalRecommendations: 5-7 конкретных действий для усиления Entity Graph, ОБЯЗАТЕЛЬНО включая:
-  * llms.txt в корне сайта (новый стандарт 2025: разрешения для AI-краулеров, аналог robots.txt для LLM — указать Allow: /blog, /faq, /about)
-  * Яндекс Бизнес / business.yandex.ru (критично для Алисы — primary source голосовых рекомендаций)
-  * Яндекс Справочник и 2GIS (для Алисы и локального AI-поиска)
-  * + остальные внешние площадки (Wikipedia, Wikidata, профильные каталоги)
+- blogTopics: 5-7 тем по реальным вопросам выборки и подтвержденным продуктам компании.
+- faqStructure: 5-8 FAQ; answerOutline — план ответа, а не выдуманные факты.
+- schemaSuggestions: только применимые типы Schema.org. Если разметка уже обнаружена, рекомендуй проверить полноту, а не объявляй её отсутствующей. Не требуй LocalBusiness у нелокального бизнеса или Review без реальных отзывов.
+- contentBriefs: 3-5 материалов под конкретные пробелы ответов с указанием проверяемой цели.
+- geoOptimizationBriefs: 3-4 материала под релевантные запросы; эффект проверяется следующими измерениями.
+- entitySignalRecommendations: только релевантные площадки. Непроверенное наличие профиля требует сначала проверки. Wikipedia/Wikidata зависят от правил значимости площадки, не гарантируй публикацию.
+- llms.txt не является разрешением на обход сайта и не заменяет robots.txt; не включай его как обязательное исправление. Не утверждай поддержку Speakable конкретным ассистентом без источника.
 - Всё на русском языке, конкретно для ниши "${niche}"`
 
-  const { output } = await generateText({
+  const { output } = await generateText({ maxRetries: 0,
     model: getAdvancedAnalysisModel(), prompt, maxOutputTokens: 10000,
     output: Output.object({ schema: z.object({
       blogTopics: z.array(z.object({ title: z.string(), angle: z.string(), keywords: z.array(z.string()) })),

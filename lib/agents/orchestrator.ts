@@ -1,10 +1,9 @@
-import Anthropic from "@anthropic-ai/sdk"
+import { generateText, tool, jsonSchema, stepCountIs } from "ai"
+import { getOrchestratorModel } from "../models"
 import { dispatchTool } from "./index"
-import type { RiskReport } from "./risk-agent"
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const TOOLS: Anthropic.Tool[] = [
+const TOOLS: { name: string; description: string; input_schema: Parameters<typeof jsonSchema>[0] }[] = [
   {
     name: "invoke_analysis_agent",
     description: "Запустить углублённый анализ результатов аудита для конкретного job",
@@ -143,56 +142,15 @@ export async function runOrchestrator(
   task: string,
   context: Record<string, unknown>
 ): Promise<string> {
-  const messages: Anthropic.MessageParam[] = [
-    {
-      role: "user",
-      content: `Задача: ${task}\n\nКонтекст: ${JSON.stringify(context, null, 2)}`,
-    },
-  ]
-
-  let iterations = 0
-  const maxIterations = 10
-
-  while (iterations < maxIterations) {
-    iterations++
-
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 4096,
-      tools: TOOLS,
-      messages,
-    })
-
-    if (response.stop_reason === "end_turn") {
-      const textBlock = response.content.find((b) => b.type === "text")
-      return textBlock?.type === "text" ? textBlock.text : "Готово."
-    }
-
-    if (response.stop_reason === "tool_use") {
-      messages.push({ role: "assistant", content: response.content })
-
-      const toolResults: Anthropic.ToolResultBlockParam[] = []
-
-      for (const block of response.content) {
-        if (block.type !== "tool_use") continue
-
-        let result: string
-        try {
-          result = await dispatchTool(block.name, block.input as Record<string, unknown>)
-        } catch (err) {
-          result = `Error: ${err instanceof Error ? err.message : String(err)}`
-        }
-
-        toolResults.push({
-          type: "tool_result",
-          tool_use_id: block.id,
-          content: result,
-        })
-      }
-
-      messages.push({ role: "user", content: toolResults })
-    }
-  }
-
-  return "Превышен лимит итераций оркестратора."
+  const tools = Object.fromEntries(TOOLS.map(definition => [definition.name, tool({
+    description: definition.description,
+    inputSchema: jsonSchema<Record<string, unknown>>(definition.input_schema),
+    execute: async (input) => dispatchTool(definition.name, input),
+  })]))
+  const result = await generateText({
+    model: getOrchestratorModel(), maxRetries: 0, maxOutputTokens: 4096,
+    prompt: `Задача: ${task}\n\nКонтекст: ${JSON.stringify(context, null, 2)}`,
+    tools, stopWhen: stepCountIs(10),
+  })
+  return result.text || "Достигнут предел шагов оркестратора; проверьте результаты выполненных действий."
 }

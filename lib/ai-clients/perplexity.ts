@@ -1,3 +1,4 @@
+import { captureAiUsage } from "../analysis/ai-meter"
 import type { AIClient } from "./types"
 import { AUDIT_SYSTEM_PROMPT } from "./types"
 
@@ -21,7 +22,9 @@ async function callPerplexityAPI(prompt: string, systemPrompt: string) {
     }),
   })
   if (!response.ok) throw new Error(`Perplexity error: ${response.status}`)
-  return await response.json()
+  const data=await response.json()
+  captureAiUsage({inputTokens:data.usage?.prompt_tokens,outputTokens:data.usage?.completion_tokens})
+  return data
 }
 
 export const perplexityClient: AIClient = {

@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { Metadata } from "next"
 import MagicLinkForm from "@/components/portal/MagicLinkForm"
 import LoginPreview from "@/components/portal/LoginPreview"
@@ -22,7 +23,7 @@ export default async function LoginPage({ searchParams }: Props) {
     >
       {/* Left — form */}
       <div className="flex-1 flex flex-col justify-center px-8 md:px-16 py-16 md:py-0 max-w-lg mx-auto md:mx-0 md:max-w-md">
-        <a
+        <Link
           href="/"
           style={{
             fontFamily: "var(--font-mono)",
@@ -37,7 +38,7 @@ export default async function LoginPage({ searchParams }: Props) {
           }}
         >
           KaliGEO
-        </a>
+        </Link>
 
         <h1
           style={{

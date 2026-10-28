@@ -1,0 +1,6 @@
+import {expect,it} from "vitest"
+import {groundBusinessMap,validateBusinessMap,mapHash,assertReviewableMap}from"@/lib/questions/business-map"
+const map={entities:[{id:"c",kind:"company",name:"Brand",attributes:[],sources:[{url:"https://example.com",quote:"Brand delivers flowers"}],confidence:"supported"}],relationships:[],audiences:[{id:"a",name:"Buyers",needs:["delivery"],entityIds:["c"],sources:[],confidence:"uncertain"}],geography:[],scope:[{entityId:"c",audienceId:"a",metric:"company",rationale:"find supplier"}],unknowns:[]}
+it("rejects fabricated citations and marks unsupported audiences",()=>{const m=groundBusinessMap(map,[{url:"https://example.com",text:"Brand sells books"}]);expect(m.entities[0].sources).toEqual([]);expect(m.entities[0].confidence).toBe("uncertain");expect(()=>assertReviewableMap(m)).toThrow()})
+it("keeps exact page evidence and stable revision",()=>{const m=groundBusinessMap(map,[{url:"https://example.com",text:"Brand delivers flowers"}]);expect(m.entities[0].confidence).toBe("supported");expect(mapHash(m)).not.toBe(mapHash({...m,unknowns:["new"]}))})
+it("rejects relationships to invented entity identifiers",()=>{expect(()=>validateBusinessMap({...map,relationships:[{from:"c",to:"unknown",role:"sells",sources:[],confidence:"uncertain"}]})).toThrow()})

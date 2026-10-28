@@ -25,7 +25,7 @@ interface StatusResponse {
 
 const STEPS: { key: JobStatus; label: string }[] = [
   { key: "PENDING", label: "Подготовка" },
-  { key: "GENERATING_QUERIES", label: "Генерация запросов" },
+  { key: "GENERATING_QUERIES", label: "Подготовка и проверка вопросов" },
   { key: "EXECUTING_QUERIES", label: "Опрос AI-платформ" },
   { key: "ANALYZING", label: "Анализ результатов" },
   { key: "GENERATING_REPORT", label: "Генерация отчёта" },

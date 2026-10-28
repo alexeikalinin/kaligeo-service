@@ -1,3 +1,4 @@
+import {compatibleMeasurements,measurementOrigin} from "@/lib/analysis/measurement-compatibility"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
   // Проверяем, что token принадлежит одному из аудитов этого клиента
   const tokenCheck = await prisma.auditJob.findFirst({
     where: { reportToken: token },
-    select: { clientEmail: true, companyName: true, websiteUrl: true, market: true, source: true },
+    select: { generatedQueries:true,selectedPlatforms:true,analysisSnapshot:true,clientEmail: true, companyName: true, websiteUrl: true, market: true, source: true },
   })
   if (!tokenCheck) {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 })
@@ -54,8 +55,9 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "asc" },
   })
 
+  const seen=new Set<string>()
   const points = jobs
-    .filter((j) => j.report !== null)
+    .filter(j=>{const origin=measurementOrigin(j.id,j.analysisSnapshot);if(!j.report||!compatibleMeasurements(tokenCheck,j)||seen.has(origin))return false;seen.add(origin);return true})
     .map((j) => ({
       id: j.id,
       tier: j.tier,

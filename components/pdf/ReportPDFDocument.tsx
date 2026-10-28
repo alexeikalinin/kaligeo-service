@@ -1,3 +1,4 @@
+import type { EntityMeasurement } from "@/lib/analysis/entity-visibility"
 import {
   Document,
   Page,
@@ -49,6 +50,8 @@ interface ActionPlan {
 }
 
 interface ReportData {
+  entityMeasurements?:EntityMeasurement[]
+  measurementMode?:boolean
   coverage?: { platform: string; answered: number; expected: number }[]
   companyName: string
   websiteUrl: string
@@ -205,7 +208,7 @@ function CoverPage({ data }: { data: ReportData }) {
         <Text style={[styles.scoreBig, { color: scoreColor(data.overallScore) }]}>
           {data.overallScore}
         </Text>
-        <Text style={styles.scoreLabel}>/ 100</Text>
+        <Text style={styles.scoreLabel}>/ 100{data.measurementMode?" — доля ответов с выбранной целевой сущностью":""}</Text>
       </View>
       <Text style={[styles.coverMeta, { marginTop: 24 }]}>Ниша: {data.niche}</Text>
       <Text style={styles.coverMeta}>Сайт: {data.websiteUrl}</Text>
@@ -339,6 +342,7 @@ export function ReportPDFDocument({ data }: { data: ReportData }) {
   return (
     <Document title={`KaliGEO Audit — ${data.companyName}`} author="KaliGEO">
       <CoverPage data={data} />
+      {data.entityMeasurements?.length ? <Page size="A4" style={styles.page}><Text style={styles.coverSubtitle}>Видимость выбранных сущностей</Text><Text>Компания, продукты и продавец учитываются отдельно. Прямые брендовые вопросы исключены из сводного индекса. Частота упоминаний не доказывает причины отсутствия или качество продукта.</Text>{data.entityMeasurements.map((m,i)=><View key={i} style={{marginTop:14}}><Text>{m.name} — {m.audienceName} — {m.metric}</Text><Text>{m.rate===null?"Не измерено":`${m.mentions}/${m.answers} ответов (${m.rate}%)`}</Text>{m.platforms.map(p=><Text key={p.platform}>{p.platform}: {p.mentions}/{p.answers}</Text>)}</View>)}</Page>:null}
       <PlatformScoresPage data={data} />
       {data.competitorMatrix.length > 0 && <CompetitorMatrixPage data={data} />}
       {data.weakPoints.some((w) => w.detected) && <WeakPointsPage data={data} />}

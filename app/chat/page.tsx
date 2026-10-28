@@ -1,4 +1,5 @@
 "use client"
+import { submittedAuditId } from "@/lib/chat/submitted-audit"
 
 import { useChat } from "@ai-sdk/react"
 import { DefaultChatTransport, isTextUIPart, type UIMessage } from "ai"
@@ -23,31 +24,13 @@ export default function ChatPage() {
   const router = useRouter()
   const bottomRef = useRef<HTMLDivElement>(null)
   const [inputValue, setInputValue] = useState("")
-  const [jobId, setJobId] = useState<string | null>(null)
 
   const { messages, sendMessage, status } = useChat({
     transport,
     messages: [WELCOME_MESSAGE],
   })
 
-  useEffect(() => {
-    for (const msg of messages) {
-      for (const part of msg.parts ?? []) {
-        const p = part as Record<string, unknown>
-        if (
-          typeof p.type === "string" &&
-          p.type.startsWith("tool-") &&
-          p.toolName === "submit_audit" &&
-          p.state === "result" &&
-          p.output &&
-          typeof p.output === "object" &&
-          "jobId" in p.output
-        ) {
-          setJobId((p.output as { jobId: string }).jobId)
-        }
-      }
-    }
-  }, [messages])
+  const jobId=submittedAuditId(messages)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })

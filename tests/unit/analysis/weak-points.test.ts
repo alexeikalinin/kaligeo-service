@@ -81,13 +81,13 @@ describe("detectWeakPoints", () => {
     expect(ids).toContain("low-score")
   })
 
-  it("always includes missing-schema weak point", () => {
+  it("does not invent missing markup without a site check", () => {
     const results = Array.from({ length: 5 }, () =>
       makeResult({ brandMentioned: true, sentiment: "positive" })
     )
     const weakPoints = detectWeakPoints(results, "https://kaligeo.ru", 85)
     const ids = weakPoints.map((wp) => wp.id)
-    expect(ids).toContain("missing-schema")
+    expect(ids).not.toContain("missing-schema")
   })
 
   it("detects no-source-citations when domain not cited in sources", () => {

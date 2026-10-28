@@ -43,3 +43,7 @@ next-env.d.ts
 .playwright-mcp/
 excalidraw.log
 .env*.local
+
+# Local one-off audit investigation scripts and certificate material
+/scripts/.qa-*.mjs
+/Сертификаты доменов/

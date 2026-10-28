@@ -1,0 +1,82 @@
+{
+  "checkedAt": "2026-10-27T22:48:31.014Z",
+  "checks": [
+    {
+      "service": "OpenAI",
+      "status": "authentication-ok",
+      "balanceVerified": false
+    },
+    {
+      "service": "Gemini",
+      "status": "authentication-ok",
+      "balanceVerified": false
+    },
+    {
+      "service": "Claude",
+      "status": "authentication-ok",
+      "balanceVerified": false
+    },
+    {
+      "service": "DeepSeek",
+      "status": "authentication-ok",
+      "balanceVerified": true
+    },
+    {
+      "service": "Grok",
+      "status": "authentication-ok",
+      "balanceVerified": false
+    },
+    {
+      "service": "Resend",
+      "status": "missing-or-redacted"
+    }
+  ],
+  "missing": [
+    "GIGACHAT_CLIENT_ID",
+    "GIGACHAT_CLIENT_SECRET",
+    "YOOKASSA_SHOP_ID",
+    "YOOKASSA_SECRET_KEY"
+  ],
+  "redactedProduction": [
+    "ADMIN_EMAIL",
+    "ADMIN_SESSION_TOKEN",
+    "ADMIN_TELEGRAM_BOT_TOKEN",
+    "ADMIN_TELEGRAM_CHAT_ID",
+    "ALFABANK_CALLBACK_TOKEN",
+    "ALFABANK_CALLBACK_TOKEN_RU",
+    "ALFABANK_PASS",
+    "ALFABANK_PASS_RU",
+    "ALFABANK_SANDBOX",
+    "ALFABANK_USER",
+    "ALFABANK_USER_RU",
+    "ANTHROPIC_API_KEY",
+    "BLOB_READ_WRITE_TOKEN",
+    "CLIENT_SESSION_SECRET",
+    "DATABASE_URL",
+    "DEEPSEEK_API_KEY",
+    "DIRECT_URL",
+    "FROM_EMAIL",
+    "FROM_EMAIL_BY",
+    "GOOGLE_AI_API_KEY",
+    "GROK_API_KEY",
+    "HUNTER_API_KEY",
+    "INTERNAL_SECRET",
+    "LANDING_ORIGIN",
+    "NEXT_PUBLIC_APP_URL",
+    "NEXT_PUBLIC_RESEARCH_PDF_URL",
+    "OPENAI_API_KEY",
+    "PERPLEXITY_API_KEY",
+    "RESEARCH_PDF_URL",
+    "RESEND_API_KEY",
+    "TELEGRAM_WEBHOOK_SECRET",
+    "TRIGGER_SECRET_KEY",
+    "UPSTASH_REDIS_REST_TOKEN",
+    "UPSTASH_REDIS_REST_URL",
+    "YANDEXGPT_API_KEY",
+    "YANDEX_FOLDER_ID",
+    "YANDEX_RELAY_SECRET",
+    "YANDEX_RELAY_URL"
+  ],
+  "savedSecrets": ".env.keys.local",
+  "note": "Successful model listing verifies authentication, not balance or inference availability. Production redactions are not proof of missing server secrets."
+}

@@ -1,3 +1,4 @@
+import {LeadStatus} from "@prisma/client"
 /**
  * lead-scorer-agent — приоритизирует лидов по потенциалу конверсии.
  *
@@ -201,9 +202,11 @@ export async function runLeadScorerAgent(leadId: string): Promise<LeadScore> {
 export async function scoreAllLeads(
   filter: { status?: string; niche?: string } = {}
 ): Promise<LeadScore[]> {
+  const status=filter.status ? LeadStatus[filter.status as keyof typeof LeadStatus] : undefined
+  if(filter.status&&!status)throw Error("Unknown lead status")
   const leads = await prisma.lead.findMany({
     where: {
-      ...(filter.status ? { status: filter.status as any } : { status: { notIn: ["CONVERTED", "UNSUBSCRIBED"] } }),
+      ...(status ? { status } : { status: { notIn: ["CONVERTED", "UNSUBSCRIBED"] } }),
       ...(filter.niche ? { niche: { contains: filter.niche, mode: "insensitive" } } : {}),
     },
     select: { id: true },

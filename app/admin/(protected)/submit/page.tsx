@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 interface PreviousAudit {
@@ -25,31 +25,27 @@ export default function SubmitPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [websiteUrl, setWebsiteUrl] = useState("")
-  const [previousAudits, setPreviousAudits] = useState<PreviousAudit[]>([])
+  const [history,setHistory]=useState<{url:string;rows:PreviousAudit[]}>({url:"",rows:[]})
+  const previousAudits=history.url===websiteUrl?history.rows:[]
   const [baselineJobId, setBaselineJobId] = useState("")
   const [tier, setTier] = useState("STANDARD")
   const [scheduleFollowUp, setScheduleFollowUp] = useState(false)
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
   const debouncedUrl = useDebounce(websiteUrl, 600)
-  const abortRef = useRef<AbortController | null>(null)
 
   useEffect(() => {
-    if (!debouncedUrl) {
-      setPreviousAudits([])
-      return
-    }
-    abortRef.current?.abort()
+    if (!debouncedUrl) return
     const ctrl = new AbortController()
-    abortRef.current = ctrl
 
     fetch(`/api/admin/audit/history?websiteUrl=${encodeURIComponent(debouncedUrl)}`, {
       signal: ctrl.signal,
     })
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data)) setPreviousAudits(data)
+        if (Array.isArray(data)&&!ctrl.signal.aborted) setHistory({url:debouncedUrl,rows:data})
       })
       .catch(() => {})
+    return ()=>ctrl.abort()
   }, [debouncedUrl])
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {

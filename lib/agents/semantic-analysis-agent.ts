@@ -4,11 +4,12 @@
  * Для каждого QueryResult, где brandMentioned = true, классифицирует
  * контекст упоминания бренда и присваивает quality score 0–100.
  *
- * Использует claude-haiku-4-5 (дёшево, быстро, достаточно для классификации).
+ * Использует Gemini Flash-Lite (дёшево, быстро, достаточно для классификации).
  * Запускается в ADVANCED / MONITOR_AGENT пайплайне параллельно с другими агентами.
  */
 
-import Anthropic from "@anthropic-ai/sdk"
+import { generateText } from "ai"
+import { getLightweightModel } from "../models"
 import { prisma } from "../prisma"
 import type { MentionContext, MentionClassification } from "./semantic-analysis-types"
 
@@ -18,16 +19,6 @@ import type { MentionContext, MentionClassification } from "./semantic-analysis-
 export type { MentionContext, MentionClassification } from "./semantic-analysis-types"
 export { MENTION_CONTEXT_LABELS } from "./semantic-analysis-types"
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-// Quality scores по типу упоминания (базовые)
-const BASE_QUALITY: Record<MentionContext, number> = {
-  PRIMARY_RECOMMENDATION: 90,
-  COMPARISON:             60,
-  ALTERNATIVE:            40,
-  REFERENCE:              25,
-  WARNING:                 5,
-}
 
 // ── Извлечь контекстное окно вокруг упоминания ─────────────────────────────
 
@@ -39,7 +30,7 @@ function extractContextWindow(text: string, brand: string, windowSize = 400): st
   return (start > 0 ? "…" : "") + text.slice(start, end) + (end < text.length ? "…" : "")
 }
 
-// ── Батч-классификация через Claude Haiku ────────────────────────────────────
+// ── Батч-классификация через Gemini Flash-Lite ────────────────────────────────────
 
 const SYSTEM_PROMPT = `Ты классифицируешь контекст упоминания бренда в ответах AI-ассистентов.
 
@@ -76,49 +67,42 @@ async function classifyBatch(items: ClassifyInput[]): Promise<MentionClassificat
   ).join("\n\n---\n\n")
 
   try {
-    const response = await client.messages.create({
-      model: "claude-haiku-4-5-20251001",
-      max_tokens: 1024,
+    const response = await generateText({
+      model: getLightweightModel(),
+      maxRetries: 0,
+      maxOutputTokens: 2048,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: userMessage }],
     })
 
-    const text = response.content[0].type === "text" ? response.content[0].text.trim() : "[]"
+    const text = response.text.trim()
 
-    // Парсим JSON — Claude Haiku иногда оборачивает в ```json
+    // Парсим JSON — Gemini Flash-Lite иногда оборачивает в ```json
     const jsonMatch = text.match(/\[[\s\S]*\]/)
-    if (!jsonMatch) return fallbackClassifications(items)
+    if (!jsonMatch) throw new Error("Classification response contains no JSON array")
 
     const parsed = JSON.parse(jsonMatch[0]) as { id: string; context: string; quality: number }[]
 
+    const expected = new Set(items.map(item => item.id))
+    if (parsed.length !== expected.size || new Set(parsed.map(p => p.id)).size !== expected.size) {
+      throw new Error("Classification response has missing or duplicate IDs")
+    }
     return parsed.map((p) => {
-      const ctx = (p.context ?? "REFERENCE") as MentionContext
-      const validContexts: MentionContext[] = [
-        "PRIMARY_RECOMMENDATION", "COMPARISON", "ALTERNATIVE", "REFERENCE", "WARNING"
-      ]
-      const safeCtx: MentionContext = validContexts.includes(ctx) ? ctx : "REFERENCE"
-      const quality = Math.max(0, Math.min(100, Math.round(p.quality ?? BASE_QUALITY[safeCtx])))
-
+      const validContexts: MentionContext[] = ["PRIMARY_RECOMMENDATION", "COMPARISON", "ALTERNATIVE", "REFERENCE", "WARNING"]
+      if (!expected.has(p.id) || !validContexts.includes(p.context as MentionContext)
+        || !Number.isFinite(p.quality) || p.quality < 0 || p.quality > 100) {
+        throw new Error("Invalid classification: ID, context or quality")
+      }
       return {
         queryResultId: p.id,
-        mentionContext: safeCtx,
-        mentionQuality: quality,
-        rationale: `Classified as ${safeCtx} with quality ${quality}`,
+        mentionContext: p.context as MentionContext,
+        mentionQuality: Math.round(p.quality),
+        rationale: `Classified as ${p.context} with quality ${p.quality}`,
       }
     })
   } catch (err) {
-    console.error("[semantic-analysis-agent] Classification error:", err)
-    return fallbackClassifications(items)
+    throw new Error(`Semantic classification failed: ${err instanceof Error ? err.message : "unknown error"}`, { cause: err })
   }
-}
-
-function fallbackClassifications(items: ClassifyInput[]): MentionClassification[] {
-  return items.map((item) => ({
-    queryResultId: item.id,
-    mentionContext: "REFERENCE" as MentionContext,
-    mentionQuality: BASE_QUALITY.REFERENCE,
-    rationale: "Fallback classification (API error)",
-  }))
 }
 
 // ── Основная функция ─────────────────────────────────────────────────────────
@@ -160,7 +144,7 @@ export async function runSemanticAnalysisAgent(jobId: string): Promise<{
     query: r.query,
   }))
 
-  // Батчи по 10 — Haiku легко справится, но не перегружаем контекст
+  // Батчи по 10 — ограничиваем размер запроса, но не перегружаем контекст
   const BATCH_SIZE = 10
   const allClassifications: MentionClassification[] = []
 
@@ -171,7 +155,7 @@ export async function runSemanticAnalysisAgent(jobId: string): Promise<{
   }
 
   // Сохраняем в БД
-  await Promise.allSettled(
+  await Promise.all(
     allClassifications.map((c) =>
       prisma.queryResult.update({
         where: { id: c.queryResultId },

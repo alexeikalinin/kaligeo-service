@@ -1,3 +1,4 @@
+import { captureAiUsage } from "../analysis/ai-meter"
 import type { AIClient } from "./types"
 import { AUDIT_SYSTEM_PROMPT } from "./types"
 
@@ -34,6 +35,7 @@ export const alisaClient: AIClient = {
     }
 
     const data = await response.json()
+    captureAiUsage({inputTokens:data.usage?.prompt_tokens,outputTokens:data.usage?.completion_tokens})
     return data.text ?? ""
   },
 }

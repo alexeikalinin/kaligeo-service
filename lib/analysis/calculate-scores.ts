@@ -1,3 +1,4 @@
+import { isBrandQuestion } from "./query-methodology"
 import type { QueryResult } from "@prisma/client"
 
 export interface PlatformScore {
@@ -24,7 +25,7 @@ export interface PlatformScore {
 export function calculateVisibilityScores(results: QueryResult[]): Record<string, PlatformScore> {
   const byPlatform: Record<string, QueryResult[]> = {}
 
-  for (const r of results) {
+  for (const r of results.filter(r => !isBrandQuestion(r.query))) {
     if (!byPlatform[r.platform]) byPlatform[r.platform] = []
     byPlatform[r.platform].push(r)
   }
@@ -46,8 +47,8 @@ export function calculateVisibilityScores(results: QueryResult[]): Record<string
 
     // Position average (только по упомянутым результатам с positionScore > 0)
     const positionScores = platformResults
-      .filter((r) => r.brandMentioned && (r as any).positionScore > 0)
-      .map((r) => (r as any).positionScore as number)
+      .filter((r) => r.brandMentioned && r.positionScore > 0)
+      .map((r) => r.positionScore as number)
     const avgPosition = positionScores.length > 0
       ? positionScores.reduce((a, b) => a + b, 0) / positionScores.length
       : 0
@@ -59,7 +60,7 @@ export function calculateVisibilityScores(results: QueryResult[]): Record<string
     let qualitySourceCount = 0
     let totalSourceCount = 0
     for (const r of platformResults) {
-      const cats = (r as any).sourceCategories as Record<string, string[]> | null
+      const cats = r.sourceCategories as Record<string, string[]> | null
       if (cats) {
         const quality = [...(cats.media ?? []), ...(cats.expert ?? []), ...(cats.catalog ?? [])].length
         const all = Object.values(cats).flat().length

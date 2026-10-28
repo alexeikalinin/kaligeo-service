@@ -1,3 +1,10 @@
+import {compatibleMeasurements} from "@/lib/analysis/measurement-compatibility"
+import { projectEntityAnswers } from "@/lib/analysis/entity-visibility"
+import type { QuestionCard } from "@/lib/questions/question-cards"
+import type { EntityMeasurement } from "@/lib/analysis/entity-visibility"
+import { isBrandQuestion } from "@/lib/analysis/query-methodology"
+import type { SiteEvidence } from "@/lib/analysis/site-evidence"
+import type { CompetitorEvidence } from "@/lib/agents/competitor-discovery-agent"
 import { isCompetitorCategory, namedCompetitors } from "@/lib/analysis/competitor-names"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -45,6 +52,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           platform: true,
           query: true,
           response: true,
+          positionScore: true,
           brandMentioned: true,
           competitors: true,      // для verbatimQuotes (brandsMentioned)
           sentiment: true,
@@ -77,9 +85,12 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
   }
 
   report.competitorMatrix = report.competitorMatrix.filter(competitor => !isCompetitorCategory(competitor.name))
+  const snapshot = job.analysisSnapshot as { questionCards?:QuestionCard[];entityMeasurements?:EntityMeasurement[];entityMeasurementVersion?:string; evidence?: SiteEvidence; methodologyVersion?: string; baselineSourceJobId?: string; competitorEvidence?: CompetitorEvidence[] } | null
+  const directAnswers = job.queryResults.filter(r => isBrandQuestion(r.query))
   const tierConfig = getTierConfig(job.tier as Tier)
+  const comparable = job.baselineJob && compatibleMeasurements(job,job.baselineJob)
   const comparison =
-    tierConfig.hasComparison && job.baselineJob?.report
+    tierConfig.hasComparison && comparable && job.baselineJob?.report
       ? compareAudits(
           {
             overallScore: job.baselineJob.report.overallScore,
@@ -120,14 +131,18 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
     // queryResults уже загружены, но без sources — делаем отдельный запрос
     const fullResults = await prisma.queryResult.findMany({ where: { jobId: id } })
     if (fullResults.length > 0) {
-      shareOfVoice = calculateShareOfVoice(fullResults, job.companyName, namedCompetitors(job.competitors))
-      competitivePosition = calculateCompetitivePosition(fullResults, namedCompetitors(job.competitors))
+      shareOfVoice = calculateShareOfVoice(fullResults.filter(r => !isBrandQuestion(r.query)), job.companyName, namedCompetitors(job.competitors))
+      competitivePosition = calculateCompetitivePosition(fullResults.filter(r => !isBrandQuestion(r.query)), namedCompetitors(job.competitors))
     }
   }
 
   return (
     <>
+      {job.source==="qa-acceptance"&&!snapshot?.entityMeasurementVersion?<aside className="mx-auto max-w-6xl p-6 border border-amber-600">Исторический тестовый аудит: вопросы не прошли новую проверку. Результаты не используются как исходная точка новой методики.</aside>:null}
+      {snapshot?.entityMeasurements?.length ? <section className="mx-auto max-w-6xl p-6 space-y-4"><h2 className="text-xl font-semibold">Видимость выбранных сущностей</h2><p>Упоминания компании, её продуктов и продавца считаются отдельно. Сводный индекс ниже — доля спонтанных ответов, в которых названа целевая сущность соответствующего вопроса. Прямые брендовые вопросы исключены. Это не оценка качества продуктов или доказательство знания компании моделью.</p>{snapshot.entityMeasurements.map((m,i)=><article key={`${m.entityId}-${m.metric}-${i}`} className="border rounded p-4"><h3>{m.name} · {{company:"Компания","owned-product":"Продукт портфеля",seller:"Продавец"}[m.metric]??m.metric} · {m.audienceName}</h3><p>{m.rate===null?"Не измерено":`${m.mentions} из ${m.answers} ответов — ${m.rate}%`}</p>{m.platforms.map(p=><p key={p.platform}>{p.platform}: {p.mentions}/{p.answers} ({p.rate}%)</p>)}<details><summary>Подтверждающие фрагменты ответов</summary>{m.evidence.map((e,j)=><blockquote key={j}><p>{e.platform}: {e.query}</p><p>{e.quote}</p></blockquote>)}</details></article>)}</section>:null}
+
       <ReportDashboard
+        measurementMode={!!snapshot?.entityMeasurementVersion}
         job={{
           id: job.id,
           companyName: job.companyName,
@@ -143,7 +158,7 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
           completedAt: job.completedAt,
           clientEmail: job.clientEmail,
           reportToken: job.reportToken,
-          queryResults: job.queryResults,
+          queryResults: snapshot?.entityMeasurementVersion ? projectEntityAnswers(job.queryResults,snapshot.questionCards??[]) : job.queryResults,
         }}
         report={report}
         comparison={comparison}
@@ -159,6 +174,23 @@ export default async function ReportPage({ params, searchParams }: PageProps) {
         analysisNotes={analysisNotes}
         contentRecommendations={contentRecommendations}
       />
+      {(snapshot?.methodologyVersion || snapshot?.baselineSourceJobId) && <section className="mx-auto max-w-6xl px-6 py-8 text-sm space-y-4">
+        <h2 className="text-xl font-semibold">Методика и подтверждения</h2>
+        {job.baselineJobId && !comparable && <p>Динамика не рассчитывается: изменились вопросы, набор платформ или методика. Этот аудит нужно использовать как новую точку отсчёта.</p>}
+        {snapshot.baselineSourceJobId && <p>Это первый замер мониторинга: использован готовый разовый аудит без повторного опроса AI. Динамика появится после следующего замера.</p>}
+        {snapshot.methodologyVersion && <p>Вопросы сформированы для аудита, а не получены из статистики реальных обращений. Прямые вопросы о компании показаны отдельно и не входят в оценку спонтанной видимости.</p>}
+        <p>Проверка сайта: {snapshot.evidence?.checkedAt ?? "не выполнена"}. Wikipedia: {snapshot.evidence?.wikipedia.status === "found" ? "найдена статья с совпадающим названием; содержание требует проверки" : "наличие не подтверждено — это не означает отсутствия статьи"}.</p>
+        {snapshot.evidence?.wikipedia.urls.map(url => <p key={url}><a className="underline" href={url} rel="noreferrer" target="_blank">{url}</a></p>)}
+        <details><summary className="cursor-pointer">Прямые вопросы о бренде ({directAnswers.length} ответов)</summary>
+          {directAnswers.map(r => <article className="my-4 whitespace-pre-wrap" key={r.id}><strong>{r.platform}: {r.query}</strong><p>{r.response}</p></article>)}
+          {!directAnswers.length && <p>Прямые вопросы в этом замере не задавались. Знание бренда не оценивалось.</p>}
+        </details>
+        <details><summary className="cursor-pointer">Альтернативные бренды в ответах AI</summary>
+          <p>Это наблюдения в ответах моделей, а не независимо проверенный список конкурентов рынка.</p>
+          {snapshot.competitorEvidence?.map((e, i) => <blockquote className="my-3 border-l pl-3" key={`${e.queryResultId}-${i}`}><strong>{e.name}</strong><p>{e.quote}</p></blockquote>)}
+          {!snapshot.competitorEvidence?.length && <p>Подтверждённых цитат недостаточно.</p>}
+        </details>
+      </section>}
       {/* Chat panel — shown for all tiers, upgrade prompt for Basic */}
       <ReportChatPanel
         jobId={id}

@@ -1,4 +1,4 @@
-import { streamText, stepCountIs, convertToModelMessages } from "ai"
+import { streamText, stepCountIs, convertToModelMessages, tool } from "ai"
 import { z } from "zod"
 import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
 import { CHAT_MODEL } from "@/lib/models"
@@ -62,23 +62,22 @@ export async function POST(req: Request) {
     model: CHAT_MODEL,
     system: SYSTEM_PROMPT,
     messages,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     tools: {
-      analyze_website: {
+      analyze_website: tool({
         description:
           "Проанализировать сайт компании и извлечь название, нишу, услуги, ключевые слова и возможных конкурентов",
-        parameters: analyzeWebsiteSchema,
+        inputSchema: analyzeWebsiteSchema,
         execute: async ({ websiteUrl }: { websiteUrl: string }) => {
           const result = await runWebsiteAnalysisAgent(websiteUrl)
           return result
         },
-      },
-      submit_audit: {
+      }),
+      submit_audit: tool({
         description: "Запустить AI-аудит после сбора всех необходимых данных",
-        parameters: submitAuditSchema,
+        inputSchema: submitAuditSchema,
         execute: executeSubmitAudit,
-      },
-    } as any,
+      }),
+    },
     stopWhen: stepCountIs(15),
   })
 

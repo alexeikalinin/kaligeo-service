@@ -1,3 +1,4 @@
+import { EVIDENCE_RULES } from "../analysis/query-methodology"
 import { generateText } from "ai"
 import { getActionPlanModel } from "../models"
 import type { WeakPoint } from "../analysis/weak-points-checker"
@@ -22,7 +23,8 @@ export async function generateActionPlan(
   weakPoints: WeakPoint[],
   platformScores: Record<string, PlatformScore>,
   overallScore: number,
-  tier: "BASIC" | "STANDARD" | "ADVANCED" = "STANDARD"
+  tier: "BASIC" | "STANDARD" | "ADVANCED" = "STANDARD",
+  verifiedEvidence?: unknown
 ): Promise<ActionPlan> {
   const model = getActionPlanModel(tier)
 
@@ -37,7 +39,7 @@ export async function generateActionPlan(
   // Алиса-блок: подключаем когда скор критически низкий
   const alisaScore = platformScores["Alisa"]?.score ?? platformScores["alisa"]?.score ?? null
   const alisaContext = alisaScore !== null && alisaScore < 40
-    ? `\nАЛИСА-ПРИОРИТЕТЫ (скор ${alisaScore}/100): Яндекс Бизнес регистрация, Speakable Schema.org разметка, FAQ-страница с ответами ≤60 слов, отзывы на Яндекс Картах, проверка YandexAdditionalBot в robots.txt, добавление llms.txt в корень сайта.`
+    ? `\nАлиса: ${alisaScore}/100 в данной выборке. Не выводи техническую причину из низкого скора; предложи проверки по ответам и подтвержденным фактам. Локальные каталоги рекомендуй только релевантному бизнесу, без гарантий цитирования.`
     : ""
 
   // Фреймворк 5 типов запросов: подсказываем агенту
@@ -49,7 +51,9 @@ export async function generateActionPlan(
 - Сравнительные: "X vs Y", "что лучше" — попасть в сравнения
 - Брендовые: прямые запросы с названием бренда — управлять нарративом`
 
-  const prompt = `Ты эксперт по AI-видимости брендов (GEO — Generative Engine Optimization). Создай приоритизированный 30/60/90-дневный план действий.
+  const prompt = `${EVIDENCE_RULES}
+Проверки сайта: ${JSON.stringify(verifiedEvidence ?? "Не проверено")}. Если Wikipedia найдена, не предлагай создать существующую статью.
+Ты эксперт по AI-видимости брендов (GEO — Generative Engine Optimization). Создай приоритизированный 30/60/90-дневный план действий.
 
 Компания: ${companyName}
 Ниша: ${niche}

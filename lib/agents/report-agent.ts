@@ -1,11 +1,11 @@
-import Anthropic from "@anthropic-ai/sdk"
+import { generateText } from "ai"
+import { getAdvancedAnalysisModel, getLightweightModel } from "../models"
 import { prisma } from "../prisma"
 import type { ActionPlan } from "../report/action-plan-gen"
 import { runBenchmarkAgent } from "./benchmark-agent"
 
 type ReportSection = "actionPlan" | "executiveSummary" | "platformNotes"
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function runReportAgent(
   jobId: string,
@@ -37,13 +37,15 @@ export async function runReportAgent(
 {"30d": [...], "60d": [...], "90d": [...]}
 Каждый элемент: {"title": "...", "description": "...", "effort": "low|medium|high", "impact": "low|medium|high"}`
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
+    const response = await generateText({
+      model: getAdvancedAnalysisModel(),
+      maxRetries: 0,
+      maxOutputTokens: 4000,
       messages: [{ role: "user", content: prompt }],
     })
 
-    const text = response.content[0].type === "text" ? response.content[0].text : ""
+    if (response.finishReason === "length") throw new Error("Report output exceeded its token budget")
+    const text = response.text
     const jsonMatch = text.match(/\{[\s\S]*\}/)
     if (!jsonMatch) throw new Error("Failed to parse action plan JSON")
 
@@ -72,13 +74,14 @@ Overall Score: ${reportData.overallScore}/100
 
 Формат: 3-4 абзаца. Ключевые выводы, сравнение с отраслью, приоритеты. На русском.`
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
+    const response = await generateText({
+      model: getLightweightModel(),
+      maxRetries: 0,
+      maxOutputTokens: 1000,
       messages: [{ role: "user", content: prompt }],
     })
 
-    const summary = response.content[0].type === "text" ? response.content[0].text : ""
+    const summary = response.text
     return { executiveSummary: summary }
   }
 
@@ -92,13 +95,14 @@ ${scores.map(s => `${s.platform}: score=${s.score}, citationRate=${s.citationRat
 
 Для каждой платформы: почему такой score, что делать для улучшения. На русском.`
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 2000,
+    const response = await generateText({
+      model: getAdvancedAnalysisModel(),
+      maxRetries: 0,
+      maxOutputTokens: 4000,
       messages: [{ role: "user", content: prompt }],
     })
 
-    const notes = response.content[0].type === "text" ? response.content[0].text : ""
+    const notes = response.text
     return { platformNotes: notes }
   }
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-const { query, create } = vi.hoisted(() => ({ query: vi.fn(), create: vi.fn() }))
+const { query, upsert } = vi.hoisted(() => ({ query: vi.fn(), upsert: vi.fn() }))
 vi.mock("@/lib/ai-clients", () => ({ AI_CLIENTS: { YANDEXGPT: { query } } }))
-vi.mock("@/lib/prisma", () => ({ prisma: { queryResult: { create } } }))
+vi.mock("@/lib/prisma", () => ({ prisma: { $executeRaw:vi.fn().mockResolvedValue(1),queryResult: { upsert } } }))
 import { executeQueriesOnPlatform } from "@/trigger/steps/execute-queries"
 describe("Unavailable platform evidence", () => {
   beforeEach(() => { vi.clearAllMocks() })
@@ -9,7 +9,7 @@ describe("Unavailable platform evidence", () => {
     query.mockRejectedValue(new TypeError("fetch failed"))
     const outcome = await executeQueriesOnPlatform("qa-1", ["q1", "q2", "q3", "q4", "q5"], "YANDEXGPT", "Brand", "https://brand.example", [])
     expect(query).toHaveBeenCalledTimes(3)
-    expect(create).not.toHaveBeenCalled()
+    expect(upsert).not.toHaveBeenCalled()
     expect(outcome.results).toEqual([])
     expect(outcome.failures.map(f => f.query)).toEqual(["q1", "q2", "q3", "q4", "q5"])
   })
@@ -18,6 +18,6 @@ describe("Unavailable platform evidence", () => {
     const outcome = await executeQueriesOnPlatform("qa-1", ["q1"], "YANDEXGPT", "Brand", "https://brand.example", [])
     expect(outcome.results).toHaveLength(0)
     expect(outcome.failures).toHaveLength(1)
-    expect(create).not.toHaveBeenCalled()
+    expect(upsert).not.toHaveBeenCalled()
   })
 })

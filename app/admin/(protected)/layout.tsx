@@ -17,6 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         <Link href="/admin" className="text-base font-bold tracking-widest text-zinc-100">
           KALIGEO
         </Link>
+        <Link href="/admin/question-review" className="text-amber-300">Проверка вопросов</Link>
         <nav className="flex gap-6 text-base text-zinc-400">
           <Link href="/admin" className="hover:text-zinc-100 transition-colors">
             Задания

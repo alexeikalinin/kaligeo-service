@@ -5,7 +5,7 @@ import { NicheSidebar } from "@/components/dashboard/NicheSidebar"
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: "Ожидание",
-  GENERATING_QUERIES: "Запросы",
+  GENERATING_QUERIES: "Подготовка и проверка",
   EXECUTING_QUERIES: "Опрос AI",
   ANALYZING: "Анализ",
   GENERATING_REPORT: "Отчёт",

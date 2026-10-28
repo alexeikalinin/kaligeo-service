@@ -1,0 +1,11 @@
+import fs from 'node:fs';
+import dotenv from 'dotenv';
+import {configure,tasks,runs} from '@trigger.dev/sdk/v3';
+const env={};for(const f of ['.env','.env.local','.env.keys.local'])if(fs.existsSync(f))Object.assign(env,dotenv.parse(fs.readFileSync(f)));
+const key=env.TRIGGER_PROD_SECRET_KEY;if(!key?.startsWith('tr_prod_'))throw Error('Usable Trigger authentication unavailable');
+configure({accessToken:key});
+const handle=await tasks.trigger('audit-readiness',{});
+console.log(JSON.stringify({runId:handle.id}));
+const result=await runs.poll(handle.id,{pollIntervalMs:1000});
+console.log(JSON.stringify({status:result.status,output:result.output}));
+if(result.status!=='COMPLETED')process.exitCode=1;

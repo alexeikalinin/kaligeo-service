@@ -1,12 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { streamText, stepCountIs, validateUIMessages, convertToModelMessages, type ModelMessage } from "ai"
-import { createAnthropic } from "@ai-sdk/anthropic"
+import { getAdvancedAnalysisModel } from "@/lib/models"
 import { prisma } from "@/lib/prisma"
 import { canUsePostAuditChat, isChatLimitReached, getTierConfig, type Tier } from "@/lib/gates"
 
 export const maxDuration = 120
 
-const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 export async function POST(
   req: NextRequest,
@@ -111,7 +110,9 @@ ${topActions || "План не сгенерирован"}
 - Отвечай на том же языке что клиент (обычно русский)`
 
   const result = streamText({
-    model: anthropic("claude-sonnet-4-6"),
+    model: getAdvancedAnalysisModel(),
+    maxOutputTokens: 3000,
+    maxRetries: 0,
     system: SYSTEM_PROMPT,
     messages: modelMessages,
     stopWhen: stepCountIs(1),

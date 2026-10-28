@@ -1,3 +1,4 @@
+import type { EntityMeasurement } from "@/lib/analysis/entity-visibility"
 import { isCompetitorCategory } from "@/lib/analysis/competitor-names"
 import { NextRequest, NextResponse } from "next/server"
 import { renderToBuffer } from "@react-pdf/renderer"
@@ -35,7 +36,9 @@ export async function POST(req: NextRequest) {
   }
 
   report.competitorMatrix = report.competitorMatrix.filter(competitor => !isCompetitorCategory(competitor.name))
+  const snapshot=job.analysisSnapshot as {entityMeasurements?:EntityMeasurement[];entityMeasurementVersion?:string}|null
   const data = {
+    entityMeasurements:snapshot?.entityMeasurements,measurementMode:!!snapshot?.entityMeasurementVersion,
     coverage: getTierConfig(job.tier as Tier).platforms.map(platform => ({
       platform,
       expected: Array.isArray(job.generatedQueries) ? job.generatedQueries.length : getTierConfig(job.tier as Tier).queryCount,

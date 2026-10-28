@@ -2,29 +2,21 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useEffect, useSyncExternalStore } from "react"
 
 interface Props {
   client: { id: string; email: string; companyName: string }
 }
 
+function subscribeTheme(listener:()=>void){window.addEventListener("storage",listener);window.addEventListener("kaligeo-theme",listener);return()=>{window.removeEventListener("storage",listener);window.removeEventListener("kaligeo-theme",listener)}}
+const themeSnapshot=()=>localStorage.getItem("theme")==="dark"
+const serverThemeSnapshot=()=>false
+
 export default function PortalTopNav({ client }: Props) {
   const pathname = usePathname()
-  const [dark, setDark] = useState(false)
-
-  useEffect(() => {
-    const stored = localStorage.getItem("theme")
-    const isDark = stored === "dark"
-    setDark(isDark)
-    document.documentElement.setAttribute("data-theme", isDark ? "dark" : "")
-  }, [])
-
-  function toggleTheme() {
-    const next = !dark
-    setDark(next)
-    document.documentElement.setAttribute("data-theme", next ? "dark" : "")
-    localStorage.setItem("theme", next ? "dark" : "light")
-  }
+  const dark=useSyncExternalStore(subscribeTheme,themeSnapshot,serverThemeSnapshot)
+  useEffect(()=>{document.documentElement.setAttribute("data-theme",dark?"dark":"")},[dark])
+  function toggleTheme(){localStorage.setItem("theme",dark?"light":"dark");window.dispatchEvent(new Event("kaligeo-theme"))}
 
   function isActive(path: string) {
     return pathname?.startsWith(path)

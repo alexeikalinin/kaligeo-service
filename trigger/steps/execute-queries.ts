@@ -1,3 +1,7 @@
+import { meteredAiCall } from "../../lib/analysis/ai-meter"
+import { withInternalUsage } from "../../lib/analysis/internal-usage"
+import type { Platform, Prisma } from "@prisma/client"
+import { answerId } from "../../lib/analysis/audit-integrity"
 import { AI_CLIENTS } from "../../lib/ai-clients"
 import { extractMentions } from "../../lib/analysis/extract-mentions"
 import { classifyMentionContext } from "../../lib/analysis/mention-extraction"
@@ -25,6 +29,7 @@ export async function executeQueriesOnPlatform(
   const aiClient = AI_CLIENTS[platform]
   if (!aiClient) throw new Error(`Unknown platform: ${platform}`)
 
+  const measuredModel:Record<string,string>={CHATGPT:"gpt-4o",CLAUDE:"claude-haiku-4-5-20251001",GEMINI:"gemini-2.5-flash",PERPLEXITY:"sonar",DEEPSEEK:"deepseek-chat",GROK:"grok-3",YANDEXGPT:"yandexgpt",ALISA:"yandexgpt-lite",GIGACHAT:"GigaChat"}
   const results: QueryExecutionResult[] = []
   const failures: { query: string; error: string }[] = []
 
@@ -36,11 +41,11 @@ export async function executeQueriesOnPlatform(
       let citationsFromApi: string[] | undefined
 
       if (aiClient.queryWithSources) {
-        const structured = await aiClient.queryWithSources(query)
+        const structured = await withInternalUsage(jobId,`platform/${platform}`,()=>meteredAiCall(platform,measuredModel[platform]??platform,0.05,()=>aiClient.queryWithSources!(query)))
         response = structured.response
         citationsFromApi = structured.citations.length > 0 ? structured.citations : undefined
       } else {
-        response = await aiClient.query(query)
+        response = await withInternalUsage(jobId,`platform/${platform}`,()=>meteredAiCall(platform,measuredModel[platform]??platform,0.05,()=>aiClient.query(query)))
       }
 
       if (!response.trim()) throw new Error("Empty AI response")
@@ -66,10 +71,13 @@ export async function executeQueriesOnPlatform(
       }
 
       // Persist immediately so we don't lose data on crashes
-      await prisma.queryResult.create({
-        data: {
+      await prisma.queryResult.upsert({
+        where: { id: answerId(jobId, platform, query) },
+        update: {},
+        create: {
+          id: answerId(jobId, platform, query),
           jobId,
-          platform: platform as any,
+          platform: platform as Platform,
           query,
           response,
           brandMentioned: mentions.brandMentioned,
@@ -77,7 +85,7 @@ export async function executeQueriesOnPlatform(
           sources: mentions.sources,
           sentiment: mentions.sentiment,
           positionScore: mentions.positionScore,
-          sourceCategories: mentions.sourceCategories as any,
+          sourceCategories: mentions.sourceCategories as Prisma.InputJsonValue,
           mentionContext: mentionContext ?? undefined,
         },
       })

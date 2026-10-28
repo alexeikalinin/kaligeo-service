@@ -1,23 +1,38 @@
+import { withInternalUsage } from "../lib/analysis/internal-usage"
+import { measureEntities,measurementVersion,projectEntityAnswers } from "../lib/analysis/entity-visibility"
+import { reviewFeedback } from "../lib/questions/review-feedback"
+import { notifyReviewReady } from "../lib/questions/review-notification"
+import { reviewQuestions } from "../lib/agents/question-review-agent"
+import { cardsVersion, assertCardsApproved, type QuestionCard } from "../lib/questions/question-cards"
+import { buildBusinessMap } from "../lib/agents/business-map-agent"
+import { mapHash, type BusinessMap } from "../lib/questions/business-map"
+import { isQuestionSetApproved, questionHash, type QuestionReview } from "../lib/questions/review"
+import { INTERNAL_MODEL_VERSION, INTERNAL_FLASH_MODEL, INTERNAL_LITE_MODEL } from "../lib/models"
+import { Prisma } from "@prisma/client"
+import { analysisFingerprint, cachedAnalysisStage } from "../lib/analysis/stage-cache"
+import { isBrandQuestion, METHODOLOGY_VERSION } from "../lib/analysis/query-methodology"
+import { uniqueAnswers, checkCoverage } from "../lib/analysis/audit-integrity"
+import { reuseBaseline } from "../lib/analysis/reuse-baseline"
+import { discoverCompetitors } from "../lib/agents/competitor-discovery-agent"
+import { extractMentions } from "../lib/analysis/extract-mentions"
+import type { SiteEvidence } from "../lib/analysis/site-evidence"
 import { namedCompetitors } from "../lib/analysis/competitor-names"
 import { resolveAuditBrand } from "../lib/brand-identity"
 import { task, tasks } from "@trigger.dev/sdk/v3"
 import { postAuditSequence } from "./post-audit-sequence"
 import { prisma } from "../lib/prisma"
-import { runWebsiteAnalysisAgent } from "../lib/agents/website-analysis-agent"
+import { runWebsiteAnalysisAgent, type WebsiteAnalysisResult } from "../lib/agents/website-analysis-agent"
 import { executeQueriesOnPlatform } from "./steps/execute-queries"
 import { generateQueries, type SiteContext } from "./steps/generate-queries"
-import { runQueryOptimizerAgent } from "../lib/agents/query-optimizer-agent"
 import { renderAndUploadPdf } from "./steps/render-pdf"
 import { sendReportEmail, sendFollowUpEmail } from "./steps/deliver"
 import { calculateVisibilityScores, calculateOverallScore } from "../lib/analysis/calculate-scores"
 import { buildCompetitorMatrix } from "../lib/analysis/competitor-matrix"
-import { detectWeakPoints } from "../lib/analysis/weak-points-checker"
 import { aggregateSources } from "../lib/analysis/aggregate-sources"
 import { generateActionPlan } from "../lib/report/action-plan-gen"
 import { runGrowthPlanAgent } from "../lib/agents/growth-plan-agent"
 import { runAnalysisAgent, runCompetitorGapsAgent } from "../lib/agents/analysis-agent"
 import { runContentAgent } from "../lib/agents/content-agent"
-import { runBenchmarkAgent } from "../lib/agents/benchmark-agent"
 import { runSemanticAnalysisAgent } from "../lib/agents/semantic-analysis-agent"
 import { getTierConfig, getBaseTier, type Tier } from "../lib/gates"
 import { assertCanStartAudit } from "../lib/agents/risk-agent"
@@ -27,6 +42,9 @@ import { getMarketConfig, type Market } from "../lib/market"
 
 export interface AuditPayload {
   jobId: string
+  reuseReportFromJobId?: string // Trusted task input: copy a baseline without AI calls.
+  excludedPlatforms?: string[] // QA-only explicit provider exclusions.
+  regenerateQuestions?: boolean // QA-only new measurement; preserved reports are backed up by the caller.
   resume?: boolean // QA-only recovery: retain completed questions and answers.
   validation?: boolean // Trusted SDK-only QA run; never accepted from public order forms.
 }
@@ -41,10 +59,12 @@ export const auditPipeline = task({
 
     const job = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
 
+    if ((payload.regenerateQuestions || payload.excludedPlatforms) && !payload.validation) throw new Error("QA options require validation mode")
     if (payload.resume && !payload.validation) throw new Error("Resume is restricted to validation runs")
     if (payload.validation && job.source !== "qa-acceptance") throw new Error("Validation requires a dedicated QA job")
     try {
-      return await runPipeline(job, payload.validation === true, payload.resume === true || (job.status === "FAILED" && Array.isArray(job.generatedQueries) && job.generatedQueries.length === getTierConfig(job.tier as Tier).queryCount))
+      if (payload.reuseReportFromJobId) return await reuseBaseline(jobId, payload.reuseReportFromJobId)
+      return await withInternalUsage(jobId,"pipeline",()=>runPipeline(job, payload.validation === true, !(payload.regenerateQuestions && (job.analysisSnapshot as { questionSetVersion?: string } | null)?.questionSetVersion !== METHODOLOGY_VERSION) && (payload.resume === true || (Array.isArray(job.generatedQueries) && job.generatedQueries.length === getTierConfig(job.tier as Tier).queryCount)), payload.validation ? (payload.excludedPlatforms ?? ["GEMINI", "GIGACHAT"]) : []))
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
       await prisma.auditJob.update({
@@ -62,23 +82,53 @@ export const auditPipeline = task({
   },
 })
 
-async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUniqueOrThrow>>, validation = false, resume = false) {
+async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUniqueOrThrow>>, validation = false, resume = false, excludedPlatforms: string[] = []) {
     const jobId = job.id
     const tier = job.tier as Tier
     const baseTier = getBaseTier(tier)   // MONITOR_* → BASIC/STANDARD/ADVANCED
     const config = getTierConfig(tier)
     const isAdvanced = baseTier === "ADVANCED"
 
+    if (tier.startsWith("MONITOR_") && !job.baselineJobId && !job.generatedQueries) {
+      const baseline = await prisma.auditJob.findFirst({
+        where: { clientId: job.clientId, clientEmail: job.clientEmail, market: job.market, websiteUrl: job.websiteUrl, tier: baseTier, status: "COMPLETED", analysisSnapshot:{path:["scoreVersion"],equals:"entity-frequency-v1"} },
+        orderBy: { completedAt: "desc" },
+      })
+      if (baseline) return reuseBaseline(jobId, baseline.id)
+    }
+
+    // A recurring audit measures the approved baseline, without regenerating its scope.
+    if (job.baselineJobId && !job.generatedQueries) {
+      const baseline = await prisma.auditJob.findUniqueOrThrow({where:{id:job.baselineJobId}})
+      if (baseline.clientEmail !== job.clientEmail || baseline.clientId !== job.clientId || baseline.websiteUrl !== job.websiteUrl || baseline.market !== job.market) throw Error("Baseline scope mismatch")
+      const source=(baseline.analysisSnapshot??{}) as Record<string,unknown>
+      const map=source.businessMap as BusinessMap
+      const queries=baseline.generatedQueries as string[]
+      if(source.scoreVersion!=="entity-frequency-v1" || source.methodologyVersion!==METHODOLOGY_VERSION || !map || !Array.isArray(queries) || queries.length!==config.queryCount) throw Error("Мониторинг требует утверждённую исходную точку текущей методики")
+      const review=source.businessMapReview as {state:string;hash:string}|undefined
+      if(review?.state!=="approved"||review.hash!==mapHash(map)||!isQuestionSetApproved(queries,source.questionReview as QuestionReview))throw Error("Baseline approvals missing")
+      assertCardsApproved(source.questionCards as QuestionCard[],queries,map)
+      const inherited:Record<string,unknown>={...(job.analysisSnapshot as object??{})}
+      for(const key of ["businessMap","businessMapReview","questionCards","questionCardsVersion","questionReview","questionSetVersion"])inherited[key]=source[key]
+      inherited.inheritedMeasurementFrom=baseline.id
+      await prisma.auditJob.update({where:{id:jobId},data:{generatedQueries:queries,selectedPlatforms:baseline.selectedPlatforms,analysisSnapshot:JSON.parse(JSON.stringify(inherited))}})
+      job.generatedQueries=queries;job.selectedPlatforms=baseline.selectedPlatforms;job.analysisSnapshot=JSON.parse(JSON.stringify(inherited));resume=true
+    }
+
     const submittedCompetitors = job.competitors
     job.competitors = namedCompetitors(job.competitors)
 
     // ── Step 0: Website analysis — определяем нишу и компанию по URL ─────
     let siteContext: SiteContext | undefined
+    let siteEvidence: SiteEvidence | undefined
     if (job.websiteUrl) {
       try {
-        const analysis = await runWebsiteAnalysisAgent(job.websiteUrl)
+        const savedSite = job.analysisSnapshot as unknown as WebsiteAnalysisResult | null
+        const analysis = savedSite?.evidence?.pages.length && savedSite.description
+          ? savedSite : await runWebsiteAnalysisAgent(job.websiteUrl)
+        siteEvidence = analysis.evidence
         const previousSnapshot = job.analysisSnapshot && typeof job.analysisSnapshot === "object" && !Array.isArray(job.analysisSnapshot) ? job.analysisSnapshot : {}
-        const updates: Record<string, unknown> = { analysisSnapshot: JSON.parse(JSON.stringify({ ...analysis, submittedCompanyName: previousSnapshot.submittedCompanyName ?? job.companyName, submittedCompetitors: previousSnapshot.submittedCompetitors ?? submittedCompetitors })) }
+        const updates: Record<string, unknown> = { analysisSnapshot: JSON.parse(JSON.stringify({ ...previousSnapshot, ...analysis, submittedCompanyName: previousSnapshot.submittedCompanyName ?? job.companyName, submittedCompetitors: previousSnapshot.submittedCompetitors ?? submittedCompetitors })) }
         // Обновляем нишу если она пустая или дефолтная
         if (analysis.niche && (!job.niche || job.niche === "Общее")) {
           updates.niche = analysis.niche
@@ -119,6 +169,8 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
             description: analysis.description,
             services: analysis.services ?? [],
             targetAudience: analysis.targetAudience ?? "",
+            externalServiceEvidence: analysis.externalServiceEvidence ?? [],
+            market: analysis.targetMarkets?.join(", ") || "Регион не подтверждён сайтом; не придумывай географическое ограничение",
           }
         }
       } catch (e) {
@@ -129,6 +181,19 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     if (!job.niche?.trim() || job.niche.trim() === "Общее") {
       throw new Error("Не определена ниша бизнеса. Укажите, какие товары или услуги предлагает компания, прежде чем запускать аудит.")
     }
+
+    const mappedJob = await prisma.auditJob.findUniqueOrThrow({where:{id:jobId}})
+    const mappedSnapshot=(mappedJob.analysisSnapshot ?? {}) as Record<string,unknown>
+    let businessMap=mappedSnapshot.businessMap as BusinessMap | undefined
+    if(!businessMap){
+      businessMap=await buildBusinessMap((mappedSnapshot.sourceDocuments ?? []) as import("../lib/questions/business-map").SourceDocument[],job.companyName)
+      await prisma.auditJob.update({where:{id:jobId},data:{status:"GENERATING_QUERIES",analysisSnapshot:JSON.parse(JSON.stringify({...mappedSnapshot,businessMap,businessMapReview:{state:"pending",hash:mapHash(businessMap)}}))}})
+      await notifyReviewReady(jobId,"businessMap",mapHash(businessMap),job.companyName,getMarketConfig((job.market as Market)??"ru").appUrl)
+      return {jobId,awaitingBusinessMapApproval:true}
+    }
+    const mapReview=mappedSnapshot.businessMapReview as {state:string;hash:string}|undefined
+    if(mapReview?.state!=="approved"||mapReview.hash!==mapHash(businessMap))return {jobId,awaitingBusinessMapApproval:true}
+    siteContext={...(siteContext ?? {description:job.niche,services:[],targetAudience:""}),businessMap}
 
     // ── Step 1: Generate queries ──────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_QUERIES" } })
@@ -146,10 +211,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       }
     }
 
-    const optimizerHints = await runQueryOptimizerAgent(job.niche, job.companyName).catch((e) => {
-      console.error("[pipeline] query-optimizer-agent failed, generating without historical hints:", e)
-      return undefined
-    })
+    const optimizerHints = undefined
 
     const savedQueries = resume && Array.isArray(job.generatedQueries) && job.generatedQueries.every(q => typeof q === "string")
       ? job.generatedQueries as string[] : null
@@ -161,18 +223,46 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       customPrompts,
       siteContext,
       optimizerHints,
-      validation ? ["GEMINI", "GIGACHAT"] : []
+      excludedPlatforms
     )
 
+    if (queries.length !== config.queryCount || new Set(queries).size !== queries.length) throw new Error("Question set does not match the tariff; start a new baseline for a changed tariff")
+
+    // Human approval is bound to the exact question version and cannot be bypassed by retries.
+    const reviewJob = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
+    const reviewSnapshot = (reviewJob.analysisSnapshot ?? {}) as Record<string, unknown>
+    const cardVersion=cardsVersion(queries,businessMap)
+    let questionCards=reviewSnapshot.questionCards as QuestionCard[]|undefined
+    if(reviewSnapshot.questionCardsVersion!==cardVersion||!questionCards){
+      questionCards=await reviewQuestions(queries,businessMap,reviewFeedback(reviewSnapshot))
+      await prisma.auditJob.update({where:{id:jobId},data:{analysisSnapshot:JSON.parse(JSON.stringify({...reviewSnapshot,questionCards,questionCardsVersion:cardVersion}))}})
+      reviewSnapshot.questionCards=questionCards;reviewSnapshot.questionCardsVersion=cardVersion
+    }
+    if (!isQuestionSetApproved(queries, reviewSnapshot.questionReview as QuestionReview | undefined)) {
+      await prisma.auditJob.update({ where: { id: jobId }, data: {
+        generatedQueries: queries, status: "GENERATING_QUERIES",
+        analysisSnapshot: JSON.parse(JSON.stringify({ ...reviewSnapshot, questionReview: {
+          hash: questionHash(queries), state: "pending", notes: (reviewSnapshot.questionReview as QuestionReview | undefined)?.notes ?? "",
+        } })),
+      } })
+      await notifyReviewReady(jobId,"questions",questionHash(queries),job.companyName,getMarketConfig((job.market as Market)??"ru").appUrl)
+      return { jobId, awaitingQuestionApproval: true }
+    }
+
+    assertCardsApproved(questionCards,queries,businessMap)
+
     // ── Step 2: Execute queries — only platforms for this tier ────────────
-    await prisma.auditJob.update({ where: { id: jobId }, data: { status: "EXECUTING_QUERIES", generatedQueries: queries } })
+    const questionSnapshot = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId }, select: { analysisSnapshot: true } })
+    await prisma.auditJob.update({ where: { id: jobId }, data: {
+      status: "EXECUTING_QUERIES", generatedQueries: queries,
+      ...(!savedQueries ? { analysisSnapshot: JSON.parse(JSON.stringify({ ...(questionSnapshot.analysisSnapshot as object ?? {}), questionSetVersion: METHODOLOGY_VERSION })) } : {}),
+    } })
 
     // Идемпотентность при ретрае Trigger.dev (retry.maxAttempts: 2): если предыдущая
     // попытка успела частично или полностью выполнить запросы, но упала на более позднем
     // шаге (например PDF), без этой очистки повторная попытка задваивала бы QueryResult.
-    if (!resume) await prisma.queryResult.deleteMany({ where: { jobId } })
-    const savedResults = resume ? await prisma.queryResult.findMany({ where: { jobId }, select: { platform: true, query: true } }) : []
-    const missingQueries = (platform: string) => queries.filter(query => !savedResults.some(result => result.platform === platform && result.query === query))
+    const savedResults = await prisma.queryResult.findMany({ where: { jobId }, select: { platform: true, query: true, response: true } })
+    const missingQueries = (platform: string) => queries.filter(query => !savedResults.some(result => result.platform === platform && result.query === query && result.response.trim()))
 
     // Пересекаем тарифные платформы с теми у которых есть ключи
     const activePlatforms = getActivePlatforms()
@@ -180,24 +270,24 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     const basePlatforms = job.selectedPlatforms.length > 0
       ? job.selectedPlatforms.filter((p) => config.platforms.includes(p))
       : config.platforms
-    const tierPlatforms = basePlatforms.filter((p) => activePlatforms.includes(p) && (!validation || !["GEMINI", "GIGACHAT"].includes(p)))
+    const tierPlatforms = basePlatforms.filter((p) => activePlatforms.includes(p) && !excludedPlatforms.includes(p))
     const suspendedByKey = config.platforms.filter((p) => !activePlatforms.includes(p))
     if (suspendedByKey.length > 0) {
       console.warn(`[platforms] Приостановлены (нет ключей): ${suspendedByKey.join(", ")}`)
     }
 
+    const expectedPlatforms = [...new Set([...basePlatforms.filter(p => !excludedPlatforms.includes(p)), ...savedResults.map(r => r.platform)])].filter(p => config.platforms.includes(p as never))
+    if (!expectedPlatforms.length) throw new Error("No platforms available for this audit")
+    const unavailablePlatforms=expectedPlatforms.filter(p=>!activePlatforms.includes(p))
+    if(unavailablePlatforms.length)throw Error(`Опрос не запущен: не настроены платформы ${unavailablePlatforms.join(", ")}. Укажите доступный состав при создании аудита или настройте платформы. Нельзя оплачивать остальные ответы, зная, что полный состав недоступен.`)
     const { platformsToUse, skippedPlatforms } = tierPlatforms.some(p => missingQueries(p).length > 0)
-      ? await assertCanStartAudit(tierPlatforms.filter(p => missingQueries(p).length > 0)).catch(error => {
-          if (!savedResults.length) throw error
-          console.warn("[risk-agent] Remaining platforms unavailable; completing the saved partial audit")
-          return { platformsToUse: [], skippedPlatforms: tierPlatforms.filter(p => missingQueries(p).length > 0) }
-        })
+      ? await assertCanStartAudit(tierPlatforms.filter(p => missingQueries(p).length > 0))
       : { platformsToUse: [], skippedPlatforms: [] }
     if (skippedPlatforms.length > 0) {
       console.warn(`[risk-agent] Пропущены из-за лимитов: ${skippedPlatforms.join(", ")}`)
     }
 
-    await prisma.auditJob.update({ where: { id: jobId }, data: { selectedPlatforms: [...new Set([...savedResults.map(r => r.platform), ...platformsToUse])] as never } })
+    await prisma.auditJob.update({ where: { id: jobId }, data: { selectedPlatforms: expectedPlatforms as never } })
 
     const executionOutcomes = await Promise.allSettled(
       platformsToUse.map((platform) =>
@@ -209,32 +299,54 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       executionDiagnostics: platformsToUse.map((platform, index) => {
         const outcome = executionOutcomes[index]
         return outcome.status === "fulfilled"
-          ? { platform, attempted: queries.length, answered: outcome.value.results.length, failures: outcome.value.failures }
-          : { platform, attempted: queries.length, answered: 0, failures: [{ error: "Platform execution failed" }] }
+          ? { platform, attempted: missingQueries(platform).length, answered: outcome.value.results.length, failures: outcome.value.failures }
+          : { platform, attempted: missingQueries(platform).length, answered: 0, failures: [{ error: "Platform execution failed" }] }
       }),
     } })
 
     // ── Step 3: Analysis ──────────────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "ANALYZING" } })
 
-    const allResults = await prisma.queryResult.findMany({ where: { jobId } })
+    const storedResults = await prisma.queryResult.findMany({ where: { jobId }, orderBy: { createdAt: "asc" } })
+    const allResults = uniqueAnswers(storedResults.filter(r => queries.includes(r.query) && expectedPlatforms.includes(r.platform)))
+    const retainedIds = new Set(allResults.map(r => r.id))
+    const obsoleteIds = storedResults.filter(r => !retainedIds.has(r.id)).map(r => r.id)
+    if (obsoleteIds.length) await prisma.queryResult.deleteMany({ where: { jobId, id: { in: obsoleteIds } } })
+    const coverage = checkCoverage(queries, expectedPlatforms, allResults)
+    if (coverage.some(c => c.missing.length)) throw new Error(`Incomplete audit: ${coverage.filter(c => c.missing.length).map(c => `${c.platform}: missing ${c.missing.length}/${c.expected}`).join("; ")}`)
+
+    const fingerprint = analysisFingerprint({ version: METHODOLOGY_VERSION, internalModels: INTERNAL_MODEL_VERSION, measurementRules:measurementVersion(businessMap,questionCards), company: job.companyName, niche: job.niche, evidence: siteEvidence, answers: allResults.map(r => [r.id, r.platform, r.query, r.response]).sort((a, b) => a[0].localeCompare(b[0])) })
+    if (config.hasCompetitorMatrix) {
+      const evidence = await cachedAnalysisStage(jobId, "competitor-discovery", fingerprint, () => discoverCompetitors(allResults, job.companyName, job.niche))
+      job.competitors = namedCompetitors([...new Set([...job.competitors, ...evidence.map(e => e.name)])]).slice(0,baseTier==="BASIC"?3:10)
+      for (const row of allResults) {
+        row.competitors = extractMentions(row.response, job.companyName, job.websiteUrl, job.competitors, row.sources).competitors
+        await prisma.queryResult.update({ where: { id: row.id }, data: { competitors: row.competitors } })
+      }
+      const latest = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
+      await prisma.auditJob.update({ where: { id: jobId }, data: { competitors: job.competitors, analysisSnapshot: JSON.parse(JSON.stringify({ ...(latest.analysisSnapshot as object ?? {}), competitorEvidence: evidence, competitorScope: "Alternatives observed in AI answers; not an independently verified market census" })) } })
+    }
 
     if (allResults.length === 0) throw new Error("Ни одна AI-платформа не вернула ответы. Отчёт не сформирован.")
-    const platformScores = calculateVisibilityScores(allResults)
+    const snapshotJob = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
+    await prisma.auditJob.update({ where: { id: jobId }, data: { analysisSnapshot: JSON.parse(JSON.stringify({ ...(snapshotJob.analysisSnapshot as object ?? {}), internalModels: { version: INTERNAL_MODEL_VERSION, analysis: INTERNAL_FLASH_MODEL, classification: INTERNAL_LITE_MODEL }, methodologyVersion: METHODOLOGY_VERSION, questionOrigin: "synthetic", coverage, brandRecognition: allResults.filter(r => isBrandQuestion(r.query)).map(r => ({ platform: r.platform, query: r.query, responseId: r.id, mentioned: r.brandMentioned, sources: r.sources })) })) } })
+    const entityMeasurements=measureEntities(allResults,questionCards,businessMap)
+    const entityVersion=measurementVersion(businessMap,questionCards)
+    const latestMeasurementJob=await prisma.auditJob.findUniqueOrThrow({where:{id:jobId}})
+    await prisma.auditJob.update({where:{id:jobId},data:{analysisSnapshot:JSON.parse(JSON.stringify({...((latestMeasurementJob.analysisSnapshot??{}) as object),entityMeasurements,entityMeasurementVersion:entityVersion,scoreVersion:"entity-frequency-v1",overallScoreScope:"share of spontaneous answers mentioning their approved target; recognition excluded"}))}})
+    const scopedResults=projectEntityAnswers(allResults,questionCards)
+    if(!scopedResults.length)throw Error("Нет спонтанных вопросов для утверждённых направлений")
+    const platformScores = calculateVisibilityScores(scopedResults)
+    for(const score of Object.values(platformScores)){score.score=Math.round(100*score.mentionCount/score.totalQueries);score.rawScore=score.score;delete score.capApplied}
     const overallScore = calculateOverallScore(platformScores)
     const competitorMatrix = config.hasCompetitorMatrix
-      ? buildCompetitorMatrix(allResults, job.competitors)
+      ? buildCompetitorMatrix(scopedResults, job.competitors)
       : []
-    const weakPoints = detectWeakPoints(allResults, job.websiteUrl, overallScore, job.competitors, platformScores)
+    const weakPoints = [{id:"scoped-coverage",title:"Охват выбранных сущностей",detected:overallScore<100,severity:"medium" as const,description:`Целевая сущность найдена в ${scopedResults.filter(r=>r.brandMentioned).length} из ${scopedResults.length} спонтанных ответов. Это частота упоминаний, не доказательство причины или рекомендация модели.`}]
     const sourcesReport = aggregateSources(allResults, job.websiteUrl, job.competitors)
 
-    // Честный percentile компании в нише (заменяет прежний хардкод "41" в UI)
-    const nicheBenchmark = config.hasBenchmark
-      ? await runBenchmarkAgent(job.niche, overallScore).catch((e) => {
-          console.error("[pipeline] benchmark-agent failed:", e)
-          return undefined
-        })
-      : undefined
+    // Historical industry scores use a different denominator and are not comparable.
+    const nicheBenchmark = undefined
 
     // ── Step 4: Advanced — параллельный запуск агентов анализа ───────────
     let competitorAnalysis: string | undefined
@@ -245,35 +357,18 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     let competitorGaps: Awaited<ReturnType<typeof runCompetitorGapsAgent>> | undefined
 
     if (isAdvanced) {
-      const [compAnalysis, gaps, sentiment, contentRecs, gapsStructured, semanticStats] = await Promise.allSettled([
-        runAnalysisAgent(jobId, "competitors"),
-        runAnalysisAgent(jobId, "gaps"),
-        runAnalysisAgent(jobId, "sentiment"),
-        runContentAgent({
-          companyName: job.companyName,
-          niche: job.niche,
-          weakPoints: weakPoints.filter((w) => w.detected).map((w) => w.title),
-          competitorStrengths: [],
-        }),
-        runCompetitorGapsAgent(jobId, job.competitors),
-        // Волна 3: семантическая классификация упоминаний (Haiku, дешево)
-        runSemanticAnalysisAgent(jobId),
-      ])
-
-      competitorAnalysis     = compAnalysis.status === "fulfilled" ? compAnalysis.value : undefined
-      gapsAnalysis           = gaps.status === "fulfilled"         ? gaps.value         : undefined
-      sentimentAnalysis      = sentiment.status === "fulfilled"    ? sentiment.value    : undefined
-      contentRecommendationsRaw = contentRecs.status === "fulfilled" ? contentRecs.value : undefined
-      competitorGaps         = gapsStructured.status === "fulfilled" ? gapsStructured.value : undefined
-
-      if (!gapsAnalysis || !sentimentAnalysis || !contentRecommendationsRaw) {
-        throw new Error("Не завершён расширенный анализ или контент-план. Сохранённые ответы будут использованы при повторной попытке.")
-      }
-      contentRecommendations = contentRecommendationsRaw ? JSON.stringify(contentRecommendationsRaw, null, 2) : undefined
-
-      if (semanticStats.status === "fulfilled") {
-        console.log(`[pipeline] Semantic analysis: ${semanticStats.value.classified}/${semanticStats.value.total} mentions classified, avg quality: ${semanticStats.value.avgQuality}`)
-      }
+      // Sequential stages respect provider rate limits. Completed stages survive retries.
+      competitorAnalysis = await cachedAnalysisStage(jobId, "competitors", fingerprint, () => runAnalysisAgent(jobId, "competitors"))
+      gapsAnalysis = await cachedAnalysisStage(jobId, "gaps", `${fingerprint}:evidence-v4`, () => runAnalysisAgent(jobId, "gaps"))
+      sentimentAnalysis = await cachedAnalysisStage(jobId, "sentiment", fingerprint, () => runAnalysisAgent(jobId, "sentiment"))
+      contentRecommendationsRaw = await cachedAnalysisStage(jobId, "content", fingerprint, () => runContentAgent({
+        verifiedEvidence: {siteEvidence,businessMap,entityMeasurements}, companyName: job.companyName, niche: job.niche,
+        weakPoints: weakPoints.filter(w => w.detected).map(w => w.title), competitorStrengths: [],
+      }))
+      competitorGaps = await cachedAnalysisStage(jobId, "competitor-gaps", fingerprint, () => runCompetitorGapsAgent(jobId, job.competitors))
+      const semanticStats = await cachedAnalysisStage(jobId, "semantic", `${fingerprint}:${INTERNAL_LITE_MODEL}`, () => runSemanticAnalysisAgent(jobId))
+      console.log(`[pipeline] Semantic analysis: ${semanticStats.classified}/${semanticStats.total}`)
+      contentRecommendations = JSON.stringify(contentRecommendationsRaw, null, 2)
     }
 
     // Персистится в Report.analysisNotes / Report.contentRecommendations / Report.competitorGaps —
@@ -288,7 +383,8 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     if (config.hasActionPlan) {
       if (isAdvanced) {
         // Advanced: детальный план внедрения с конкретными шагами
-        actionPlan = await runGrowthPlanAgent({
+        actionPlan = await cachedAnalysisStage(jobId, "growth-plan", `${fingerprint}:evidence-v4`, () => runGrowthPlanAgent({
+          verifiedEvidence: {siteEvidence,businessMap,entityMeasurements},
           companyName: job.companyName,
           niche: job.niche,
           websiteUrl: job.websiteUrl,
@@ -300,13 +396,13 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
           gapsAnalysis,
           sentimentAnalysis,
           contentRecommendations,
-        })
+        }))
       } else {
         // Standard: базовый план (GPT-4o-mini)
-        actionPlan = await generateActionPlan(
+        actionPlan = await cachedAnalysisStage(jobId, "action-plan", fingerprint, () => generateActionPlan(
           job.companyName, job.niche, weakPoints, platformScores, overallScore,
-          baseTier
-        )
+          baseTier, {siteEvidence,businessMap,entityMeasurements}
+        ))
       }
     }
 
@@ -332,7 +428,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
         jobId,
         ...reportData,
       },
-      update: reportData,
+      update: { ...reportData, websiteFix: Prisma.DbNull },
     })
     /* eslint-enable @typescript-eslint/no-explicit-any */
 

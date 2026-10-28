@@ -3,19 +3,6 @@ import { runRiskAgent } from "@/lib/agents/risk-agent"
 import { getActivePlatforms, getInactivePlatforms } from "@/lib/ai-clients"
 import { PlatformHealth } from "@/components/admin/PlatformHealth"
 
-// Дневные лимиты на запросы к каждой платформе.
-// Настраиваются через env, иначе используются консервативные дефолты.
-const DAILY_LIMITS: Record<string, number> = {
-  CHATGPT:    Number(process.env.LIMIT_CHATGPT)    || 200,
-  CLAUDE:     Number(process.env.LIMIT_CLAUDE)     || 200,
-  GEMINI:     Number(process.env.LIMIT_GEMINI)     || 300,
-  PERPLEXITY: Number(process.env.LIMIT_PERPLEXITY) || 100,
-  DEEPSEEK:   Number(process.env.LIMIT_DEEPSEEK)   || 200,
-  YANDEXGPT:  Number(process.env.LIMIT_YANDEXGPT)  || 200,
-  GIGACHAT:   Number(process.env.LIMIT_GIGACHAT)   || 100,
-  ALISA:      Number(process.env.LIMIT_ALISA)      || 100,
-}
-
 const PLATFORM_LABEL: Record<string, string> = {
   CHATGPT:    "ChatGPT",
   CLAUDE:     "Claude",
@@ -25,31 +12,22 @@ const PLATFORM_LABEL: Record<string, string> = {
   YANDEXGPT:  "YandexGPT",
   GIGACHAT:   "GigaChat",
   ALISA:      "Алиса",
+  GROK:       "Grok",
 }
 
 function startOf(unit: "day" | "week" | "month"): Date {
   const d = new Date()
   if (unit === "day") {
-    d.setHours(0, 0, 0, 0)
+    d.setUTCHours(0, 0, 0, 0)
   } else if (unit === "week") {
-    const day = d.getDay()
-    d.setDate(d.getDate() - ((day + 6) % 7))
-    d.setHours(0, 0, 0, 0)
+    const day = d.getUTCDay()
+    d.setUTCDate(d.getUTCDate() - ((day + 6) % 7))
+    d.setUTCHours(0, 0, 0, 0)
   } else {
-    d.setDate(1)
-    d.setHours(0, 0, 0, 0)
+    d.setUTCDate(1)
+    d.setUTCHours(0, 0, 0, 0)
   }
   return d
-}
-
-function pct(used: number, limit: number) {
-  return Math.min(Math.round((used / limit) * 100), 100)
-}
-
-function statusColor(p: number): string {
-  if (p >= 90) return "#ef4444"
-  if (p >= 70) return "#f59e0b"
-  return "#22c55e"
 }
 
 export default async function UsagePage() {
@@ -83,22 +61,20 @@ export default async function UsagePage() {
   const week = toMap(weekRows)
   const total = toMap(totalRows)
 
-  const platforms = Object.keys(DAILY_LIMITS)
+  const recentUsage=await prisma.auditJob.findMany({where:{},orderBy:{updatedAt:"desc"},take:30,select:{id:true,companyName:true,aiUsage:true,aiBudgetUsd:true}})
+  const platforms = Object.keys(PLATFORM_LABEL)
 
   const totalToday = platforms.reduce((s, p) => s + (today[p] ?? 0), 0)
   const totalWeek = platforms.reduce((s, p) => s + (week[p] ?? 0), 0)
   const totalAll = platforms.reduce((s, p) => s + (total[p] ?? 0), 0)
-  const totalLimit = platforms.reduce((s, p) => s + DAILY_LIMITS[p], 0)
-  const overallPct = pct(totalToday, totalLimit)
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold mb-1">Расход API-лимитов</h1>
+        <h1 className="text-2xl font-bold mb-1">Использование AI-платформ</h1>
         <p className="text-sm text-zinc-500">
           Запросов сегодня: <span className="text-zinc-300 font-mono font-bold">{totalToday}</span>
-          {" / "}
-          <span className="text-zinc-500">{totalLimit} дневной лимит</span>
+
           {" · "}
           Неделя: <span className="text-zinc-300 font-mono">{totalWeek}</span>
           {" · "}
@@ -106,6 +82,11 @@ export default async function UsagePage() {
         </p>
       </div>
 
+      <section className="mb-8 space-y-3"><h2 className="text-xl">Расходы по аудитам</h2><p className="text-sm text-zinc-400">Оценки по токенам не заменяют счёт провайдера. Неизвестные суммы не считаются нулевыми. При заданном бюджете до вызова резервируется оценка: 0,10 USD для внутренних моделей и 0,05 USD для опроса платформ.</p>{recentUsage.map(job=>{
+        const entries=Object.values((job.aiUsage??{}) as Record<string,{stage:string;model:string;state:string;estimatedUsd:number|null;reservedUsd:number;inputTokens?:number;outputTokens?:number}>)
+        const known=entries.reduce((n,e)=>n+(e.estimatedUsd??0),0),unknown=entries.filter(e=>e.estimatedUsd==null).length
+        return <details key={job.id} className="border p-3"><summary>{job.companyName}: {entries.length} вызовов · известная оценка ${known.toFixed(4)} · без суммы: {unknown} · бюджет: {job.aiBudgetUsd??"не задан"}</summary><table className="w-full text-sm"><thead><tr><th>Этап</th><th>Модель</th><th>Вход / выход</th><th>USD</th><th>Состояние</th></tr></thead><tbody>{entries.map((e,i)=><tr key={i}><td>{e.stage}</td><td>{e.model}</td><td>{e.inputTokens??"?"} / {e.outputTokens??"?"}</td><td>{e.estimatedUsd==null?"Неизвестно":e.estimatedUsd.toFixed(5)}</td><td>{e.state}</td></tr>)}</tbody></table></details>
+      })}</section>
       {/* Risk Agent banner */}
       {(() => {
         const RISK_STYLE: Record<string, { bg: string; border: string; icon: string; label: string }> = {
@@ -160,32 +141,8 @@ export default async function UsagePage() {
       {/* Active platforms count */}
       <div className="flex items-center gap-2 mb-4 text-xs text-zinc-500">
         <span className="text-emerald-400 font-semibold">● {activePlatforms.length} активных</span>
-        <span>из 8 платформ</span>
+        <span>из {platforms.length} платформ</span>
         <span className="font-mono">[{activePlatforms.join(", ")}]</span>
-      </div>
-
-      {/* Overall bar */}
-      <div className="bg-zinc-800 rounded-xl p-5 mb-8">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-zinc-300">Суммарно сегодня</span>
-          <span
-            className="font-mono text-lg font-bold"
-            style={{ color: statusColor(overallPct) }}
-          >
-            {overallPct}%
-          </span>
-        </div>
-        <div className="h-3 rounded-full bg-zinc-700 overflow-hidden">
-          <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${overallPct}%`, background: statusColor(overallPct) }}
-          />
-        </div>
-        {overallPct >= 80 && (
-          <p className="mt-2 text-xs text-amber-400">
-            ⚠ Суммарный дневной лимит почти исчерпан. Новые аудиты могут не завершиться.
-          </p>
-        )}
       </div>
 
       {/* Per-platform table */}
@@ -194,9 +151,6 @@ export default async function UsagePage() {
           const todayCount = today[platform] ?? 0
           const weekCount = week[platform] ?? 0
           const totalCount = total[platform] ?? 0
-          const limit = DAILY_LIMITS[platform]
-          const p = pct(todayCount, limit)
-          const color = statusColor(p)
           const label = PLATFORM_LABEL[platform] ?? platform
 
           return (
@@ -205,24 +159,13 @@ export default async function UsagePage() {
                 <span className="text-sm font-semibold text-zinc-200 w-28 shrink-0">
                   {label}
                 </span>
-                <div className="flex-1 h-2 rounded-full bg-zinc-700 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all"
-                    style={{ width: `${p}%`, background: color }}
-                  />
-                </div>
-                <span
-                  className="font-mono text-sm font-bold w-12 text-right shrink-0"
-                  style={{ color }}
-                >
-                  {p}%
-                </span>
+                <span className="text-xs text-emerald-400">Без внутреннего дневного лимита</span>
               </div>
               <div className="flex gap-6 text-xs text-zinc-500 pl-0">
                 <span>
                   Сегодня:{" "}
                   <span className="font-mono text-zinc-300">
-                    {todayCount} / {limit}
+                    {todayCount}
                   </span>
                 </span>
                 <span>
@@ -233,14 +176,7 @@ export default async function UsagePage() {
                   Всего:{" "}
                   <span className="font-mono text-zinc-300">{totalCount}</span>
                 </span>
-                {p >= 90 && (
-                  <span className="text-red-400 font-medium">
-                    🔴 Критический уровень
-                  </span>
-                )}
-                {p >= 70 && p < 90 && (
-                  <span className="text-amber-400">⚠ Приближается к лимиту</span>
-                )}
+
               </div>
             </div>
           )
@@ -248,8 +184,8 @@ export default async function UsagePage() {
       </div>
 
       <p className="mt-6 mb-10 text-xs text-zinc-600">
-        Лимиты настраиваются через env: LIMIT_CHATGPT, LIMIT_CLAUDE, LIMIT_GEMINI и т.д.
-        Счётчики сбрасываются по UTC 00:00. Данные берутся напрямую из БД (таблица QueryResult).
+        Внутренние дневные лимиты отключены. Статистика за день считается с 00:00 UTC.
+        Данные — сохранённые ответы в БД; реальные ограничения и ошибки провайдеров отображаются в диагностике аудита.
       </p>
 
       {/* Live API health check */}

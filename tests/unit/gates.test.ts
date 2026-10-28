@@ -18,9 +18,9 @@ import {
 // ── getTierConfig ─────────────────────────────────────────────────────────────
 
 describe("getTierConfig", () => {
-  it("BASIC: hasPdf=false, hasActionPlan=false, chatMessageLimit=0", () => {
+  it("BASIC: hasPdf=true, hasActionPlan=false, chatMessageLimit=0", () => {
     const config = getTierConfig("BASIC")
-    expect(config.hasPdf).toBe(false)
+    expect(config.hasPdf).toBe(true)
     expect(config.hasActionPlan).toBe(false)
     expect(config.chatMessageLimit).toBe(0)
     expect(config.hasPostAuditChat).toBe(false)

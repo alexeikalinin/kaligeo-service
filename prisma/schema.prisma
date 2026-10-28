@@ -88,6 +88,8 @@ model AuditJob {
   emailOptOut          Boolean       @default(false) // клиент отписался от email-рассылок (по clientEmail)
   subscriptionId       String?       // ссылка на Subscription — если этот аудит создан автосписанием
   subscription         Subscription? @relation(fields: [subscriptionId], references: [id])
+  aiUsage             Json? // independent ledger: survives snapshot rewrites
+  aiBudgetUsd         Float? // optional administrator-approved estimate budget
   analysisSnapshot    Json?
   executionDiagnostics Json? // per-platform coverage and safe failure diagnostics
   generatedQueries    Json?
