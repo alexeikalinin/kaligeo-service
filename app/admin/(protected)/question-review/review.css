@@ -14,3 +14,5 @@
 .review-question { transition: border-color .15s; }
 .review-question:focus-within { border-color: #87A62E; }
 .review-dashboard fieldset:disabled .sticky { display: none; }
+
+.review-dashboard textarea.review-question-input { resize: none; overflow: hidden; min-height: 34px; }
