@@ -21,7 +21,7 @@ export function validateCards(cards:QuestionCard[],queries:string[],map:Business
   if(!entity||!audience)reasons.push("Неизвестная сущность или аудитория")
   if(c.mentionRule.metric!=="recognition"&&!map.scope.some(s=>s.entityId===c.entityId&&s.audienceId===c.audienceId&&s.metric===c.mentionRule.metric))reasons.push("Вопрос вне утверждённых направлений")
   if(entity&&c.mentionRule.names.some(n=>![entity.name,...(entity.aliases??[])].includes(n)))reasons.push("Название для зачёта не подтверждено картой")
-  const sources=[...map.entities,...map.relationships,...map.audiences,...map.geography].flatMap(x=>x.sources)
+  const sources=[...map.entities,...map.relationships.filter(r=>r.enabled!==false),...map.audiences,...map.geography].flatMap(x=>x.sources)
   if(c.evidence.some(e=>!sources.some(s=>s.url===e.url&&s.quote===e.quote)))reasons.push("Источник не подтверждён картой")
   if(c.mentionRule.metric==="seller"&&c.expectedAnswer!=="sellers")reasons.push("Товар не равнозначен упоминанию продавца")
   if(c.mentionRule.metric==="company"&&c.expectedAnswer!=="companies")reasons.push("Корпоративный вопрос должен искать компании")

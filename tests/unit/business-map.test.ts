@@ -6,3 +6,15 @@ it("keeps exact page evidence and stable revision",()=>{const m=groundBusinessMa
 it("rejects relationships to invented entity identifiers",()=>{expect(()=>validateBusinessMap({...map,relationships:[{from:"c",to:"unknown",role:"sells",sources:[],confidence:"uncertain"}]})).toThrow()})
 
 it("does not measure a product category as the seller",()=>{const m=validateBusinessMap({...map,entities:[{...map.entities[0],kind:"category"}],audiences:[{...map.audiences[0],confidence:"supported"}],scope:[{...map.scope[0],metric:"seller"}]});expect(()=>assertReviewableMap(m)).toThrow("категория товара не является продавцом")})
+
+it("keeps disabled relationships in the revision but excludes them from AI context",async()=>{
+ const {activeBusinessMap}=await import("@/lib/questions/business-map")
+ const m=validateBusinessMap({...map,entities:[...map.entities,{...map.entities[0],id:"p",kind:"product"}],relationships:[{from:"c",to:"p",role:"develops",enabled:false,sources:[],confidence:"supported"}]})
+ expect(m.relationships).toHaveLength(1)
+ expect(activeBusinessMap(m).relationships).toHaveLength(0)
+ expect(mapHash(m)).not.toBe(mapHash({...m,relationships:m.relationships.map(r=>({...r,enabled:true}))}))
+})
+it("does not allow disabled ownership as evidence for product measurement",()=>{
+ const m=validateBusinessMap({...map,entities:[...map.entities,{...map.entities[0],id:"p",kind:"product"}],audiences:[{...map.audiences[0],confidence:"supported"}],relationships:[{from:"c",to:"p",role:"develops",enabled:false,sources:[],confidence:"supported"}],scope:[{...map.scope[0],entityId:"p",metric:"owned-product"}]})
+ expect(()=>assertReviewableMap(m)).toThrow("подтвердите связь")
+})

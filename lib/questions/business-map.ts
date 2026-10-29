@@ -3,7 +3,7 @@ import { z } from "zod"
 export const sourceSchema = z.object({ url: z.string().url(), quote: z.string().min(1).max(2000) })
 export const businessMapSchema = z.object({
   entities: z.array(z.object({ id:z.string().min(1),name:z.string().min(1),kind:z.enum(["company","brand","product","service","category"]),attributes:z.array(z.string()),aliases:z.array(z.string().min(1)).optional(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})).max(100),
-  relationships:z.array(z.object({from:z.string(),to:z.string(),role:z.enum(["owns","develops","publishes","sells","provides","belongs_to"]),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})).max(150),
+  relationships:z.array(z.object({from:z.string(),to:z.string(),role:z.enum(["owns","develops","publishes","sells","provides","belongs_to"]),enabled:z.boolean().optional(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})).max(150),
   audiences:z.array(z.object({id:z.string(),name:z.string(),needs:z.array(z.string()),entityIds:z.array(z.string()),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})).max(30),
   geography:z.array(z.object({name:z.string(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})),
   scope:z.array(z.object({entityId:z.string(),audienceId:z.string(),metric:z.enum(["company","owned-product","seller"]),rationale:z.string()})),
@@ -36,6 +36,8 @@ export function assertReviewableMap(m:BusinessMap){
   if(e.confidence!=="supported"||a.confidence!=="supported")throw Error("Уточните неподтверждённые сущности и аудитории выбранного направления")
   if(s.metric==="seller"&&!["company","brand"].includes(e.kind))throw Error("Для метрики продавца выберите компанию или бренд продавца; категория товара не является продавцом")
   if(s.metric==="company"&&!["company","brand"].includes(e.kind))throw Error("Корпоративная метрика требует компанию или бренд")
-  if(s.metric==="owned-product"&&!m.relationships.some(r=>r.to===e.id&&["owns","develops","publishes"].includes(r.role)&&r.confidence==="supported"))throw Error("Для продуктовой метрики подтвердите связь с компанией")
+  if(s.metric==="owned-product"&&!m.relationships.some(r=>r.to===e.id&&["owns","develops","publishes"].includes(r.role)&&r.confidence==="supported"&&r.enabled!==false))throw Error("Для продуктовой метрики подтвердите связь с компанией")
  }
 }
+
+export function activeBusinessMap(map:BusinessMap):BusinessMap{return {...map,relationships:map.relationships.filter(r=>r.enabled!==false)}}
