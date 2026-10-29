@@ -2,21 +2,15 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { useEffect, useSyncExternalStore } from "react"
+import { useEffect } from "react"
 
 interface Props {
   client: { id: string; email: string; companyName: string }
 }
 
-function subscribeTheme(listener:()=>void){window.addEventListener("storage",listener);window.addEventListener("kaligeo-theme",listener);return()=>{window.removeEventListener("storage",listener);window.removeEventListener("kaligeo-theme",listener)}}
-const themeSnapshot=()=>localStorage.getItem("theme")==="dark"
-const serverThemeSnapshot=()=>false
-
 export default function PortalTopNav({ client }: Props) {
   const pathname = usePathname()
-  const dark=useSyncExternalStore(subscribeTheme,themeSnapshot,serverThemeSnapshot)
-  useEffect(()=>{document.documentElement.setAttribute("data-theme",dark?"dark":"")},[dark])
-  function toggleTheme(){localStorage.setItem("theme",dark?"light":"dark");window.dispatchEvent(new Event("kaligeo-theme"))}
+  useEffect(()=>{document.documentElement.removeAttribute("data-theme")},[])
 
   function isActive(path: string) {
     return pathname?.startsWith(path)
@@ -37,7 +31,7 @@ export default function PortalTopNav({ client }: Props) {
         zIndex: 50,
       }}
     >
-      <div className="max-w-5xl mx-auto px-6 py-4 flex items-center gap-6">
+      <div className="max-w-5xl mx-auto px-6 py-4 flex flex-wrap items-center gap-4">
         <Link
           href="/my/dashboard"
           style={{
@@ -53,7 +47,7 @@ export default function PortalTopNav({ client }: Props) {
           KaliGEO
         </Link>
 
-        <nav className="flex items-center gap-5 ml-4">
+        <nav className="flex flex-wrap items-center gap-3">
           <NavLink href="/my/dashboard" active={isActive("/my/dashboard")}>
             Обзор
           </NavLink>
@@ -75,23 +69,6 @@ export default function PortalTopNav({ client }: Props) {
         </nav>
 
         <div className="ml-auto flex items-center gap-3">
-          <button
-            onClick={toggleTheme}
-            title={dark ? "Светлая тема" : "Тёмная тема"}
-            style={{
-              fontSize: "15px",
-              background: "none",
-              border: "none",
-              cursor: "pointer",
-              padding: "4px",
-              lineHeight: 1,
-              opacity: 0.6,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1" }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.6" }}
-          >
-            {dark ? "☀" : "☾"}
-          </button>
           <span
             style={{
               fontSize: "13px",
@@ -146,7 +123,9 @@ function NavLink({
         color: active ? "var(--ink)" : "var(--ink-3)",
         fontWeight: active ? 600 : 400,
         textDecoration: "none",
-        borderBottom: active ? "2px solid var(--accent)" : "2px solid transparent",
+        background: active ? "var(--accent)" : "transparent",
+        borderRadius: "var(--radius-md)",
+        padding: "8px 10px",
         paddingBottom: "2px",
         transition: "color 0.15s",
       }}

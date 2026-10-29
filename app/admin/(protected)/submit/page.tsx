@@ -91,8 +91,8 @@ export default function SubmitPage() {
     }
   }
 
-  const field = "w-full bg-zinc-900 border border-zinc-600 text-zinc-100 placeholder-zinc-500 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-400 focus:border-zinc-400 transition-colors"
-  const label = "block text-sm font-medium text-zinc-300 mb-2"
+  const field = "w-full bg-white border border-[#E5E5E1] text-[#0F1115] placeholder-[#6A6D75] rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[#E5E5E1] focus:border-[#E5E5E1] transition-colors"
+  const label = "block text-sm font-medium text-[#0F1115] mb-2"
 
   return (
     <div className="max-w-2xl">
@@ -180,7 +180,7 @@ export default function SubmitPage() {
             <div>
               <label className={label}>
                 Платформы{" "}
-                <span className="text-zinc-500 font-normal">
+                <span className="text-[#6A6D75] font-normal">
                   — выбрано {selectedPlatforms.length} из {limit} (пусто = дефолты тарифа)
                 </span>
               </label>
@@ -195,8 +195,8 @@ export default function SubmitPage() {
                         checked
                           ? "border-lime-400 bg-lime-400/10 text-lime-300"
                           : disabled
-                          ? "border-zinc-700 text-zinc-600 cursor-not-allowed"
-                          : "border-zinc-600 text-zinc-300 hover:border-zinc-400"
+                          ? "border-[#E5E5E1] text-[#6A6D75] cursor-not-allowed"
+                          : "border-[#E5E5E1] text-[#0F1115] hover:border-[#E5E5E1]"
                       }`}
                     >
                       <input
@@ -215,17 +215,17 @@ export default function SubmitPage() {
           )
         })()}
 
-        <div className="flex items-start gap-3 rounded-xl border border-zinc-600 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-xl border border-[#E5E5E1] px-4 py-3">
           <input
             id="scheduleFollowUp"
             type="checkbox"
             checked={scheduleFollowUp}
             onChange={(e) => setScheduleFollowUp(e.target.checked)}
-            className="mt-0.5 h-4 w-4 rounded border-zinc-600 bg-zinc-900 accent-lime-400 cursor-pointer"
+            className="mt-0.5 h-4 w-4 rounded border-[#E5E5E1] bg-white accent-lime-400 cursor-pointer"
           />
-          <label htmlFor="scheduleFollowUp" className="text-sm text-zinc-300 cursor-pointer leading-snug">
+          <label htmlFor="scheduleFollowUp" className="text-sm text-[#0F1115] cursor-pointer leading-snug">
             Запланировать повторный аудит через 30 дней
-            <span className="block text-xs text-zinc-500 mt-0.5">
+            <span className="block text-xs text-[#6A6D75] mt-0.5">
               Клиент автоматически получит сравнительный отчёт с динамикой
             </span>
           </label>
@@ -235,7 +235,7 @@ export default function SubmitPage() {
           <div>
             <label className={label}>
               Базовый аудит для сравнения{" "}
-              <span className="text-zinc-500 font-normal">(опционально)</span>
+              <span className="text-[#6A6D75] font-normal">(опционально)</span>
             </label>
             <select
               value={baselineJobId}
@@ -255,18 +255,18 @@ export default function SubmitPage() {
               ))}
             </select>
             {baselineJobId && (
-              <p className="mt-2 text-xs text-zinc-400">
+              <p className="mt-2 text-xs text-[#6A6D75]">
                 В новом отчёте появится таб «Прогресс» с динамикой относительно выбранного аудита.
               </p>
             )}
           </div>
         )}
 
-        {error && <p className="text-red-400 text-base">{error}</p>}
+        {error && <p className="text-red-700 text-base">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-4 bg-zinc-100 text-zinc-900 rounded-xl font-semibold text-base hover:bg-white transition-colors disabled:opacity-50"
+          className="w-full py-4 bg-[#F2F1EB] text-[#0F1115] rounded-xl font-semibold text-base hover:bg-white transition-colors disabled:opacity-50"
         >
           {loading ? "Запускаем..." : "Запустить аудит"}
         </button>

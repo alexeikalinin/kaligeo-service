@@ -1,0 +1,5 @@
+.admin-review-shell { color-scheme: light; }
+.admin-review-shell > header { background: #fff; border-color: #E5E5E1; }
+.admin-review-shell :is(input,select,textarea) { accent-color: #71951D; color-scheme: light; }
+.admin-review-shell :is(button,a,input,textarea,select,summary):focus-visible { outline: 2px solid #71951D; outline-offset: 3px; }
+.admin-review-shell th { color: #6A6D75; }

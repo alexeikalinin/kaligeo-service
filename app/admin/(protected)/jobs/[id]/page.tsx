@@ -23,7 +23,7 @@ function DeleteButton({ jobId }: { jobId: string }) {
     <button
       onClick={handleDelete}
       disabled={loading}
-      className="px-4 py-2 text-xs text-red-500 border border-red-900/40 rounded-lg hover:bg-red-900/20 hover:text-red-400 transition-colors disabled:opacity-50"
+      className="px-4 py-2 text-xs text-red-500 border border-red-900/40 rounded-lg hover:bg-red-50 hover:text-red-700 transition-colors disabled:opacity-50"
     >
       {loading ? "Удаление..." : "Удалить заявку"}
     </button>
@@ -44,13 +44,13 @@ function RestartButton({ jobId }: { jobId: string }) {
     }
   }
 
-  if (done) return <span className="text-emerald-400 text-sm">✓ Перезапущен</span>
+  if (done) return <span className="text-emerald-700 text-sm">✓ Перезапущен</span>
 
   return (
     <button
       onClick={restart}
       disabled={loading}
-      className="px-5 py-3 bg-red-900/40 border border-red-800 text-red-300 rounded-xl text-sm hover:bg-red-900/60 transition-colors disabled:opacity-50"
+      className="px-5 py-3 bg-red-50 border border-red-800 text-red-700 rounded-xl text-sm hover:bg-red-50 transition-colors disabled:opacity-50"
     >
       {loading ? "Запускаем..." : "↺ Перезапустить"}
     </button>
@@ -83,10 +83,10 @@ interface JobData {
 
 const STEPS: { key: JobStatus; label: string; description: string }[] = [
   { key: "PENDING", label: "Подготовка", description: "Инициализация задания" },
-  { key: "GENERATING_QUERIES", label: "Генерация запросов", description: "GPT создаёт список запросов по нише" },
+  { key: "GENERATING_QUERIES", label: "Генерация запросов", description: "Подготовка и согласование вопросов по карте бизнеса" },
   { key: "EXECUTING_QUERIES", label: "Опрос AI-платформ", description: "Параллельный опрос платформ по тарифу" },
   { key: "ANALYZING", label: "Анализ", description: "Подсчёт scores и матрицы конкурентов" },
-  { key: "GENERATING_REPORT", label: "Генерация отчёта", description: "Claude создаёт план роста и PDF" },
+  { key: "GENERATING_REPORT", label: "Генерация отчёта", description: "Подготовка рекомендаций и отчёта" },
   { key: "DELIVERING", label: "Отправка", description: "Письмо с отчётом на email" },
   { key: "COMPLETED", label: "Готово", description: "Аудит завершён" },
 ]
@@ -101,7 +101,7 @@ export default function JobDetailPage() {
     if (!id) return
 
     const poll = async () => {
-      const res = await fetch(`/api/audit/${id}/status`)
+      const res = await fetch(`/api/admin/jobs/${id}`)
       if (!res.ok) return
       const json: JobData = await res.json()
       setData(json)
@@ -118,7 +118,7 @@ export default function JobDetailPage() {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="w-8 h-8 border-2 border-zinc-600 border-t-zinc-300 rounded-full animate-spin" />
+        <div className="w-8 h-8 border-2 border-[#E5E5E1] border-t-[#E5E5E1] rounded-full animate-spin" />
       </div>
     )
   }
@@ -129,7 +129,7 @@ export default function JobDetailPage() {
   return (
     <div className="max-w-2xl">
       <div className="flex items-center justify-between mb-6">
-        <Link href="/admin" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+        <Link href="/admin" className="text-sm text-[#6A6D75] hover:text-[#0F1115] transition-colors">
           ← Заявки
         </Link>
         <DeleteButton jobId={id} />
@@ -138,15 +138,15 @@ export default function JobDetailPage() {
       <div className="flex items-start justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold">{data.companyName}</h1>
-          <p className="text-zinc-500 text-sm mt-1">{data.websiteUrl}</p>
+          <p className="text-[#6A6D75] text-sm mt-1">{data.websiteUrl}</p>
         </div>
-        <div className="text-right text-xs text-zinc-600">
+        <div className="text-right text-xs text-[#6A6D75]">
           <p>{data.tier}</p>
           <p>{data.clientEmail}</p>
         </div>
       </div>
 
-      <div className="bg-zinc-800 rounded-2xl p-6 mb-6 space-y-3">
+      <div className="bg-[#F2F1EB] rounded-2xl p-6 mb-6 space-y-3">
         {STEPS.map((step, i) => {
           const isDone = i < currentStep || data.status === "COMPLETED"
           const isCurrent = i === currentStep && isActive
@@ -158,32 +158,32 @@ export default function JobDetailPage() {
                 <div
                   className={`w-7 h-7 rounded-full flex items-center justify-center text-xs shrink-0 ${
                     data.status === "COMPLETED" || isDone
-                      ? "bg-emerald-500 text-white"
+                      ? "bg-emerald-500 text-[#0F1115]"
                       : isCurrent
-                        ? "bg-zinc-600 text-zinc-200"
+                        ? "bg-[#F2F1EB] text-[#0F1115]"
                         : data.status === "FAILED" && isCurrent
-                          ? "bg-red-500 text-white"
-                          : "bg-zinc-700 text-zinc-600"
+                          ? "bg-red-500 text-[#0F1115]"
+                          : "bg-[#F2F1EB] text-[#6A6D75]"
                   }`}
                 >
                   {data.status === "COMPLETED" || isDone ? "✓" : isCurrent ? "●" : i + 1}
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className={`w-px h-5 mt-1 ${isDone ? "bg-emerald-500/40" : "bg-zinc-700"}`} />
+                  <div className={`w-px h-5 mt-1 ${isDone ? "bg-emerald-500/40" : "bg-[#F2F1EB]"}`} />
                 )}
               </div>
               <div className={`pb-1 ${isPending ? "opacity-40" : ""}`}>
-                <p className={`text-sm font-medium ${isCurrent ? "text-zinc-100" : isDone ? "text-zinc-300" : "text-zinc-500"}`}>
+                <p className={`text-sm font-medium ${isCurrent ? "text-[#0F1115]" : isDone ? "text-[#0F1115]" : "text-[#6A6D75]"}`}>
                   {step.label}
                   {isCurrent && (
                     <span className="ml-2 inline-flex gap-0.5">
-                      <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce [animation-delay:0ms]" />
-                      <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce [animation-delay:150ms]" />
-                      <span className="w-1 h-1 bg-zinc-400 rounded-full animate-bounce [animation-delay:300ms]" />
+                      <span className="w-1 h-1 bg-[#F2F1EB] rounded-full animate-bounce [animation-delay:0ms]" />
+                      <span className="w-1 h-1 bg-[#F2F1EB] rounded-full animate-bounce [animation-delay:150ms]" />
+                      <span className="w-1 h-1 bg-[#F2F1EB] rounded-full animate-bounce [animation-delay:300ms]" />
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-zinc-600">{step.description}</p>
+                <p className="text-xs text-[#6A6D75]">{step.description}</p>
               </div>
             </div>
           )
@@ -191,8 +191,8 @@ export default function JobDetailPage() {
       </div>
 
       {data.status === "FAILED" && (
-        <div className="bg-red-900/20 border border-red-800 rounded-xl p-4 mb-4">
-          <p className="text-red-300 text-sm mb-3">{data.errorMessage ?? "Произошла ошибка"}</p>
+        <div className="bg-red-50 border border-red-800 rounded-xl p-4 mb-4">
+          <p className="text-red-700 text-sm mb-3">{data.errorMessage ?? "Произошла ошибка"}</p>
           <RestartButton jobId={id} />
         </div>
       )}
@@ -201,7 +201,7 @@ export default function JobDetailPage() {
         <div className="flex gap-3">
           <Link
             href={data.reportUrl}
-            className="flex-1 text-center py-3 bg-zinc-100 text-zinc-900 rounded-xl font-semibold text-sm hover:bg-white transition-colors"
+            className="flex-1 text-center py-3 bg-[#F2F1EB] text-[#0F1115] rounded-xl font-semibold text-sm hover:bg-white transition-colors"
           >
             Открыть отчёт →
           </Link>
@@ -210,7 +210,7 @@ export default function JobDetailPage() {
               href={data.pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="px-5 py-3 bg-zinc-700 text-zinc-200 rounded-xl text-sm hover:bg-zinc-600 transition-colors"
+              className="px-5 py-3 bg-[#F2F1EB] text-[#0F1115] rounded-xl text-sm hover:bg-[#F2F1EB] transition-colors"
             >
               PDF
             </a>

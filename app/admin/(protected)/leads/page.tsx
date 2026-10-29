@@ -84,47 +84,47 @@ export default async function LeadsPage() {
     <div>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Лиды</h1>
-        <p className="text-sm text-zinc-500">Freemium-сканы и конверсия в платных клиентов</p>
+        <p className="text-sm text-[#6A6D75]">Freemium-сканы и конверсия в платных клиентов</p>
       </div>
 
       {/* Funnel */}
       <section className="mb-8">
-        <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Воронка freemium → платный</p>
-        <div className="grid grid-cols-4 gap-px bg-zinc-800 rounded-xl overflow-hidden">
+        <p className="text-xs text-[#6A6D75] uppercase tracking-widest mb-3">Воронка freemium → платный</p>
+        <div className="grid grid-cols-4 gap-px bg-[#F2F1EB] rounded-xl overflow-hidden">
           {[
             {
               label: "Сканов запущено",
               value: totalScans,
               sub: "все посетители",
-              cls: "text-zinc-100",
+              cls: "text-[#0F1115]",
               pct: null,
             },
             {
               label: "Оставили email",
               value: withEmail,
               sub: `${emailCaptureRate !== null ? emailCaptureRate + "%" : "—"} от сканов`,
-              cls: "text-blue-400",
+              cls: "text-blue-700",
               pct: emailCaptureRate,
             },
             {
               label: "Создали заявку",
               value: converted,
               sub: `${conversionRate !== null ? conversionRate + "%" : "—"} от email`,
-              cls: "text-amber-400",
+              cls: "text-[#4C6218]",
               pct: conversionRate,
             },
             {
               label: "Оплатили",
               value: paid,
               sub: `${paymentRate !== null ? paymentRate + "%" : "—"} от заявок`,
-              cls: "text-emerald-400",
+              cls: "text-emerald-700",
               pct: paymentRate,
             },
           ].map((step, i) => (
-            <div key={i} className="bg-zinc-900 p-6">
-              <p className="text-xs text-zinc-600 uppercase tracking-wider mb-2">{step.label}</p>
+            <div key={i} className="bg-white p-6">
+              <p className="text-xs text-[#6A6D75] uppercase tracking-wider mb-2">{step.label}</p>
               <p className={`text-4xl font-bold font-mono ${step.cls}`}>{step.value}</p>
-              <p className="text-xs text-zinc-600 mt-1.5">{step.sub}</p>
+              <p className="text-xs text-[#6A6D75] mt-1.5">{step.sub}</p>
             </div>
           ))}
         </div>
@@ -140,12 +140,12 @@ export default async function LeadsPage() {
             const pct = bar.max > 0 ? Math.round((bar.value / bar.max) * 100) : 0
             return (
               <div key={bar.label} className="flex items-center gap-3">
-                <span className="text-xs text-zinc-600 w-16 text-right shrink-0">{bar.label}</span>
-                <div className="flex-1 h-3 bg-zinc-800/60 rounded overflow-hidden">
+                <span className="text-xs text-[#6A6D75] w-16 text-right shrink-0">{bar.label}</span>
+                <div className="flex-1 h-3 bg-[#F2F1EB]/60 rounded overflow-hidden">
                   <div className="h-full rounded transition-all" style={{ width: `${pct}%`, background: bar.color }} />
                 </div>
-                <span className="text-xs font-mono text-zinc-500 w-20 shrink-0">
-                  {bar.value} <span className="text-zinc-700">({pct}%)</span>
+                <span className="text-xs font-mono text-[#6A6D75] w-20 shrink-0">
+                  {bar.value} <span className="text-[#6A6D75]">({pct}%)</span>
                 </span>
               </div>
             )
@@ -155,29 +155,29 @@ export default async function LeadsPage() {
 
       {/* Email sequence performance */}
       <section className="mb-8 grid grid-cols-4 gap-4">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Не купили</p>
-          <p className="text-3xl font-bold font-mono text-red-400">{unconverted}</p>
-          <p className="text-xs text-zinc-600 mt-1">лидов ждут возврата</p>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] uppercase tracking-wider mb-1">Не купили</p>
+          <p className="text-3xl font-bold font-mono text-red-700">{unconverted}</p>
+          <p className="text-xs text-[#6A6D75] mt-1">лидов ждут возврата</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Писем отправлено</p>
-          <p className="text-3xl font-bold font-mono text-zinc-100">{totalSent}</p>
-          <p className="text-xs text-zinc-600 mt-1">через все кампании</p>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] uppercase tracking-wider mb-1">Писем отправлено</p>
+          <p className="text-3xl font-bold font-mono text-[#0F1115]">{totalSent}</p>
+          <p className="text-xs text-[#6A6D75] mt-1">через все кампании</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Open rate</p>
-          <p className={`text-3xl font-bold font-mono ${openRate === null ? "text-zinc-700" : openRate >= 30 ? "text-emerald-400" : openRate >= 15 ? "text-amber-400" : "text-red-400"}`}>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] uppercase tracking-wider mb-1">Open rate</p>
+          <p className={`text-3xl font-bold font-mono ${openRate === null ? "text-[#6A6D75]" : openRate >= 30 ? "text-emerald-700" : openRate >= 15 ? "text-[#4C6218]" : "text-red-700"}`}>
             {openRate !== null ? `${openRate}%` : "—"}
           </p>
-          <p className="text-xs text-zinc-600 mt-1">{totalOpened} открыли письмо</p>
+          <p className="text-xs text-[#6A6D75] mt-1">{totalOpened} открыли письмо</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-600 uppercase tracking-wider mb-1">Click rate</p>
-          <p className={`text-3xl font-bold font-mono ${clickRate === null ? "text-zinc-700" : clickRate >= 10 ? "text-emerald-400" : clickRate >= 5 ? "text-amber-400" : "text-red-400"}`}>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] uppercase tracking-wider mb-1">Click rate</p>
+          <p className={`text-3xl font-bold font-mono ${clickRate === null ? "text-[#6A6D75]" : clickRate >= 10 ? "text-emerald-700" : clickRate >= 5 ? "text-[#4C6218]" : "text-red-700"}`}>
             {clickRate !== null ? `${clickRate}%` : "—"}
           </p>
-          <p className="text-xs text-zinc-600 mt-1">{totalClicked} кликнули по ссылке</p>
+          <p className="text-xs text-[#6A6D75] mt-1">{totalClicked} кликнули по ссылке</p>
         </div>
       </section>
 
@@ -188,27 +188,27 @@ export default async function LeadsPage() {
 
       {/* Retargeting export */}
       <section className="mb-10">
-        <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Экспорт аудиторий для ретаргетинга</p>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+        <p className="text-xs text-[#6A6D75] uppercase tracking-widest mb-3">Экспорт аудиторий для ретаргетинга</p>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
           <div className="grid grid-cols-2 gap-3 mb-4">
             {[
               {
                 href: "/api/admin/leads/retargeting?segment=all",
                 label: "Все с email",
                 desc: `${withEmail} контактов — Яндекс.Аудитории, VK`,
-                color: "border-zinc-700 text-zinc-300 hover:border-zinc-500",
+                color: "border-[#E5E5E1] text-[#0F1115] hover:border-[#E5E5E1]",
               },
               {
                 href: "/api/admin/leads/retargeting?segment=hot",
                 label: "Горячие (score ≥ 50)",
                 desc: `${scans.filter((s) => s.emailCaptured && s.previewScore >= 50).length} контактов — высокий AI-Score`,
-                color: "border-amber-800/50 text-amber-300 hover:border-amber-600",
+                color: "border-amber-800/50 text-[#4C6218] hover:border-amber-600",
               },
               {
                 href: "/api/admin/leads/retargeting?segment=unconverted",
                 label: "Не купили",
                 desc: `${unconverted} контактов — основной сегмент возврата`,
-                color: "border-red-800/50 text-red-300 hover:border-red-600",
+                color: "border-red-800/50 text-red-700 hover:border-red-600",
               },
               {
                 href: "/api/admin/leads/retargeting?segment=noopen",
@@ -220,17 +220,17 @@ export default async function LeadsPage() {
               <a
                 key={btn.href}
                 href={btn.href}
-                className={`flex items-start justify-between p-4 bg-zinc-900 border rounded-xl transition-colors group ${btn.color}`}
+                className={`flex items-start justify-between p-4 bg-white border rounded-xl transition-colors group ${btn.color}`}
               >
                 <div>
                   <p className="text-sm font-semibold">{btn.label}</p>
-                  <p className="text-xs text-zinc-600 mt-0.5">{btn.desc}</p>
+                  <p className="text-xs text-[#6A6D75] mt-0.5">{btn.desc}</p>
                 </div>
                 <span className="text-lg opacity-60 group-hover:opacity-100 transition-opacity ml-4 shrink-0">↓</span>
               </a>
             ))}
           </div>
-          <p className="text-xs text-zinc-700">
+          <p className="text-xs text-[#6A6D75]">
             CSV совместим с Яндекс.Аудиториями, VK Рекламой и Meta Custom Audiences. Загрузите файл в рекламный кабинет → создайте похожую аудиторию (Look-alike).
           </p>
         </div>
@@ -239,11 +239,11 @@ export default async function LeadsPage() {
       {/* Campaigns */}
       {campaigns.length > 0 && (
         <section>
-          <p className="text-xs text-zinc-600 uppercase tracking-widest mb-3">Email-кампании</p>
+          <p className="text-xs text-[#6A6D75] uppercase tracking-widest mb-3">Email-кампании</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="text-left text-xs text-zinc-600 border-b border-zinc-800">
+                <tr className="text-left text-xs text-[#6A6D75] border-b border-[#E5E5E1]">
                   <th className="pb-3 pr-6 font-medium">Кампания</th>
                   <th className="pb-3 pr-6 font-medium">Статус</th>
                   <th className="pb-3 pr-6 font-medium">Лидов</th>
@@ -260,35 +260,35 @@ export default async function LeadsPage() {
                   const uniqueLeads = new Set(c.outreachEmails.map((e) => e.leadId)).size
 
                   const STATUS_STYLE: Record<string, string> = {
-                    DRAFT: "bg-zinc-800 text-zinc-500",
-                    ACTIVE: "bg-emerald-900/30 text-emerald-400",
-                    PAUSED: "bg-amber-900/30 text-amber-400",
-                    COMPLETED: "bg-zinc-800 text-zinc-400",
+                    DRAFT: "bg-[#F2F1EB] text-[#6A6D75]",
+                    ACTIVE: "bg-emerald-50 text-emerald-700",
+                    PAUSED: "bg-[#C8F24A] text-[#4C6218]",
+                    COMPLETED: "bg-[#F2F1EB] text-[#6A6D75]",
                   }
 
                   return (
-                    <tr key={c.id} className="border-b border-zinc-800/40 hover:bg-zinc-800/20">
+                    <tr key={c.id} className="border-b border-[#E5E5E1]/40 hover:bg-[#F2F1EB]/20">
                       <td className="py-3.5 pr-6">
-                        <p className="text-zinc-200 font-medium">{c.name}</p>
-                        {c.targetNiche && <p className="text-xs text-zinc-600 mt-0.5">{c.targetNiche}</p>}
+                        <p className="text-[#0F1115] font-medium">{c.name}</p>
+                        {c.targetNiche && <p className="text-xs text-[#6A6D75] mt-0.5">{c.targetNiche}</p>}
                       </td>
                       <td className="py-3.5 pr-6">
                         <span className={`text-xs px-2.5 py-1 rounded-full ${STATUS_STYLE[c.status] ?? STATUS_STYLE.DRAFT}`}>
                           {c.status}
                         </span>
                       </td>
-                      <td className="py-3.5 pr-6 font-mono text-zinc-300">{uniqueLeads}</td>
-                      <td className="py-3.5 pr-6 font-mono text-zinc-300">{sent}</td>
+                      <td className="py-3.5 pr-6 font-mono text-[#0F1115]">{uniqueLeads}</td>
+                      <td className="py-3.5 pr-6 font-mono text-[#0F1115]">{sent}</td>
                       <td className="py-3.5 pr-6">
-                        <span className={`font-mono ${opened > 0 ? "text-blue-400" : "text-zinc-600"}`}>
+                        <span className={`font-mono ${opened > 0 ? "text-blue-700" : "text-[#6A6D75]"}`}>
                           {opened}
-                          {sent > 0 && <span className="text-zinc-600 text-xs ml-1">({Math.round(opened / sent * 100)}%)</span>}
+                          {sent > 0 && <span className="text-[#6A6D75] text-xs ml-1">({Math.round(opened / sent * 100)}%)</span>}
                         </span>
                       </td>
                       <td className="py-3.5">
-                        <span className={`font-mono ${clicked > 0 ? "text-violet-400" : "text-zinc-600"}`}>
+                        <span className={`font-mono ${clicked > 0 ? "text-violet-400" : "text-[#6A6D75]"}`}>
                           {clicked}
-                          {sent > 0 && <span className="text-zinc-600 text-xs ml-1">({Math.round(clicked / sent * 100)}%)</span>}
+                          {sent > 0 && <span className="text-[#6A6D75] text-xs ml-1">({Math.round(clicked / sent * 100)}%)</span>}
                         </span>
                       </td>
                     </tr>

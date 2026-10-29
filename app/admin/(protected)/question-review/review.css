@@ -1,8 +1,3 @@
-.admin-review-shell { color-scheme: light; }
-.admin-review-shell > header { background: #fff; border-color: #E5E5E1; }
-.admin-review-shell > header a { color: #6A6D75; }
-.admin-review-shell > header a:first-child { color: #0F1115; }
-.admin-review-shell > header a[href="/admin/question-review"] { color: #0F1115; background: #C8F24A; padding: 8px 14px; border-radius: 8px; }
 .review-dashboard { --accent: #C8F24A; }
 .review-dashboard input, .review-dashboard textarea { accent-color: #6B8B18; }
 .review-dashboard textarea { resize: vertical; }

@@ -85,18 +85,18 @@ export default async function AdminPage({ searchParams }: Props) {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h1 className="text-3xl font-bold">Заявки</h1>
         <div className="flex items-center gap-3">
           <Link
             href="/admin/funnel"
-            className="px-4 py-2 text-sm text-zinc-400 border border-zinc-700 rounded-lg hover:text-zinc-200 hover:border-zinc-500 transition-colors"
+            className="px-4 py-2 text-sm text-[#6A6D75] border border-[#E5E5E1] rounded-lg hover:text-[#0F1115] hover:border-[#E5E5E1] transition-colors"
           >
             Аналитика →
           </Link>
           <Link
             href="/admin/submit"
-            className="px-5 py-2.5 bg-zinc-100 text-zinc-900 rounded-lg text-base font-semibold hover:bg-white transition-colors"
+            className="px-5 py-2.5 bg-[#C8F24A] text-[#0F1115] rounded-lg text-base font-semibold hover:bg-[#B9E437] transition-colors"
           >
             + Новый аудит
           </Link>
@@ -108,62 +108,62 @@ export default async function AdminPage({ searchParams }: Props) {
       </div>
 
       {/* Pipeline status counters */}
-      <div className="grid grid-cols-5 gap-4 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-5">
         {[
-          { label: "Всего",        value: total,          cls: "text-zinc-100" },
-          { label: "Ждут оплаты", value: pendingPayment, cls: "text-yellow-400" },
-          { label: "В работе",    value: inProgress,     cls: "text-blue-400" },
-          { label: "Завершено",   value: completed,      cls: "text-emerald-400" },
-          { label: "Ошибок",      value: failed,         cls: "text-red-400" },
+          { label: "Всего",        value: total,          cls: "text-[#0F1115]" },
+          { label: "Ждут оплаты", value: pendingPayment, cls: "text-[#4C6218]" },
+          { label: "В работе",    value: inProgress,     cls: "text-blue-700" },
+          { label: "Завершено",   value: completed,      cls: "text-emerald-700" },
+          { label: "Ошибок",      value: failed,         cls: "text-red-700" },
         ].map((s) => (
-          <div key={s.label} className="bg-zinc-800 rounded-xl p-5">
-            <p className="text-sm text-zinc-500 mb-2">{s.label}</p>
+          <div key={s.label} className="bg-[#F2F1EB] rounded-xl p-5">
+            <p className="text-sm text-[#6A6D75] mb-2">{s.label}</p>
             <p className={`text-4xl font-bold ${s.cls}`}>{s.value}</p>
           </div>
         ))}
       </div>
 
       {/* Business KPIs */}
-      <div className="grid grid-cols-5 gap-4 mb-8">
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-500 mb-1 uppercase tracking-widest">Выручка {monthName}</p>
-          <p className="text-2xl font-bold text-zinc-100 font-mono">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8">
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] mb-1 uppercase tracking-widest">Выручка {monthName}</p>
+          <p className="text-2xl font-bold text-[#0F1115] font-mono">
             {monthRevenue.toLocaleString("ru-RU")} ₽
           </p>
-          <p className="text-xs text-zinc-600 mt-1">{paidThisMonth.length} оплаченных аудитов</p>
+          <p className="text-xs text-[#6A6D75] mt-1">{paidThisMonth.length} оплаченных аудитов</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-500 mb-1 uppercase tracking-widest">Новых сегодня</p>
-          <p className="text-2xl font-bold text-blue-400 font-mono">{todayNew}</p>
-          <p className="text-xs text-zinc-600 mt-1">заявок за сутки</p>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] mb-1 uppercase tracking-widest">Новых сегодня</p>
+          <p className="text-2xl font-bold text-blue-700 font-mono">{todayNew}</p>
+          <p className="text-xs text-[#6A6D75] mt-1">заявок за сутки</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-500 mb-1 uppercase tracking-widest">Конверсия</p>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] mb-1 uppercase tracking-widest">Конверсия</p>
           <p className="text-2xl font-bold font-mono" style={{ color: conversionRate === null ? "#52525b" : conversionRate >= 90 ? "#22c55e" : conversionRate >= 70 ? "#f59e0b" : "#ef4444" }}>
             {conversionRate !== null ? `${conversionRate}%` : "—"}
           </p>
-          <p className="text-xs text-zinc-600 mt-1">завершено / (завершено + ошибки)</p>
+          <p className="text-xs text-[#6A6D75] mt-1">завершено / (завершено + ошибки)</p>
         </div>
-        <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
-          <p className="text-xs text-zinc-500 mb-1 uppercase tracking-widest">Зависших</p>
-          <p className={`text-2xl font-bold font-mono ${stuckJobs.length > 0 ? "text-red-400" : "text-zinc-600"}`}>
+        <div className="bg-white border border-[#E5E5E1] rounded-xl p-5">
+          <p className="text-xs text-[#6A6D75] mb-1 uppercase tracking-widest">Зависших</p>
+          <p className={`text-2xl font-bold font-mono ${stuckJobs.length > 0 ? "text-red-700" : "text-[#6A6D75]"}`}>
             {stuckJobs.length}
           </p>
-          <p className="text-xs text-zinc-600 mt-1">в работе &gt;90 мин без обновления</p>
+          <p className="text-xs text-[#6A6D75] mt-1">в работе &gt;90 мин без обновления</p>
         </div>
-        <Link href="/admin/leads" className="bg-zinc-900 border border-zinc-800 rounded-xl p-5 hover:border-zinc-600 transition-colors group">
-          <p className="text-xs text-zinc-500 mb-1 uppercase tracking-widest">Freemium лиды</p>
+        <Link href="/admin/leads" className="bg-white border border-[#E5E5E1] rounded-xl p-5 hover:border-[#E5E5E1] transition-colors group">
+          <p className="text-xs text-[#6A6D75] mb-1 uppercase tracking-widest">Freemium лиды</p>
           <p className="text-2xl font-bold font-mono text-violet-400 group-hover:text-violet-300 transition-colors">
             {freemiumStats.withEmail}
           </p>
-          <p className="text-xs text-zinc-600 mt-1">из {freemiumStats.total} сканов оставили email →</p>
+          <p className="text-xs text-[#6A6D75] mt-1">из {freemiumStats.total} сканов оставили email →</p>
         </Link>
       </div>
 
       {/* Stuck jobs alert */}
       {stuckJobs.length > 0 && (
-        <div className="mb-6 border border-red-800/50 bg-red-950/20 rounded-xl p-4">
-          <p className="text-sm font-semibold text-red-400 mb-2">
+        <div className="mb-6 border border-red-800/50 bg-red-50 rounded-xl p-4">
+          <p className="text-sm font-semibold text-red-700 mb-2">
             ⚠ Зависшие аудиты ({stuckJobs.length})
           </p>
           <div className="flex flex-wrap gap-2">
@@ -173,7 +173,7 @@ export default async function AdminPage({ searchParams }: Props) {
                 <Link
                   key={j.id}
                   href={`/admin/jobs/${j.id}`}
-                  className="text-xs px-3 py-1.5 bg-red-900/30 border border-red-800/40 rounded-lg text-red-300 hover:bg-red-900/50 transition-colors"
+                  className="text-xs px-3 py-1.5 bg-red-50 border border-red-800/40 rounded-lg text-red-700 hover:bg-red-50 transition-colors"
                 >
                   {j.companyName} · {minsAgo} мин
                 </Link>
@@ -186,14 +186,14 @@ export default async function AdminPage({ searchParams }: Props) {
       {/* Pending payment — выделенный блок */}
       {pendingPayment > 0 && (
         <div className="mb-6 border border-yellow-800/50 rounded-xl overflow-hidden">
-          <div className="bg-yellow-900/20 px-4 py-2 flex items-center gap-2">
-            <span className="text-yellow-400 text-sm font-semibold">
+          <div className="bg-[#C8F24A] px-4 py-2 flex items-center gap-2">
+            <span className="text-[#4C6218] text-sm font-semibold">
               ⏳ Ожидают подтверждения оплаты ({pendingPayment})
             </span>
           </div>
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-xs text-zinc-500 border-b border-zinc-800">
+              <tr className="text-left text-xs text-[#6A6D75] border-b border-[#E5E5E1]">
                 <th className="py-2 px-4">Компания</th>
                 <th className="py-2 px-4">Email</th>
                 <th className="py-2 px-4">Тариф</th>
@@ -205,11 +205,11 @@ export default async function AdminPage({ searchParams }: Props) {
               {jobs
                 .filter((j) => j.status === "PENDING_PAYMENT")
                 .map((job) => (
-                  <tr key={job.id} className="border-b border-zinc-800/50 bg-yellow-900/5">
-                    <td className="py-3 px-4 text-zinc-200 font-medium">{job.companyName}</td>
-                    <td className="py-3 px-4 text-zinc-400 text-xs">{job.clientEmail}</td>
-                    <td className="py-3 px-4 text-zinc-400 text-xs">{job.tier}</td>
-                    <td className="py-3 px-4 text-zinc-500 text-xs">
+                  <tr key={job.id} className="border-b border-[#E5E5E1]/50 bg-[#C8F24A]">
+                    <td className="py-3 px-4 text-[#0F1115] font-medium">{job.companyName}</td>
+                    <td className="py-3 px-4 text-[#6A6D75] text-xs">{job.clientEmail}</td>
+                    <td className="py-3 px-4 text-[#6A6D75] text-xs">{job.tier}</td>
+                    <td className="py-3 px-4 text-[#6A6D75] text-xs">
                       {new Date(job.createdAt).toLocaleDateString("ru-RU", {
                         day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
                       })}

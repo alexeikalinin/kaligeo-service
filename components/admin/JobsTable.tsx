@@ -5,15 +5,15 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
-  PENDING_PAYMENT:    { label: "Ждёт оплаты", cls: "bg-yellow-900/30 text-yellow-400" },
-  PENDING:            { label: "В очереди",   cls: "bg-zinc-700 text-zinc-400" },
-  GENERATING_QUERIES: { label: "Запросы",     cls: "bg-blue-900/30 text-blue-400" },
-  EXECUTING_QUERIES:  { label: "Опрос AI",    cls: "bg-blue-900/30 text-blue-400" },
-  ANALYZING:          { label: "Анализ",      cls: "bg-purple-900/30 text-purple-400" },
-  GENERATING_REPORT:  { label: "Отчёт",       cls: "bg-amber-900/30 text-amber-400" },
-  DELIVERING:         { label: "Отправка",    cls: "bg-amber-900/30 text-amber-400" },
-  COMPLETED:          { label: "Готово",      cls: "bg-emerald-900/30 text-emerald-400" },
-  FAILED:             { label: "Ошибка",      cls: "bg-red-900/30 text-red-400" },
+  PENDING_PAYMENT:    { label: "Ждёт оплаты", cls: "bg-[#C8F24A] text-[#4C6218]" },
+  PENDING:            { label: "В очереди",   cls: "bg-[#F2F1EB] text-[#6A6D75]" },
+  GENERATING_QUERIES: { label: "Запросы",     cls: "bg-blue-50 text-blue-700" },
+  EXECUTING_QUERIES:  { label: "Опрос AI",    cls: "bg-blue-50 text-blue-700" },
+  ANALYZING:          { label: "Анализ",      cls: "bg-purple-50 text-purple-700" },
+  GENERATING_REPORT:  { label: "Отчёт",       cls: "bg-[#C8F24A] text-[#4C6218]" },
+  DELIVERING:         { label: "Отправка",    cls: "bg-[#C8F24A] text-[#4C6218]" },
+  COMPLETED:          { label: "Готово",      cls: "bg-emerald-50 text-emerald-700" },
+  FAILED:             { label: "Ошибка",      cls: "bg-red-50 text-red-700" },
 }
 
 const STATUS_FILTER_OPTIONS = [
@@ -32,10 +32,10 @@ const TIER_OPTIONS = [
 ]
 
 function scoreColor(score: number | null) {
-  if (score === null) return "text-zinc-600"
-  if (score >= 60) return "text-emerald-400"
-  if (score >= 30) return "text-amber-400"
-  return "text-red-400"
+  if (score === null) return "text-[#6A6D75]"
+  if (score >= 60) return "text-emerald-700"
+  if (score >= 30) return "text-[#4C6218]"
+  return "text-red-700"
 }
 
 type SortField = "company" | "date" | "score" | "tier" | null
@@ -54,8 +54,8 @@ type Job = {
 }
 
 function SortIcon({ field, current, dir }: { field: SortField; current: SortField; dir: SortDir }) {
-  if (current !== field) return <span className="ml-1 text-zinc-700 text-xs">⇅</span>
-  return <span className="ml-1 text-zinc-300 text-xs">{dir === "asc" ? "↑" : "↓"}</span>
+  if (current !== field) return <span className="ml-1 text-[#6A6D75] text-xs">⇅</span>
+  return <span className="ml-1 text-[#0F1115] text-xs">{dir === "asc" ? "↑" : "↓"}</span>
 }
 
 export function JobsTable({ jobs }: { jobs: Job[] }) {
@@ -150,24 +150,24 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
   const hasFilters = search || statusFilter || tierFilter
 
   function thClass(field: SortField) {
-    return `pb-4 pr-6 font-medium cursor-pointer select-none hover:text-zinc-300 transition-colors ${sortField === field ? "text-zinc-300" : "text-zinc-500"}`
+    return `pb-4 pr-6 font-medium cursor-pointer select-none hover:text-[#0F1115] transition-colors ${sortField === field ? "text-[#0F1115]" : "text-[#6A6D75]"}`
   }
 
   return (
     <div>
       {/* Filters */}
-      <div className="flex items-center gap-3 mb-4">
+      <div className="flex flex-wrap items-center gap-3 mb-4">
         <input
           type="text"
           placeholder="Поиск по компании или email..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"
+          className="flex-1 bg-[#F2F1EB] border border-[#E5E5E1] rounded-lg px-3 py-2 text-sm text-[#0F1115] placeholder-[#6A6D75] focus:outline-none focus:border-[#E5E5E1]"
         />
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500"
+          className="bg-[#F2F1EB] border border-[#E5E5E1] rounded-lg px-3 py-2 text-sm text-[#0F1115] focus:outline-none focus:border-[#E5E5E1]"
         >
           {STATUS_FILTER_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -176,23 +176,23 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
         <select
           value={tierFilter}
           onChange={(e) => setTierFilter(e.target.value)}
-          className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-200 focus:outline-none focus:border-zinc-500"
+          className="bg-[#F2F1EB] border border-[#E5E5E1] rounded-lg px-3 py-2 text-sm text-[#0F1115] focus:outline-none focus:border-[#E5E5E1]"
         >
           {TIER_OPTIONS.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
           ))}
         </select>
         {hasFilters && (
-          <button onClick={resetFilters} className="px-3 py-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors">
+          <button onClick={resetFilters} className="px-3 py-2 text-sm text-[#6A6D75] hover:text-[#0F1115] transition-colors">
             Сбросить
           </button>
         )}
-        <span className="text-sm text-zinc-600 whitespace-nowrap">
+        <span className="text-sm text-[#6A6D75] whitespace-nowrap">
           {filtered.length} из {jobs.length}
         </span>
         <a
           href="/api/admin/export?format=csv"
-          className="ml-auto px-3 py-2 text-xs text-zinc-400 border border-zinc-700 rounded-lg hover:text-zinc-200 hover:border-zinc-500 transition-colors whitespace-nowrap"
+          className="ml-auto px-3 py-2 text-xs text-[#6A6D75] border border-[#E5E5E1] rounded-lg hover:text-[#0F1115] hover:border-[#E5E5E1] transition-colors whitespace-nowrap"
         >
           ↓ CSV
         </a>
@@ -202,25 +202,25 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
       <div className="overflow-x-auto">
         <table className="w-full text-base">
           <thead>
-            <tr className="text-left text-sm border-b border-zinc-800">
-              <th className="pb-4 pr-3 font-medium w-8 text-zinc-500">
+            <tr className="text-left text-sm border-b border-[#E5E5E1]">
+              <th className="pb-4 pr-3 font-medium w-8 text-[#6A6D75]">
                 <input
                   type="checkbox"
                   checked={allSelected}
                   onChange={toggleAll}
-                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-400 cursor-pointer"
+                  className="w-4 h-4 rounded border-[#E5E5E1] bg-[#F2F1EB] accent-[#E5E5E1] cursor-pointer"
                 />
               </th>
               <th className={thClass("company")} onClick={() => toggleSort("company")}>
                 Компания<SortIcon field="company" current={sortField} dir={sortDir} />
               </th>
-              <th className="pb-4 pr-6 font-medium text-zinc-500">Email</th>
-              <th className="pb-4 pr-6 font-medium text-zinc-500">Домен</th>
+              <th className="pb-4 pr-6 font-medium text-[#6A6D75]">Email</th>
+              <th className="pb-4 pr-6 font-medium text-[#6A6D75]">Домен</th>
               <th className={thClass("tier")} onClick={() => toggleSort("tier")}>
                 Тариф<SortIcon field="tier" current={sortField} dir={sortDir} />
               </th>
-              <th className="pb-4 pr-6 font-medium text-zinc-500">Статус</th>
-              <th className="pb-4 pr-6 font-medium text-zinc-500">Оплата</th>
+              <th className="pb-4 pr-6 font-medium text-[#6A6D75]">Статус</th>
+              <th className="pb-4 pr-6 font-medium text-[#6A6D75]">Оплата</th>
               <th className={thClass("score")} onClick={() => toggleSort("score")}>
                 Score<SortIcon field="score" current={sortField} dir={sortDir} />
               </th>
@@ -239,39 +239,39 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
               return (
                 <tr
                   key={job.id}
-                  className={`border-b border-zinc-800/50 transition-colors ${isSelected ? "bg-zinc-700/30" : "hover:bg-zinc-800/20"}`}
+                  className={`border-b border-[#E5E5E1]/50 transition-colors ${isSelected ? "bg-[#F2F1EB]/30" : "hover:bg-[#F2F1EB]/20"}`}
                 >
                   <td className="py-4 pr-3">
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleOne(job.id)}
-                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-400 cursor-pointer"
+                      className="w-4 h-4 rounded border-[#E5E5E1] bg-[#F2F1EB] accent-[#E5E5E1] cursor-pointer"
                     />
                   </td>
-                  <td className="py-4 pr-6 text-zinc-200 font-medium">{job.companyName}</td>
-                  <td className="py-4 pr-6 text-zinc-400 text-sm">{job.clientEmail}</td>
+                  <td className="py-4 pr-6 text-[#0F1115] font-medium">{job.companyName}</td>
+                  <td className="py-4 pr-6 text-[#6A6D75] text-sm">{job.clientEmail}</td>
                   <td className="py-4 pr-6 text-sm">
-                    <span className={`px-2 py-0.5 rounded text-xs font-mono ${job.market === "by" ? "bg-red-900/20 text-red-300" : "bg-blue-900/20 text-blue-300"}`}>
+                    <span className={`px-2 py-0.5 rounded text-xs font-mono ${job.market === "by" ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
                       {job.market === "by" ? "BY" : "RU"}
                     </span>
                   </td>
-                  <td className="py-4 pr-6 text-zinc-400 text-sm">{job.tier}</td>
+                  <td className="py-4 pr-6 text-[#6A6D75] text-sm">{job.tier}</td>
                   <td className="py-4 pr-6">
                     <span className={`text-sm px-3 py-1 rounded-full ${cfg.cls}`}>{cfg.label}</span>
                   </td>
                   <td className="py-4 pr-6 text-sm">
                     {job.paidAt
-                      ? <span className="text-emerald-400">✓ {new Date(job.paidAt).toLocaleDateString("ru-RU")}</span>
-                      : <span className="text-yellow-600">—</span>
+                      ? <span className="text-emerald-700">✓ {new Date(job.paidAt).toLocaleDateString("ru-RU")}</span>
+                      : <span className="text-[#4C6218]">—</span>
                     }
                   </td>
                   <td className={`py-4 pr-6 font-mono font-bold text-lg ${scoreColor(score)}`}>
                     {score ?? "—"}
                   </td>
-                  <td className="py-4 pr-6 text-zinc-400 text-sm">{date}</td>
+                  <td className="py-4 pr-6 text-[#6A6D75] text-sm">{date}</td>
                   <td className="py-4">
-                    <Link href={`/admin/jobs/${job.id}`} className="text-base text-zinc-400 hover:text-zinc-200 transition-colors">→</Link>
+                    <Link href={`/admin/jobs/${job.id}`} className="text-sm text-[#6A6D75] hover:text-[#0F1115] underline">Задание</Link>{job.status === "COMPLETED" && job.report && <Link href={`/admin/jobs/${job.id}/report`} className="mt-2 block whitespace-nowrap rounded-lg bg-[#C8F24A] px-3 py-2 text-center text-sm font-medium text-[#0F1115]">Открыть отчёт</Link>}
                   </td>
                 </tr>
               )
@@ -280,23 +280,23 @@ export function JobsTable({ jobs }: { jobs: Job[] }) {
         </table>
 
         {filtered.length === 0 && (
-          <p className="text-center text-zinc-600 py-10 text-sm">Ничего не найдено</p>
+          <p className="text-center text-[#6A6D75] py-10 text-sm">Ничего не найдено</p>
         )}
       </div>
 
       {/* Floating bulk action bar */}
       {someSelected && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-zinc-800 border border-zinc-700 rounded-xl px-5 py-3 shadow-2xl">
-          <span className="text-sm text-zinc-300">
-            Выбрано: <span className="font-bold text-zinc-100">{selected.size}</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-[#F2F1EB] border border-[#E5E5E1] rounded-xl px-5 py-3 shadow-2xl">
+          <span className="text-sm text-[#0F1115]">
+            Выбрано: <span className="font-bold text-[#0F1115]">{selected.size}</span>
           </span>
-          <button onClick={() => setSelected(new Set())} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+          <button onClick={() => setSelected(new Set())} className="text-sm text-[#6A6D75] hover:text-[#0F1115] transition-colors">
             Снять
           </button>
           <button
             onClick={handleBulkDelete}
             disabled={isDeleting || isPending}
-            className="px-4 py-1.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-red-100 hover:bg-red-200 disabled:opacity-50 text-[#0F1115] text-sm font-semibold rounded-lg transition-colors"
           >
             {isDeleting ? "Удаление..." : "Удалить выбранные"}
           </button>

@@ -29,9 +29,9 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-[#FAFAF7] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        <h1 className="text-xl font-bold text-zinc-100 text-center mb-8">
+        <h1 className="text-xl font-bold text-[#0F1115] text-center mb-8">
           KALIGEO Admin
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -41,13 +41,13 @@ export default function AdminLoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Пароль"
             required
-            className="w-full bg-zinc-800 text-zinc-100 placeholder-zinc-600 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-zinc-600"
+            className="w-full bg-[#F2F1EB] text-[#0F1115] placeholder-[#6A6D75] rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#E5E5E1]"
           />
-          {error && <p className="text-red-400 text-sm text-center">{error}</p>}
+          {error && <p className="text-red-700 text-sm text-center">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 bg-zinc-100 text-zinc-900 rounded-xl font-semibold text-sm hover:bg-white transition-colors disabled:opacity-50"
+            className="w-full py-3 bg-[#C8F24A] text-[#0F1115] rounded-xl font-semibold text-sm hover:bg-white transition-colors disabled:opacity-50"
           >
             {loading ? "Вход..." : "Войти"}
           </button>

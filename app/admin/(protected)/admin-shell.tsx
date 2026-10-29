@@ -2,39 +2,19 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 export default function AdminShell({children}:{children:React.ReactNode}) {
- const light=usePathname().startsWith("/admin/question-review")
+ const pathname=usePathname()
+ const links=[['/admin/question-review','Проверка вопросов'],['/admin','Задания'],['/admin/submit','Новый аудит'],['/admin/leads','Лиды'],['/admin/clients','Клиенты'],['/admin/usage','Лимиты'],['/admin/funnel','Аналитика'],['/admin/agents','Агенты']]
  return (
-    <div className={light ? "admin-review-shell min-h-screen bg-[#FAFAF7] text-[#0F1115] text-base" : "min-h-screen bg-zinc-950 text-zinc-100 text-base"}>
-      <header className="border-b border-zinc-800 px-4 sm:px-8 py-5 flex flex-wrap items-center gap-4 sm:gap-8">
-        <Link href="/admin" className="text-base font-bold tracking-widest text-zinc-100">
+    <div className="admin-review-shell min-h-screen bg-[#FAFAF7] text-[#0F1115] text-base">
+      <header className="border-b border-[#E5E5E1] px-4 sm:px-8 py-5 flex flex-wrap items-center gap-4 sm:gap-8">
+        <Link href="/admin" className="text-base font-bold tracking-widest text-[#0F1115]">
           KALIGEO
         </Link>
-        <Link href="/admin/question-review" className="text-amber-300">Проверка вопросов</Link>
-        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-zinc-400">
-          <Link href="/admin" className="hover:text-zinc-100 transition-colors">
-            Задания
-          </Link>
-          <Link href="/admin/submit" className="hover:text-zinc-100 transition-colors">
-            Новый аудит
-          </Link>
-          <Link href="/admin/leads" className="hover:text-zinc-100 transition-colors">
-            Лиды
-          </Link>
-          <Link href="/admin/clients" className="hover:text-zinc-100 transition-colors">
-            Клиенты
-          </Link>
-          <Link href="/admin/usage" className="hover:text-zinc-100 transition-colors">
-            Лимиты
-          </Link>
-          <Link href="/admin/funnel" className="hover:text-zinc-100 transition-colors">
-            Аналитика
-          </Link>
-          <Link href="/admin/agents" className="hover:text-zinc-100 transition-colors">
-            Агенты
-          </Link>
+        <nav aria-label="Разделы кабинета" className="flex flex-wrap gap-1 text-sm">
+          {links.map(([href,label])=>{const active=href==='/admin'?(pathname==='/admin'||pathname.startsWith('/admin/jobs/')):pathname.startsWith(href);return <Link key={href} href={href} aria-current={active?'page':undefined} className={`rounded-lg px-3 py-2 transition-colors ${active?'bg-[#C8F24A] font-medium text-[#0F1115]':'text-[#6A6D75] hover:bg-[#F2F1EB] hover:text-[#0F1115]'}`}>{label}</Link>})}
         </nav>
         <div className="ml-auto">
-          <Link href="/chat" className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+          <Link href="/chat" className="text-sm text-[#6A6D75] hover:text-[#0F1115] transition-colors">
             → Чат
           </Link>
         </div>

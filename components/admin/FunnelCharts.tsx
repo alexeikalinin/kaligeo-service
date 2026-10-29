@@ -19,10 +19,10 @@ type WeeklyDataPoint = {
 }
 
 const TOOLTIP_STYLE = {
-  backgroundColor: "#18181b",
-  border: "1px solid #3f3f46",
+  backgroundColor: "#FFFFFF",
+  border: "1px solid #BDC6A5",
   borderRadius: "8px",
-  color: "#e4e4e7",
+  color: "#0F1115",
   fontSize: "12px",
 }
 
@@ -30,11 +30,11 @@ export function FunnelCharts({ weeklyData }: { weeklyData: WeeklyDataPoint[] }) 
   return (
     <div className="grid grid-cols-2 gap-6">
       {/* Jobs per week */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider">Заявки по неделям</p>
+      <div className="bg-white border border-[#E5E5E1] rounded-xl p-6">
+        <p className="text-xs text-[#6A6D75] mb-4 uppercase tracking-wider">Заявки по неделям</p>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={weeklyData} barCategoryGap="30%">
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E1" vertical={false} />
             <XAxis
               dataKey="week"
               tick={{ fill: "#71717a", fontSize: 10 }}
@@ -54,18 +54,18 @@ export function FunnelCharts({ weeklyData }: { weeklyData: WeeklyDataPoint[] }) 
             <Legend
               wrapperStyle={{ fontSize: 11, color: "#71717a" }}
             />
-            <Bar dataKey="created" name="Создано" fill="#3f3f46" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="completed" name="Завершено" fill="#059669" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="created" name="Создано" fill="#BDC6A5" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="completed" name="Завершено" fill="#88AA2D" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Revenue per week */}
-      <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-        <p className="text-xs text-zinc-500 mb-4 uppercase tracking-wider">Выручка по неделям, ₽</p>
+      <div className="bg-white border border-[#E5E5E1] rounded-xl p-6">
+        <p className="text-xs text-[#6A6D75] mb-4 uppercase tracking-wider">Выручка по неделям, ₽</p>
         <ResponsiveContainer width="100%" height={180}>
           <BarChart data={weeklyData} barCategoryGap="30%">
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#E5E5E1" vertical={false} />
             <XAxis
               dataKey="week"
               tick={{ fill: "#71717a", fontSize: 10 }}

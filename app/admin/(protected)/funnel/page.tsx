@@ -137,7 +137,7 @@ export default async function FunnelPage({ searchParams }: Props) {
   return (
     <div>
       <div className="flex items-center gap-4 mb-10">
-        <Link href="/admin" className="text-zinc-500 hover:text-zinc-300 transition-colors text-sm">
+        <Link href="/admin" className="text-[#6A6D75] hover:text-[#0F1115] transition-colors text-sm">
           ← Заявки
         </Link>
         <h1 className="text-3xl font-bold">Аналитика</h1>
@@ -148,23 +148,23 @@ export default async function FunnelPage({ searchParams }: Props) {
 
       {/* Conversion funnel */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+        <h2 className="text-sm font-semibold text-[#6A6D75] uppercase tracking-widest mb-4">
           Воронка конверсии
         </h2>
-        <div className="grid grid-cols-4 gap-px bg-zinc-800 rounded-xl overflow-hidden">
+        <div className="grid grid-cols-4 gap-px bg-[#F2F1EB] rounded-xl overflow-hidden">
           {[
-            { label: "Создано", value: total, cls: "text-zinc-100", sub: "все заявки" },
-            { label: "Оплачено", value: paid, pct: total > 0 ? Math.round((paid / total) * 100) : null, cls: "text-yellow-400", sub: "подтвердили оплату" },
-            { label: "Запущено", value: paid, pct: total > 0 ? Math.round((paid / total) * 100) : null, cls: "text-blue-400", sub: "запущены в работу" },
-            { label: "Завершено", value: completed, pct: paid > 0 ? Math.round((completed / paid) * 100) : null, cls: "text-emerald-400", sub: "получили отчёт" },
+            { label: "Создано", value: total, cls: "text-[#0F1115]", sub: "все заявки" },
+            { label: "Оплачено", value: paid, pct: total > 0 ? Math.round((paid / total) * 100) : null, cls: "text-[#4C6218]", sub: "подтвердили оплату" },
+            { label: "Запущено", value: paid, pct: total > 0 ? Math.round((paid / total) * 100) : null, cls: "text-blue-700", sub: "запущены в работу" },
+            { label: "Завершено", value: completed, pct: paid > 0 ? Math.round((completed / paid) * 100) : null, cls: "text-emerald-700", sub: "получили отчёт" },
           ].map((step, i) => (
-            <div key={i} className="bg-zinc-900 p-6">
-              <p className="text-xs text-zinc-500 mb-2 uppercase tracking-wider">{step.label}</p>
+            <div key={i} className="bg-white p-6">
+              <p className="text-xs text-[#6A6D75] mb-2 uppercase tracking-wider">{step.label}</p>
               <p className={`text-4xl font-bold font-mono ${step.cls}`}>{step.value}</p>
               {step.pct !== null && step.pct !== undefined && (
-                <p className="text-xs text-zinc-500 mt-1">{step.pct}% от предыдущего</p>
+                <p className="text-xs text-[#6A6D75] mt-1">{step.pct}% от предыдущего</p>
               )}
-              <p className="text-xs text-zinc-700 mt-0.5">{step.sub}</p>
+              <p className="text-xs text-[#6A6D75] mt-0.5">{step.sub}</p>
             </div>
           ))}
         </div>
@@ -180,15 +180,15 @@ export default async function FunnelPage({ searchParams }: Props) {
             const pct = total > 0 ? Math.round((bar.value / total) * 100) : 0
             return (
               <div key={bar.label} className="flex items-center gap-3">
-                <span className="text-xs text-zinc-500 w-24 text-right shrink-0">{bar.label}</span>
-                <div className="flex-1 h-5 bg-zinc-800/50 rounded-md overflow-hidden">
+                <span className="text-xs text-[#6A6D75] w-24 text-right shrink-0">{bar.label}</span>
+                <div className="flex-1 h-5 bg-[#F2F1EB]/50 rounded-md overflow-hidden">
                   <div
                     className="h-full rounded-md transition-all"
                     style={{ width: `${pct}%`, background: bar.color }}
                   />
                 </div>
-                <span className="text-xs font-mono text-zinc-400 w-16 shrink-0">
-                  {bar.value} <span className="text-zinc-600">({pct}%)</span>
+                <span className="text-xs font-mono text-[#6A6D75] w-16 shrink-0">
+                  {bar.value} <span className="text-[#6A6D75]">({pct}%)</span>
                 </span>
               </div>
             )
@@ -198,26 +198,26 @@ export default async function FunnelPage({ searchParams }: Props) {
 
       {/* Revenue by tier */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+        <h2 className="text-sm font-semibold text-[#6A6D75] uppercase tracking-widest mb-4">
           Выручка по тарифам
         </h2>
         <div className="grid grid-cols-2 gap-6">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <p className="text-xs text-zinc-500 mb-1">Суммарно</p>
-            <p className="text-3xl font-bold font-mono text-zinc-100 mb-4">
+          <div className="bg-white border border-[#E5E5E1] rounded-xl p-6">
+            <p className="text-xs text-[#6A6D75] mb-1">Суммарно</p>
+            <p className="text-3xl font-bold font-mono text-[#0F1115] mb-4">
               {totalRevenue.toLocaleString("ru-RU")} ₽
             </p>
             <div className="space-y-3">
               {tierBreakdown.map((t) => (
                 <div key={t.tier}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-zinc-300">{t.tier}</span>
-                    <span className="text-sm font-mono text-zinc-400">
+                    <span className="text-sm text-[#0F1115]">{t.tier}</span>
+                    <span className="text-sm font-mono text-[#6A6D75]">
                       {t.revenue.toLocaleString("ru-RU")} ₽
-                      <span className="text-zinc-600 ml-2">{t.count} аудитов</span>
+                      <span className="text-[#6A6D75] ml-2">{t.count} аудитов</span>
                     </span>
                   </div>
-                  <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+                  <div className="h-1.5 bg-[#F2F1EB] rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full"
                       style={{ width: `${t.pct}%`, background: t.color }}
@@ -226,27 +226,27 @@ export default async function FunnelPage({ searchParams }: Props) {
                 </div>
               ))}
               {tierBreakdown.length === 0 && (
-                <p className="text-sm text-zinc-600">Пока нет оплаченных аудитов</p>
+                <p className="text-sm text-[#6A6D75]">Пока нет оплаченных аудитов</p>
               )}
             </div>
           </div>
 
-          <div className="bg-zinc-900 border border-zinc-800 rounded-xl p-6">
-            <p className="text-xs text-zinc-500 mb-4">Выручка по месяцам</p>
+          <div className="bg-white border border-[#E5E5E1] rounded-xl p-6">
+            <p className="text-xs text-[#6A6D75] mb-4">Выручка по месяцам</p>
             <div className="space-y-2">
               {monthlyRevenue.map((m) => {
                 const max = Math.max(...monthlyRevenue.map((x) => x.revenue), 1)
                 const pct = Math.round((m.revenue / max) * 100)
                 return (
                   <div key={m.month} className="flex items-center gap-3">
-                    <span className="text-xs text-zinc-500 w-16 shrink-0">{m.month}</span>
-                    <div className="flex-1 h-4 bg-zinc-800/50 rounded overflow-hidden">
+                    <span className="text-xs text-[#6A6D75] w-16 shrink-0">{m.month}</span>
+                    <div className="flex-1 h-4 bg-[#F2F1EB]/50 rounded overflow-hidden">
                       <div
                         className="h-full rounded transition-all"
                         style={{ width: `${pct}%`, background: "#7c3aed" }}
                       />
                     </div>
-                    <span className="text-xs font-mono text-zinc-400 w-20 text-right shrink-0">
+                    <span className="text-xs font-mono text-[#6A6D75] w-20 text-right shrink-0">
                       {m.revenue > 0 ? m.revenue.toLocaleString("ru-RU") + " ₽" : "—"}
                     </span>
                   </div>
@@ -259,7 +259,7 @@ export default async function FunnelPage({ searchParams }: Props) {
 
       {/* Weekly charts (client component with recharts) */}
       <section className="mb-10">
-        <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+        <h2 className="text-sm font-semibold text-[#6A6D75] uppercase tracking-widest mb-4">
           Динамика за 8 недель
         </h2>
         <FunnelCharts weeklyData={weeklyData} />
@@ -267,18 +267,18 @@ export default async function FunnelPage({ searchParams }: Props) {
 
       {/* Export */}
       <section>
-        <h2 className="text-sm font-semibold text-zinc-500 uppercase tracking-widest mb-4">
+        <h2 className="text-sm font-semibold text-[#6A6D75] uppercase tracking-widest mb-4">
           Экспорт
         </h2>
         <div className="flex gap-3">
           <a
             href="/api/admin/export?format=csv"
-            className="px-4 py-2.5 bg-zinc-800 border border-zinc-700 text-zinc-200 rounded-lg text-sm hover:bg-zinc-700 hover:border-zinc-600 transition-colors"
+            className="px-4 py-2.5 bg-[#F2F1EB] border border-[#E5E5E1] text-[#0F1115] rounded-lg text-sm hover:bg-[#F2F1EB] hover:border-[#E5E5E1] transition-colors"
           >
             Скачать CSV — все заявки
           </a>
         </div>
-        <p className="text-xs text-zinc-600 mt-2">
+        <p className="text-xs text-[#6A6D75] mt-2">
           Экспортируются все поля: компания, email, тариф, статус, дата, score, оплата
         </p>
       </section>

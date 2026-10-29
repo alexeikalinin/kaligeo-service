@@ -24,10 +24,10 @@ export type LeadRow = {
 type Tab = "all" | "no_email" | "unconverted" | "converted"
 
 const SCORE_CLS = (s: number) =>
-  s >= 60 ? "text-emerald-400" : s >= 40 ? "text-amber-400" : "text-red-400"
+  s >= 60 ? "text-emerald-700" : s >= 40 ? "text-[#4C6218]" : "text-red-700"
 
 const SCORE_BG = (s: number) =>
-  s >= 60 ? "bg-emerald-900/30" : s >= 40 ? "bg-amber-900/20" : "bg-red-900/20"
+  s >= 60 ? "bg-emerald-50" : s >= 40 ? "bg-[#C8F24A]" : "bg-red-50"
 
 export function LeadsTable({ leads }: { leads: LeadRow[] }) {
   const router = useRouter()
@@ -106,19 +106,19 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
   return (
     <div>
       {/* Tabs */}
-      <div className="flex items-center gap-1 mb-4 border-b border-zinc-800 pb-0">
+      <div className="flex items-center gap-1 mb-4 border-b border-[#E5E5E1] pb-0">
         {tabs.map((t) => (
           <button
             key={t.key}
             onClick={() => { setTab(t.key); setSelected(new Set()) }}
             className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
               tab === t.key
-                ? "border-zinc-100 text-zinc-100"
-                : "border-transparent text-zinc-500 hover:text-zinc-300"
+                ? "border-[#E5E5E1] text-[#0F1115]"
+                : "border-transparent text-[#6A6D75] hover:text-[#0F1115]"
             }`}
           >
             {t.label}
-            <span className={`ml-2 text-xs font-mono ${tab === t.key ? "text-zinc-400" : "text-zinc-600"}`}>
+            <span className={`ml-2 text-xs font-mono ${tab === t.key ? "text-[#6A6D75]" : "text-[#6A6D75]"}`}>
               {t.count}
             </span>
           </button>
@@ -129,7 +129,7 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
             placeholder="Поиск..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="bg-zinc-800 border border-zinc-700 rounded-lg px-3 py-1.5 text-sm text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 w-48"
+            className="bg-[#F2F1EB] border border-[#E5E5E1] rounded-lg px-3 py-1.5 text-sm text-[#0F1115] placeholder-[#6A6D75] focus:outline-none focus:border-[#E5E5E1] w-48"
           />
         </div>
       </div>
@@ -138,10 +138,10 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
-            <tr className="text-left text-xs text-zinc-500 border-b border-zinc-800">
+            <tr className="text-left text-xs text-[#6A6D75] border-b border-[#E5E5E1]">
               <th className="pb-3 pr-3 w-8">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll}
-                  className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-400 cursor-pointer" />
+                  className="w-4 h-4 rounded border-[#E5E5E1] bg-[#F2F1EB] accent-[#E5E5E1] cursor-pointer" />
               </th>
               <th className="pb-3 pr-4 font-medium">Сайт / Компания</th>
               <th className="pb-3 pr-4 font-medium">Email</th>
@@ -157,20 +157,20 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
               const isSelected = selected.has(lead.id)
               const domain = (() => { try { return new URL(lead.websiteUrl).hostname.replace(/^www\./, "") } catch { return lead.websiteUrl } })()
               return (
-                <tr key={lead.id} className={`group border-b border-zinc-800/40 transition-colors ${isSelected ? "bg-zinc-700/25" : "hover:bg-zinc-800/20"}`}>
+                <tr key={lead.id} className={`group border-b border-[#E5E5E1]/40 transition-colors ${isSelected ? "bg-[#F2F1EB]/25" : "hover:bg-[#F2F1EB]/20"}`}>
                   <td className="py-3 pr-3">
                     <input type="checkbox" checked={isSelected} onChange={() => toggleOne(lead.id)}
-                      className="w-4 h-4 rounded border-zinc-600 bg-zinc-800 accent-zinc-400 cursor-pointer" />
+                      className="w-4 h-4 rounded border-[#E5E5E1] bg-[#F2F1EB] accent-[#E5E5E1] cursor-pointer" />
                   </td>
                   <td className="py-3 pr-4">
-                    <p className="text-zinc-200 font-medium leading-tight">{lead.companyName}</p>
-                    <p className="text-zinc-600 text-xs mt-0.5">{domain}</p>
+                    <p className="text-[#0F1115] font-medium leading-tight">{lead.companyName}</p>
+                    <p className="text-[#6A6D75] text-xs mt-0.5">{domain}</p>
                   </td>
                   <td className="py-3 pr-4">
                     {lead.email ? (
-                      <span className="text-zinc-400 font-mono text-xs">{lead.email}</span>
+                      <span className="text-[#6A6D75] font-mono text-xs">{lead.email}</span>
                     ) : (
-                      <span className="text-zinc-700 text-xs italic">не оставил</span>
+                      <span className="text-[#6A6D75] text-xs italic">не оставил</span>
                     )}
                   </td>
                   <td className="py-3 pr-4">
@@ -181,43 +181,43 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
                   <td className="py-3 pr-4">
                     {lead.emailSequence ? (
                       <div className="flex items-center gap-1.5">
-                        <span className="text-zinc-500 text-xs">{lead.emailSequence.sent} отпр.</span>
+                        <span className="text-[#6A6D75] text-xs">{lead.emailSequence.sent} отпр.</span>
                         {lead.emailSequence.opened && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-900/30 text-blue-400">открыл</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-blue-50 text-blue-700">открыл</span>
                         )}
                         {lead.emailSequence.clicked && (
-                          <span className="text-xs px-1.5 py-0.5 rounded bg-violet-900/30 text-violet-400">кликнул</span>
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-violet-50 text-violet-700">кликнул</span>
                         )}
                         {!lead.emailSequence.opened && (
-                          <span className="text-xs text-zinc-700">—</span>
+                          <span className="text-xs text-[#6A6D75]">—</span>
                         )}
                       </div>
                     ) : (
-                      <span className="text-zinc-700 text-xs">—</span>
+                      <span className="text-[#6A6D75] text-xs">—</span>
                     )}
                   </td>
                   <td className="py-3 pr-4">
                     {lead.converted ? (
-                      <span className={`text-xs px-2 py-1 rounded-full ${lead.paid ? "bg-emerald-900/30 text-emerald-400" : "bg-yellow-900/30 text-yellow-400"}`}>
+                      <span className={`text-xs px-2 py-1 rounded-full ${lead.paid ? "bg-emerald-50 text-emerald-700" : "bg-[#C8F24A] text-[#4C6218]"}`}>
                         {lead.paid ? "Оплатил" : "Заявка"}
                       </span>
                     ) : lead.email ? (
-                      <span className="text-xs px-2 py-1 rounded-full bg-zinc-800 text-zinc-500">
+                      <span className="text-xs px-2 py-1 rounded-full bg-[#F2F1EB] text-[#6A6D75]">
                         Не купил
                       </span>
                     ) : (
-                      <span className="text-xs px-2 py-1 rounded-full bg-zinc-900 text-zinc-700">
+                      <span className="text-xs px-2 py-1 rounded-full bg-white text-[#6A6D75]">
                         Анон
                       </span>
                     )}
                   </td>
-                  <td className="py-3 pr-4 text-zinc-600 text-xs">
+                  <td className="py-3 pr-4 text-[#6A6D75] text-xs">
                     {new Date(lead.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short" })}
                   </td>
                   <td className="py-3">
                     <button
                       onClick={() => deleteOne(lead.id)}
-                      className="opacity-0 group-hover:opacity-100 text-zinc-700 hover:text-red-400 transition-all text-base leading-none px-1"
+                      className="opacity-0 group-hover:opacity-100 text-[#6A6D75] hover:text-red-700 transition-all text-base leading-none px-1"
                       title="Удалить"
                     >
                       ×
@@ -229,35 +229,35 @@ export function LeadsTable({ leads }: { leads: LeadRow[] }) {
           </tbody>
         </table>
         {filtered.length === 0 && (
-          <p className="text-center text-zinc-700 py-10 text-sm">Ничего не найдено</p>
+          <p className="text-center text-[#6A6D75] py-10 text-sm">Ничего не найдено</p>
         )}
       </div>
 
       {/* Bulk actions */}
       {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-zinc-800 border border-zinc-700 rounded-xl px-5 py-3 shadow-2xl">
-          <span className="text-sm text-zinc-300">
-            Выбрано: <span className="font-bold text-zinc-100">{selected.size}</span>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-[#F2F1EB] border border-[#E5E5E1] rounded-xl px-5 py-3 shadow-2xl">
+          <span className="text-sm text-[#0F1115]">
+            Выбрано: <span className="font-bold text-[#0F1115]">{selected.size}</span>
           </span>
-          <button onClick={() => setSelected(new Set())} className="text-sm text-zinc-500 hover:text-zinc-300 transition-colors">
+          <button onClick={() => setSelected(new Set())} className="text-sm text-[#6A6D75] hover:text-[#0F1115] transition-colors">
             Снять
           </button>
           <button
             onClick={copyEmails}
-            className="px-4 py-1.5 bg-zinc-700 hover:bg-zinc-600 text-zinc-200 text-sm rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-[#F2F1EB] hover:bg-[#F2F1EB] text-[#0F1115] text-sm rounded-lg transition-colors"
           >
             Скопировать email
           </button>
           <a
             href={`/api/admin/leads/retargeting?segment=unconverted`}
-            className="px-4 py-1.5 bg-violet-700 hover:bg-violet-600 text-white text-sm font-semibold rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-[#C8F24A] hover:bg-[#B9E437] text-[#0F1115] text-sm font-semibold rounded-lg transition-colors"
           >
             ↓ CSV для ретаргетинга
           </a>
           <button
             onClick={deleteSelected}
             disabled={deleting}
-            className="px-4 py-1.5 bg-red-900/60 hover:bg-red-800 disabled:opacity-50 text-red-300 text-sm font-semibold rounded-lg transition-colors"
+            className="px-4 py-1.5 bg-red-50 hover:bg-red-50 disabled:opacity-50 text-red-700 text-sm font-semibold rounded-lg transition-colors"
           >
             {deleting ? "Удаляем…" : "Удалить"}
           </button>

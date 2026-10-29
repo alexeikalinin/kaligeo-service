@@ -41,13 +41,13 @@ export default function AgentsPage() {
     setLoading(false)
   }
 
-  const field = "w-full bg-zinc-900 border border-zinc-600 text-zinc-100 placeholder-zinc-500 rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-zinc-400 focus:border-zinc-400 transition-colors"
-  const label = "block text-sm font-medium text-zinc-300 mb-2"
+  const field = "w-full bg-white border border-[#E5E5E1] text-[#0F1115] placeholder-[#6A6D75] rounded-xl px-4 py-3 text-base outline-none focus:ring-2 focus:ring-[#E5E5E1] focus:border-[#E5E5E1] transition-colors"
+  const label = "block text-sm font-medium text-[#0F1115] mb-2"
 
   return (
     <div className="max-w-3xl">
       <h1 className="text-3xl font-bold mb-2">Агенты</h1>
-      <p className="text-zinc-500 text-sm mb-10">
+      <p className="text-[#6A6D75] text-sm mb-10">
         Ручной вызов orchestrator — Claude сам решает, каких агентов вызвать
         (анализ, контент, риск, бенчмарк, лид-скоринг, outreach, оптимизация запросов, анализ сайта).
       </p>
@@ -65,7 +65,7 @@ export default function AgentsPage() {
         </div>
         <div>
           <label className={label}>
-            Контекст <span className="text-zinc-500 font-normal">(опционально, JSON)</span>
+            Контекст <span className="text-[#6A6D75] font-normal">(опционально, JSON)</span>
           </label>
           <textarea
             rows={3}
@@ -75,11 +75,11 @@ export default function AgentsPage() {
             className={`${field} resize-none font-mono text-sm`}
           />
         </div>
-        {error && <p className="text-red-400 text-base">{error}</p>}
+        {error && <p className="text-red-700 text-base">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-4 bg-zinc-100 text-zinc-900 rounded-xl font-semibold text-base hover:bg-white transition-colors disabled:opacity-50"
+          className="w-full py-4 bg-[#F2F1EB] text-[#0F1115] rounded-xl font-semibold text-base hover:bg-white transition-colors disabled:opacity-50"
         >
           {loading ? "Выполняем..." : "Запустить"}
         </button>
@@ -87,7 +87,7 @@ export default function AgentsPage() {
       {result && (
         <div className="mt-10">
           <p className={label}>Ответ</p>
-          <pre className="whitespace-pre-wrap bg-zinc-900 border border-zinc-700 rounded-xl p-5 text-sm text-zinc-200">
+          <pre className="whitespace-pre-wrap bg-white border border-[#E5E5E1] rounded-xl p-5 text-sm text-[#0F1115]">
             {result}
           </pre>
         </div>

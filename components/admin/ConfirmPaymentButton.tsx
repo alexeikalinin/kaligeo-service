@@ -35,29 +35,29 @@ export function ConfirmPaymentButton({ jobId, currentTier }: Props) {
   }
 
   if (done) {
-    return <span className="text-xs text-emerald-400">✓ Запущен</span>
+    return <span className="text-xs text-emerald-700">✓ Запущен</span>
   }
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="text-xs px-3 py-1 rounded bg-yellow-500 text-black font-semibold hover:bg-yellow-400 transition-colors"
+        className="text-xs px-3 py-1 rounded bg-[#C8F24A] text-black font-semibold hover:bg-[#C8F24A] transition-colors"
       >
         Подтвердить оплату
       </button>
 
       {open && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-96 shadow-2xl">
+          <div className="bg-white border border-[#E5E5E1] rounded-xl p-6 w-96 shadow-2xl">
             <h3 className="text-base font-bold mb-4">Подтверждение оплаты</h3>
 
             <div className="mb-4">
-              <label className="text-xs text-zinc-500 block mb-1">Тариф</label>
+              <label className="text-xs text-[#6A6D75] block mb-1">Тариф</label>
               <select
                 value={tier}
                 onChange={(e) => setTier(e.target.value)}
-                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100"
+                className="w-full bg-[#F2F1EB] border border-[#E5E5E1] rounded px-3 py-2 text-sm text-[#0F1115]"
               >
                 <option value="BASIC">Basic — $50</option>
                 <option value="STANDARD">Standard — $150</option>
@@ -66,13 +66,13 @@ export function ConfirmPaymentButton({ jobId, currentTier }: Props) {
             </div>
 
             <div className="mb-5">
-              <label className="text-xs text-zinc-500 block mb-1">Заметки (необязательно)</label>
+              <label className="text-xs text-[#6A6D75] block mb-1">Заметки (необязательно)</label>
               <input
                 type="text"
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Оплата через Stripe #xxxx"
-                className="w-full bg-zinc-800 border border-zinc-700 rounded px-3 py-2 text-sm text-zinc-100 placeholder-zinc-600"
+                className="w-full bg-[#F2F1EB] border border-[#E5E5E1] rounded px-3 py-2 text-sm text-[#0F1115] placeholder-[#6A6D75]"
               />
             </div>
 
@@ -80,13 +80,13 @@ export function ConfirmPaymentButton({ jobId, currentTier }: Props) {
               <button
                 onClick={confirm}
                 disabled={loading}
-                className="flex-1 py-2 rounded bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-500 transition-colors disabled:opacity-50"
+                className="flex-1 py-2 rounded bg-[#C8F24A] text-[#0F1115] text-sm font-semibold hover:bg-[#B9E437] transition-colors disabled:opacity-50"
               >
                 {loading ? "Запускаем..." : "✓ Оплачено — Запустить аудит"}
               </button>
               <button
                 onClick={() => setOpen(false)}
-                className="px-4 py-2 rounded bg-zinc-700 text-zinc-300 text-sm hover:bg-zinc-600 transition-colors"
+                className="px-4 py-2 rounded bg-[#F2F1EB] text-[#0F1115] text-sm hover:bg-[#F2F1EB] transition-colors"
               >
                 Отмена
               </button>
