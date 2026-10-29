@@ -2,9 +2,9 @@ import { createHash } from "node:crypto"
 import { z } from "zod"
 export const sourceSchema = z.object({ url: z.string().url(), quote: z.string().min(1).max(2000) })
 export const businessMapSchema = z.object({
-  entities: z.array(z.object({ id:z.string().min(1),name:z.string().min(1),kind:z.enum(["company","brand","product","service","category"]),attributes:z.array(z.string()),aliases:z.array(z.string().min(1)).optional(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})).max(100),
-  relationships:z.array(z.object({from:z.string(),to:z.string(),role:z.enum(["owns","develops","publishes","sells","provides","belongs_to"]),enabled:z.boolean().optional(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})).max(150),
-  audiences:z.array(z.object({id:z.string(),name:z.string(),needs:z.array(z.string()),entityIds:z.array(z.string()),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})).max(30),
+  entities: z.array(z.object({ id:z.string().min(1),name:z.string().min(1),kind:z.enum(["company","brand","product","service","category"]),attributes:z.array(z.string()),aliases:z.array(z.string().min(1)).optional(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"]),clarification:z.string().max(4000).optional()})).max(100),
+  relationships:z.array(z.object({from:z.string(),to:z.string(),role:z.enum(["owns","develops","publishes","sells","provides","belongs_to"]),enabled:z.boolean().optional(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"]),clarification:z.string().max(4000).optional()})).max(150),
+  audiences:z.array(z.object({id:z.string(),name:z.string(),needs:z.array(z.string()),entityIds:z.array(z.string()),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"]),clarification:z.string().max(4000).optional()})).max(30),
   geography:z.array(z.object({name:z.string(),sources:z.array(sourceSchema),confidence:z.enum(["supported","uncertain"])})),
   scope:z.array(z.object({entityId:z.string(),audienceId:z.string(),metric:z.enum(["company","owned-product","seller"]),rationale:z.string()})),
   unknowns:z.array(z.string()),

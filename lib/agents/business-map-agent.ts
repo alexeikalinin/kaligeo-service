@@ -7,9 +7,9 @@ import {businessMapSchema,sourceSchema,groundBusinessMap,type SourceDocument} fr
 // The full editor schema still allows the reviewer to expand the map.
 const evidence=z.array(sourceSchema).max(8)
 export const businessMapDraftSchema=businessMapSchema.extend({
- entities:z.array(businessMapSchema.shape.entities.element.extend({attributes:z.array(z.string().max(120)).max(4),aliases:z.array(z.string()).max(3).optional(),sources:evidence})).max(12),
- relationships:z.array(businessMapSchema.shape.relationships.element.extend({sources:evidence})).max(18),
- audiences:z.array(businessMapSchema.shape.audiences.element.extend({needs:z.array(z.string().max(120)).max(4),sources:evidence})).max(4),
+ entities:z.array(businessMapSchema.shape.entities.element.omit({clarification:true}).extend({attributes:z.array(z.string().max(120)).max(4),aliases:z.array(z.string()).max(3).optional(),sources:evidence})).max(12),
+ relationships:z.array(businessMapSchema.shape.relationships.element.omit({clarification:true}).extend({sources:evidence})).max(18),
+ audiences:z.array(businessMapSchema.shape.audiences.element.omit({clarification:true}).extend({needs:z.array(z.string().max(120)).max(4),sources:evidence})).max(4),
  geography:z.array(businessMapSchema.shape.geography.element.extend({sources:evidence})).max(4),
  scope:businessMapSchema.shape.scope.max(24),unknowns:businessMapSchema.shape.unknowns.max(8),
 })

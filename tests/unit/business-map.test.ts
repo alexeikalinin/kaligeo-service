@@ -18,3 +18,11 @@ it("does not allow disabled ownership as evidence for product measurement",()=>{
  const m=validateBusinessMap({...map,entities:[...map.entities,{...map.entities[0],id:"p",kind:"product"}],audiences:[{...map.audiences[0],confidence:"supported"}],relationships:[{from:"c",to:"p",role:"develops",enabled:false,sources:[],confidence:"supported"}],scope:[{...map.scope[0],entityId:"p",metric:"owned-product"}]})
  expect(()=>assertReviewableMap(m)).toThrow("подтвердите связь")
 })
+
+it("persists addressed clarification in the map revision without promoting uncertain facts",()=>{
+ const m=validateBusinessMap({...map,entities:[{...map.entities[0],confidence:"uncertain",clarification:"Уточнить модель бизнеса\nНе смешивать продажи и производство"}],audiences:[{...map.audiences[0],clarification:"Ищут место покупки"}]})
+ expect(m.entities[0].clarification).toContain("\n")
+ expect(m.entities[0].confidence).toBe("uncertain")
+ expect(mapHash(m)).not.toBe(mapHash(validateBusinessMap(map)))
+ expect(()=>assertReviewableMap(m)).toThrow()
+})
