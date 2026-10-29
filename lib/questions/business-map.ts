@@ -11,7 +11,7 @@ export const businessMapSchema = z.object({
 })
 export type BusinessMap = z.infer<typeof businessMapSchema>
 export interface SourceDocument {url:string;text:string}
-export function mapHash(map:BusinessMap){return createHash("sha256").update(JSON.stringify(map)).digest("hex")}
+export function mapHash(map:BusinessMap){return createHash("sha256").update(JSON.stringify(validateBusinessMap(map))).digest("hex")}
 export function validateBusinessMap(raw:unknown):BusinessMap {
  const m=businessMapSchema.parse(raw), ids=new Set(m.entities.map(e=>e.id)), audiences=new Set(m.audiences.map(a=>a.id))
  if(ids.size!==m.entities.length||audiences.size!==m.audiences.length)throw Error("Повторяются идентификаторы карты")

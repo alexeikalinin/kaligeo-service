@@ -204,6 +204,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     }
     const mapReview=mappedSnapshot.businessMapReview as {state:string;hash:string}|undefined
     if(mapReview?.state!=="approved"||mapReview.hash!==mapHash(businessMap))return {jobId,awaitingBusinessMapApproval:true}
+    await prisma.$executeRaw`UPDATE "AuditJob" SET "analysisSnapshot"=jsonb_set(COALESCE("analysisSnapshot",'{}'::jsonb),'{questionPreparation}',${JSON.stringify({state:"generating",queuedAt:(mappedSnapshot.questionPreparation as {queuedAt?:string}|undefined)?.queuedAt??new Date().toISOString(),startedAt:new Date().toISOString()})}::jsonb) WHERE id=${jobId}`
     siteContext={...(siteContext ?? {description:job.niche,services:[],targetAudience:""}),businessMap}
 
     // ── Step 1: Generate queries ──────────────────────────────────────────
@@ -242,6 +243,8 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     // Human approval is bound to the exact question version and cannot be bypassed by retries.
     const reviewJob = await prisma.auditJob.findUniqueOrThrow({ where: { id: jobId } })
     const reviewSnapshot = (reviewJob.analysisSnapshot ?? {}) as Record<string, unknown>
+    reviewSnapshot.questionPreparation={...((reviewSnapshot.questionPreparation??{}) as object),state:"reviewing"}
+    await prisma.$executeRaw`UPDATE "AuditJob" SET "analysisSnapshot"=jsonb_set(COALESCE("analysisSnapshot",'{}'::jsonb),'{questionPreparation}',${JSON.stringify(reviewSnapshot.questionPreparation)}::jsonb) WHERE id=${jobId}`
     const cardVersion=cardsVersion(queries,businessMap)
     let questionCards=reviewSnapshot.questionCards as QuestionCard[]|undefined
     if(reviewSnapshot.questionCardsVersion!==cardVersion||!questionCards){
@@ -252,7 +255,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     if (!isQuestionSetApproved(queries, reviewSnapshot.questionReview as QuestionReview | undefined)) {
       await prisma.auditJob.update({ where: { id: jobId }, data: {
         generatedQueries: queries, status: "GENERATING_QUERIES",
-        analysisSnapshot: JSON.parse(JSON.stringify({ ...reviewSnapshot, questionReview: {
+        analysisSnapshot: JSON.parse(JSON.stringify({ ...reviewSnapshot, questionPreparation:{...((reviewSnapshot.questionPreparation??{}) as object),state:"ready",completedAt:new Date().toISOString()}, questionReview: {
           hash: questionHash(queries), state: "pending", notes: (reviewSnapshot.questionReview as QuestionReview | undefined)?.notes ?? "",
         } })),
       } })

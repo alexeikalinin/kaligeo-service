@@ -26,3 +26,9 @@ it("persists addressed clarification in the map revision without promoting uncer
  expect(mapHash(m)).not.toBe(mapHash(validateBusinessMap(map)))
  expect(()=>assertReviewableMap(m)).toThrow()
 })
+
+it("keeps approval hash stable through JSONB property reordering",()=>{
+ const original=validateBusinessMap(map)
+ const reorder=(value:unknown):unknown=>Array.isArray(value)?value.map(reorder):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).reverse().map(([k,v])=>[k,reorder(v)])):value
+ expect(mapHash(reorder(original) as typeof original)).toBe(mapHash(original))
+})

@@ -5,6 +5,7 @@ import type { BusinessMap } from "@/lib/questions/business-map"
 import { prisma } from "@/lib/prisma"
 import MapEditor from "./map-editor"
 import Editor from "./editor"
+import ReviewWorkspace from "./review-workspace"
 
 export default async function QuestionReviewPage() {
   const jobs = await prisma.auditJob.findMany({ where: { status: { in: ["GENERATING_QUERIES", "FAILED"] } }, orderBy: { createdAt: "asc" } })
@@ -16,12 +17,13 @@ export default async function QuestionReviewPage() {
       const snapshot = (job.analysisSnapshot ?? {}) as Record<string, unknown>
       const review = snapshot.questionReview as { hash: string; notes?: string; state: string } | undefined
       const mapReview = snapshot.businessMapReview as { state: string; hash: string; notes?: string } | undefined
-      const pendingMap = mapReview?.state === "pending" && snapshot.businessMap
-      if (!pendingMap && !review && job.status !== "FAILED") return <section key={job.id} className="rounded-xl border border-zinc-800 p-6"><h2 className="text-xl">{job.companyName}</h2><p className="mt-2 text-sm text-zinc-400">Подготовка вопросов выполняется. Обновите страницу через некоторое время.</p></section>
       return <section key={job.id} className="space-y-5">
         <div className="flex flex-wrap justify-between gap-3 border-b border-zinc-800 pb-4"><div><h2 className="text-2xl font-semibold">{job.companyName} <span className="ml-2 rounded-md bg-zinc-800 px-2 py-1 text-xs font-normal">{job.tier}</span></h2><a href={job.websiteUrl} target="_blank" rel="noreferrer" className="mt-2 block text-sm text-zinc-400 underline">{job.websiteUrl}</a></div><Link className="self-center text-sm text-zinc-400 underline" href={`/admin/jobs/${job.id}`}>Открыть задание</Link></div>
         {job.status === "FAILED" && <div className="rounded-xl border border-red-900 bg-red-950/20 p-4"><AuditFailureNotice message={job.errorMessage}/></div>}
-        {pendingMap && mapReview ? <MapEditor id={job.id} initial={snapshot.businessMap as BusinessMap} version={mapReview.hash} initialNotes={mapReview.notes ?? ""}/> : review && ["pending", "approved"].includes(review.state) ? <div className="rounded-xl border border-zinc-800 p-5 space-y-4"><h3 className="text-xl font-semibold">Шаг 2. Проверка вопросов</h3><p className="text-sm text-zinc-400">{review.state === "approved" ? "Список утверждён. При сбое постановки в очередь можно повторить запуск." : "Карта утверждена, вопросы подготовлены. Проверьте формулировки перед опросом ИИ."}</p><details className="text-sm text-zinc-400"><summary className="cursor-pointer">Контекст и уведомления</summary><p className="mt-3">{job.niche}</p><p>{String(snapshot.description ?? "")}</p><p>{String(snapshot.targetAudience ?? "")}</p><pre className="mt-3 overflow-auto text-xs">{JSON.stringify(snapshot.reviewNotifications ?? "Уведомлений пока нет", null, 2)}</pre></details><Editor failed={job.status === "FAILED"} id={job.id} queries={(job.generatedQueries ?? []) as string[]} version={review.hash} initialNotes={review.notes ?? ""} initialCards={(snapshot.questionCards ?? []) as QuestionCard[]}/></div> : null}
+        <ReviewWorkspace jobId={job.id} mapApproved={mapReview?.state==="approved"} questionsReady={!!review&&["pending","approved"].includes(review.state)} failed={job.status==="FAILED"} startedAt={(snapshot.questionPreparation as {queuedAt?:string}|undefined)?.queuedAt}
+          mapPanel={snapshot.businessMap&&mapReview?<MapEditor id={job.id} initial={snapshot.businessMap as BusinessMap} version={mapReview.hash} initialNotes={mapReview.notes??""}/>:<p className="text-sm text-zinc-400">Карта бизнеса ещё не подготовлена.</p>}
+          questionsPanel={review?<div className="rounded-xl border border-zinc-800 p-5 space-y-4"><h3 className="text-xl font-semibold">Проверка вопросов</h3><p className="text-sm text-zinc-400">{review.state==="approved"?"Список утверждён.":"Вопросы подготовлены по выбранной аудитории. Проверьте формулировки перед опросом ИИ."}</p><Editor failed={job.status==="FAILED"} id={job.id} queries={(job.generatedQueries??[]) as string[]} version={review.hash} initialNotes={review.notes??""} initialCards={(snapshot.questionCards??[]) as QuestionCard[]}/></div>:null}/>
+
       </section>
     })}
   </div>
