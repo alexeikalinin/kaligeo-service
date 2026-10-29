@@ -13,12 +13,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 text-base">
-      <header className="border-b border-zinc-800 px-8 py-5 flex items-center gap-8">
+      <header className="border-b border-zinc-800 px-4 sm:px-8 py-5 flex flex-wrap items-center gap-4 sm:gap-8">
         <Link href="/admin" className="text-base font-bold tracking-widest text-zinc-100">
           KALIGEO
         </Link>
         <Link href="/admin/question-review" className="text-amber-300">Проверка вопросов</Link>
-        <nav className="flex gap-6 text-base text-zinc-400">
+        <nav className="flex flex-wrap gap-x-6 gap-y-3 text-sm text-zinc-400">
           <Link href="/admin" className="hover:text-zinc-100 transition-colors">
             Задания
           </Link>
@@ -47,7 +47,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </Link>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto px-8 py-10">{children}</main>
+      <main className="max-w-7xl mx-auto px-4 sm:px-8 py-8">{children}</main>
     </div>
   )
 }
