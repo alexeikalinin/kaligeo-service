@@ -14,3 +14,14 @@ it("keeps question approval versions stable after JSONB reorders map keys",()=>{
  reversed.entities=reversed.entities.map((entity:Record<string,unknown>)=>Object.fromEntries(Object.entries(entity).reverse()))
  expect(cardsVersion(["Where to buy?"],reversed)).toBe(cardsVersion(["Where to buy?"],map))
 })
+
+it("restricts model annotation to approved targets while allowing product brands in seller questions",async()=>{
+ const {scopedQuestionCardSchema}=await import("@/lib/questions/question-cards")
+ const shopMap:BusinessMap={...map,entities:[...map.entities,{id:"xbox",name:"Xbox",kind:"brand",attributes:[],sources:[],confidence:"supported"}]}
+ const sellerQuestion={...card,query:"Где купить Xbox?"}
+ expect(scopedQuestionCardSchema(shopMap).safeParse(sellerQuestion).success).toBe(true)
+ expect(validateCards([sellerQuestion],[sellerQuestion.query],shopMap)[0].decision).toBe("accept")
+ expect(scopedQuestionCardSchema(shopMap).safeParse({...sellerQuestion,entityId:"xbox"}).success).toBe(false)
+ expect(scopedQuestionCardSchema(shopMap).safeParse({...sellerQuestion,mentionRule:{...card.mentionRule,names:["Xbox"]}}).success).toBe(false)
+ expect(validateCards([{...sellerQuestion,query:"Где купить FlowerShop?"}],["Где купить FlowerShop?"],shopMap)[0].decision).toBe("reject")
+})
