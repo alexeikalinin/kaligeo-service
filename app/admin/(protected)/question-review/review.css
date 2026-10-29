@@ -1,0 +1,16 @@
+.admin-review-shell { color-scheme: light; }
+.admin-review-shell > header { background: #fff; border-color: #E5E5E1; }
+.admin-review-shell > header a { color: #6A6D75; }
+.admin-review-shell > header a:first-child { color: #0F1115; }
+.admin-review-shell > header a[href="/admin/question-review"] { color: #0F1115; background: #C8F24A; padding: 8px 14px; border-radius: 8px; }
+.review-dashboard { --accent: #C8F24A; }
+.review-dashboard input, .review-dashboard textarea { accent-color: #6B8B18; }
+.review-dashboard textarea { resize: vertical; }
+.review-dashboard button, .review-dashboard summary { cursor: pointer; }
+.review-dashboard button:disabled { cursor: default; }
+.review-dashboard :is(button,a,input,textarea,summary):focus-visible { outline: 2px solid #6B8B18; outline-offset: 3px; }
+.review-dashboard nav[aria-label="Этапы аудита"] > * { background: white; }
+.review-dashboard nav[aria-label="Этапы аудита"] > button[aria-current="step"] { background: #EAF5CD; border-color: #87A62E; font-weight: 600; }
+.review-question { transition: border-color .15s; }
+.review-question:focus-within { border-color: #87A62E; }
+.review-dashboard fieldset:disabled .sticky { display: none; }
