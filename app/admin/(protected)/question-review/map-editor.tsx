@@ -23,7 +23,7 @@ export default function MapEditor({ id, initial, version, initialNotes = "" }: {
   // Keep raw text while typing. Parsing on each keystroke removes trailing spaces/newlines.
   function payloadMap() {
     const list = (key: string, fallback: string[], separator: string) => drafts[key] === undefined ? fallback : drafts[key].split(separator).map(s => s.trim()).filter(Boolean)
-    return { ...map, entities: map.entities.map(e => ({ ...e, attributes: list(`attributes:${e.id}`, e.attributes, ";"), aliases: list(`aliases:${e.id}`, e.aliases ?? [], ";") })), audiences: map.audiences.map(a => ({ ...a, needs: list(`needs:${a.id}`, a.needs, "\n") })) }
+    return { ...map, entities: map.entities.map(e => ({ ...e, attributes: list(`attributes:${e.id}`, e.attributes, ";"), ...(drafts[`aliases:${e.id}`] === undefined ? {} : { aliases: list(`aliases:${e.id}`, e.aliases ?? [], ";") }) })), audiences: map.audiences.map(a => ({ ...a, needs: list(`needs:${a.id}`, a.needs, "\n") })) }
   }
   async function submit(action: string) {
     setBusy(true)
