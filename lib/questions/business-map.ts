@@ -34,6 +34,7 @@ export function assertReviewableMap(m:BusinessMap){
  if(!m.scope.length)throw Error("Выберите хотя бы одно направление аудита")
  for(const s of m.scope){const e=m.entities.find(e=>e.id===s.entityId)!,a=m.audiences.find(a=>a.id===s.audienceId)!
   if(e.confidence!=="supported"||a.confidence!=="supported")throw Error("Уточните неподтверждённые сущности и аудитории выбранного направления")
+  if(s.metric==="seller"&&!["company","brand"].includes(e.kind))throw Error("Для метрики продавца выберите компанию или бренд продавца; категория товара не является продавцом")
   if(s.metric==="company"&&!["company","brand"].includes(e.kind))throw Error("Корпоративная метрика требует компанию или бренд")
   if(s.metric==="owned-product"&&!m.relationships.some(r=>r.to===e.id&&["owns","develops","publishes"].includes(r.role)&&r.confidence==="supported"))throw Error("Для продуктовой метрики подтвердите связь с компанией")
  }

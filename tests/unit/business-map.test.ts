@@ -4,3 +4,5 @@ const map={entities:[{id:"c",kind:"company",name:"Brand",attributes:[],sources:[
 it("rejects fabricated citations and marks unsupported audiences",()=>{const m=groundBusinessMap(map,[{url:"https://example.com",text:"Brand sells books"}]);expect(m.entities[0].sources).toEqual([]);expect(m.entities[0].confidence).toBe("uncertain");expect(()=>assertReviewableMap(m)).toThrow()})
 it("keeps exact page evidence and stable revision",()=>{const m=groundBusinessMap(map,[{url:"https://example.com",text:"Brand delivers flowers"}]);expect(m.entities[0].confidence).toBe("supported");expect(mapHash(m)).not.toBe(mapHash({...m,unknowns:["new"]}))})
 it("rejects relationships to invented entity identifiers",()=>{expect(()=>validateBusinessMap({...map,relationships:[{from:"c",to:"unknown",role:"sells",sources:[],confidence:"uncertain"}]})).toThrow()})
+
+it("does not measure a product category as the seller",()=>{const m=validateBusinessMap({...map,entities:[{...map.entities[0],kind:"category"}],audiences:[{...map.audiences[0],confidence:"supported"}],scope:[{...map.scope[0],metric:"seller"}]});expect(()=>assertReviewableMap(m)).toThrow("категория товара не является продавцом")})
