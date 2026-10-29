@@ -1,3 +1,4 @@
+import { auditFailure } from "../lib/analysis/audit-failure"
 import {ensurePlatformsReady,PlatformPreflightError} from "../lib/ai-clients/preflight"
 import { withInternalUsage } from "../lib/analysis/internal-usage"
 import { measureEntities,measurementVersion,projectEntityAnswers } from "../lib/analysis/entity-visibility"
@@ -5,7 +6,7 @@ import { reviewFeedback } from "../lib/questions/review-feedback"
 import { notifyReviewReady } from "../lib/questions/review-notification"
 import { reviewQuestions } from "../lib/agents/question-review-agent"
 import { cardsVersion, assertCardsApproved, type QuestionCard } from "../lib/questions/question-cards"
-import { buildBusinessMap } from "../lib/agents/business-map-agent"
+import { buildBusinessMap, UnfinishedBusinessMapError } from "../lib/agents/business-map-agent"
 import { mapHash, type BusinessMap } from "../lib/questions/business-map"
 import { isQuestionSetApproved, questionHash, type QuestionReview } from "../lib/questions/review"
 import { INTERNAL_MODEL_VERSION, INTERNAL_FLASH_MODEL, INTERNAL_LITE_MODEL } from "../lib/models"
@@ -67,18 +68,20 @@ export const auditPipeline = task({
       if (payload.reuseReportFromJobId) return await reuseBaseline(jobId, payload.reuseReportFromJobId)
       return await withInternalUsage(jobId,"pipeline",()=>runPipeline(job, payload.validation === true, !(payload.regenerateQuestions && (job.analysisSnapshot as { questionSetVersion?: string } | null)?.questionSetVersion !== METHODOLOGY_VERSION) && (payload.resume === true || (Array.isArray(job.generatedQueries) && job.generatedQueries.length === getTierConfig(job.tier as Tier).queryCount)), payload.validation ? (payload.excludedPlatforms ?? ["GEMINI", "GIGACHAT"]) : []))
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : String(err)
+      const failedJob = await prisma.auditJob.findUniqueOrThrow({where:{id:jobId}})
+      const failure = auditFailure(err instanceof Error ? err.message : String(err), failedJob.status)
+      const errorMessage = err instanceof PlatformPreflightError ? `${failure.stage}: ${err.message}` : `${failure.stage}: ${failure.reason} ${failure.action}`
       await prisma.auditJob.update({
         where: { id: jobId },
         data: { status: "FAILED", errorMessage },
       })
-      if (!payload.validation) notifyAuditFailed({
+      if (!payload.validation) notifyAuditFailed({market:job.market as "by"|"ru",
         companyName: job.companyName,
         tier: job.tier,
         jobId,
         errorMessage,
       }).catch(console.error)
-      if(err instanceof PlatformPreflightError)throw new AbortTaskRunError(errorMessage)
+      if(err instanceof PlatformPreflightError || err instanceof UnfinishedBusinessMapError)throw new AbortTaskRunError(errorMessage)
       throw err
     }
   },

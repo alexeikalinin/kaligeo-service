@@ -1,3 +1,4 @@
+import {getMarketConfig,type Market} from "./market"
 import { Resend } from "resend"
 
 function getResend() {
@@ -50,11 +51,12 @@ export async function notifyNewAuditRequest(opts: {
   websiteUrl: string
   tier: string
   clientNumber: number | null
+  market: Market
   jobId: string
 }) {
   const { companyName, clientEmail, websiteUrl, tier, clientNumber, jobId } = opts
   const clientTag = clientNumber ? `KG-${String(clientNumber).padStart(3, "0")}` : "новый"
-  const adminUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin`
+  const adminUrl = `${getMarketConfig(opts.market).appUrl}/admin/jobs/${jobId}`
 
   const tg = [
     `📥 <b>Новая заявка</b>`,
@@ -62,7 +64,7 @@ export async function notifyNewAuditRequest(opts: {
     `Тариф: ${tier}`,
     `Email: ${clientEmail}`,
     `Сайт: ${websiteUrl}`,
-    `👉 Подтвердить оплату: ${adminUrl}`,
+    `👉 Открыть заявку: ${adminUrl}`,
   ].join("\n")
   await sendTelegram(tg)
 
@@ -77,7 +79,7 @@ export async function notifyNewAuditRequest(opts: {
     </table>
     <div style="margin-top:20px">
       <a href="${adminUrl}" style="background:#facc15;color:#000;padding:10px 20px;border-radius:6px;text-decoration:none;font-weight:bold">
-        Подтвердить оплату →
+        Открыть заявку →
       </a>
     </div>
   `)
@@ -90,9 +92,10 @@ export async function notifyAuditStarted(opts: {
   companyName: string
   tier: string
   jobId: string
+  market: Market
 }) {
   const { companyName, tier, jobId } = opts
-  const jobUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${jobId}`
+  const jobUrl = `${getMarketConfig(opts.market).appUrl}/admin/jobs/${jobId}`
 
   const tg = `▶️ <b>Аудит запущен</b>\n${companyName} · ${tier}\n${jobUrl}`
   await sendTelegram(tg)
@@ -177,10 +180,11 @@ export async function notifyAuditFailed(opts: {
   companyName: string
   tier: string
   jobId: string
+  market: Market
   errorMessage?: string
 }) {
   const { companyName, tier, jobId, errorMessage } = opts
-  const jobUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${jobId}`
+  const jobUrl = `${getMarketConfig(opts.market).appUrl}/admin/jobs/${jobId}`
 
   const tg = [
     `🔴 <b>Аудит упал</b>`,
@@ -213,9 +217,10 @@ export async function notifySubscriptionCharged(opts: {
   companyName: string
   tier: string
   jobId: string
+  market: Market
 }) {
   const { companyName, tier, jobId } = opts
-  const jobUrl = `${process.env.NEXT_PUBLIC_APP_URL}/admin/jobs/${jobId}`
+  const jobUrl = `${getMarketConfig(opts.market).appUrl}/admin/jobs/${jobId}`
   await sendTelegram(`💳 <b>Автосписание прошло</b>\n${companyName} · ${tier}\n${jobUrl}`)
 }
 

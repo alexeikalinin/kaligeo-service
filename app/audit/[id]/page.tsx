@@ -1,4 +1,5 @@
 "use client"
+import { AuditFailureNotice } from "@/components/audit-failure-notice"
 
 import { useEffect, useState } from "react"
 import { useRouter, useParams } from "next/navigation"
@@ -146,9 +147,9 @@ export default function AuditStatusPage() {
 
         {data?.status === "FAILED" && (
           <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
-            <p className="text-red-700 text-sm mb-3">
-              {data.errorMessage ?? "Произошла ошибка при выполнении аудита"}
-            </p>
+            <div className="text-red-700 text-sm mb-3">
+              <AuditFailureNotice message={data.errorMessage} />
+            </div>
             <a href="/my/login" className="block text-[var(--ink)] text-sm underline">
               Открыть личный кабинет
             </a>

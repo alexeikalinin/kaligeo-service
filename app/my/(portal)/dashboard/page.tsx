@@ -1,3 +1,4 @@
+import { AuditFailureNotice } from "@/components/audit-failure-notice"
 import { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { headers } from "next/headers"
@@ -202,6 +203,7 @@ export default async function DashboardPage() {
         <SectionTitle>Текущие заказы</SectionTitle>
         <div className="space-y-3">{activeJobs.map(job => <Link key={job.id} href={`/audit/${job.id}`} className="block border rounded-lg p-4" style={{ borderColor: "var(--rule)" }}>
           {job.companyName} · {job.tier} · {job.status === "FAILED" ? "Ошибка выполнения — повторная оплата не нужна" : job.status === "PENDING_PAYMENT" ? "Ожидает оплаты" : "Выполняется"}
+          {job.status === "FAILED" && <AuditFailureNotice message={job.errorMessage} />}
         </Link>)}</div>
       </section>}
       {qaJobs.length > 0 && <section>
@@ -209,6 +211,7 @@ export default async function DashboardPage() {
         <p className="text-sm mb-3">Проверка тарифов. Эти запуски не являются покупками и не входят в статистику обычных аудитов.</p>
         <div className="space-y-3">{qaJobs.map(job => <Link key={job.id} href={job.status === "COMPLETED" ? `/my/audits/${job.id}` : `/audit/${job.id}`} className="block border rounded-lg p-4" style={{ borderColor: "var(--rule)" }}>
           {job.companyName} · {job.tier} · {job.status === "COMPLETED" ? `${job.report?.overallScore ?? "—"}/100 — открыть отчёт` : job.status === "FAILED" ? "Ошибка проверки" : job.status === "PENDING" ? "Ожидает запуска" : "Проверка выполняется"}
+          {job.status === "FAILED" && <AuditFailureNotice message={job.errorMessage} />}
         </Link>)}</div>
       </section>}
 

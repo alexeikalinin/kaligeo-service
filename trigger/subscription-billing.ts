@@ -135,7 +135,7 @@ export const subscriptionBilling = schedules.task({
           },
         })
 
-        notifySubscriptionCharged({
+        notifySubscriptionCharged({market:sub.market as "by"|"ru",
           companyName: sub.client.companyName,
           tier: sub.tier,
           jobId: newJob.id,

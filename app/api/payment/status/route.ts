@@ -90,7 +90,7 @@ export async function GET(req: NextRequest) {
 
     if (updated.count > 0) {
       await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: job.id })
-      notifyAuditStarted({
+      notifyAuditStarted({market:job.market as "by"|"ru",
         companyName: job.companyName,
         tier: job.tier,
         jobId: job.id,

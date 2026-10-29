@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   if (updated.count > 0) {
     await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: job.id })
-    notifyAuditStarted({ companyName: job.companyName, tier: job.tier, jobId: job.id }).catch(console.error)
+    notifyAuditStarted({market:job.market as "by"|"ru", companyName: job.companyName, tier: job.tier, jobId: job.id }).catch(console.error)
 
     if (job.clientId) {
       const paymentMethodId = payment.payment_method?.saved ? payment.payment_method.id : undefined

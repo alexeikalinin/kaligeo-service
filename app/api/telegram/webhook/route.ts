@@ -730,6 +730,7 @@ async function createAuditJob(chatId: string, data: SessionData) {
     websiteUrl,
     tier,
     clientNumber: client.clientNumber,
+    market: job.market as "by"|"ru",
     jobId: job.id,
   }).catch(console.error)
 }

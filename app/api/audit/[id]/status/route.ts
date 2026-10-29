@@ -1,3 +1,4 @@
+import { auditFailure } from "@/lib/analysis/audit-failure"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
@@ -29,6 +30,7 @@ export async function GET(
 
   return NextResponse.json({
     ...job,
+    errorMessage: job.status === "FAILED" ? Object.values(auditFailure(job.errorMessage)).join(". ") : null,
     testRun: job.source === "qa-acceptance",
     // Report URL is delivered via email; do not expose here
     reportUrl: null,

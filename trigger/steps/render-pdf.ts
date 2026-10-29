@@ -1,3 +1,4 @@
+import {getMarketConfig,type Market} from "../../lib/market"
 import { put } from "@vercel/blob"
 import { prisma } from "../../lib/prisma"
 
@@ -9,7 +10,7 @@ export async function renderAndUploadPdf(jobId: string): Promise<string> {
 
   if (!job.report) throw new Error("Report data not found")
 
-  const response = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/report/generate-pdf`, {
+  const response = await fetch(`${getMarketConfig(job.market as Market).appUrl}/api/report/generate-pdf`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

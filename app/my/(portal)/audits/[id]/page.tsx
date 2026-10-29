@@ -17,10 +17,12 @@ export default async function AuditRedirectPage({ params }: Props) {
 
   const job = await prisma.auditJob.findFirst({
     where: { id, clientId, market },
-    select: { reportToken: true },
+    select: { reportToken: true, status: true },
   })
 
   if (!job) redirect("/my/dashboard")
+
+  if (job.status !== "COMPLETED") redirect(`/audit/${id}`)
 
   redirect(`/report/${id}?token=${job.reportToken}`)
 }

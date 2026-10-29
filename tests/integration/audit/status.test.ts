@@ -110,7 +110,8 @@ describe("GET /api/audit/[id]/status", () => {
     const json = await res.json()
 
     expect(json.status).toBe("FAILED")
-    expect(json.errorMessage).toBe("Pipeline timeout")
+    expect(json.errorMessage).toContain("Превышено время ожидания")
+    expect(json.errorMessage).not.toContain("Pipeline timeout")
   })
 
   it("returns all pipeline status values", async () => {

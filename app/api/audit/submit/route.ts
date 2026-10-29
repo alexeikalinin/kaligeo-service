@@ -122,6 +122,7 @@ export async function POST(req: NextRequest) {
       websiteUrl: data.websiteUrl,
       tier: data.tier,
       clientNumber: client.clientNumber,
+      market,
       jobId: job.id,
     }).catch(console.error)
 

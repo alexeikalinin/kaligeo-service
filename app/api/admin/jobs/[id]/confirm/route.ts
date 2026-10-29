@@ -43,7 +43,7 @@ export async function POST(
 
   await tasks.trigger<typeof auditPipeline>("audit-pipeline", { jobId: id })
 
-  notifyAuditStarted({
+  notifyAuditStarted({market:job.market as "by"|"ru",
     companyName: job.companyName,
     tier: tier ?? job.tier,
     jobId: id,

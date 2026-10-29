@@ -1,0 +1,4 @@
+import {it,expect,vi,afterEach} from "vitest"
+import {notifyNewAuditRequest} from "@/lib/notify"
+afterEach(()=>{vi.unstubAllEnvs();vi.unstubAllGlobals()})
+it("links a BY submission to its own BY job without implying a payment action",async()=>{vi.stubEnv("ADMIN_TELEGRAM_BOT_TOKEN","test");vi.stubEnv("ADMIN_TELEGRAM_CHAT_ID","test");vi.stubEnv("ADMIN_EMAIL","");vi.stubEnv("NEXT_PUBLIC_APP_URL","https://app.kaligeo.ru");const fetch=vi.fn().mockResolvedValue({ok:true});vi.stubGlobal("fetch",fetch);await notifyNewAuditRequest({companyName:"Company",clientEmail:"owner@example.com",websiteUrl:"https://example.com",tier:"BASIC",clientNumber:1,jobId:"job",market:"by"});const body=JSON.parse(fetch.mock.calls[0][1].body);expect(body.text).toContain("https://app.kaligeo.by/admin/jobs/job");expect(body.text).not.toContain("kaligeo.ru");expect(body.text).not.toContain("Подтвердить оплату")})
