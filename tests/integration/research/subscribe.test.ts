@@ -11,13 +11,13 @@ describe("Research signup delivery", () => {
   it("normalizes email and queues delivery only after retaining the lead", async () => {
     expect((await subscribe({ email: " USER@example.com ", company: "ACME" })).status).toBe(200)
     expect(create).toHaveBeenCalledWith({ data: { email: "user@example.com", companyName: "ACME", source: "research-2026", status: "NEW" } })
-    expect(trigger).toHaveBeenCalledWith("send-research-nurture-sequence", { leadId: "lead-1", email: "user@example.com", companyName: "ACME" }, { idempotencyKey: "research-lead-1" })
+    expect(trigger).toHaveBeenCalledWith("send-research-nurture-sequence", { leadId: "lead-1", email: "user@example.com", companyName: "ACME", market:"ru" }, { idempotencyKey: "research-ru-lead-1" })
   })
   it("retries an existing signup with the same delivery key rather than losing the email after a queue outage", async () => {
     find.mockResolvedValue({ id: "lead-1", companyName: "Original" })
     expect((await subscribe({ email: "user@example.com" })).status).toBe(200)
     expect(create).not.toHaveBeenCalled()
-    expect(trigger).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ companyName: "Original" }), { idempotencyKey: "research-lead-1" })
+    expect(trigger).toHaveBeenCalledWith(expect.any(String), expect.objectContaining({ companyName: "Original" }), { idempotencyKey: "research-ru-lead-1" })
   })
   it("reports a queue failure instead of claiming the email was accepted", async () => {
     trigger.mockRejectedValue(new Error("unavailable"))
@@ -34,3 +34,5 @@ describe("Research signup delivery", () => {
     expect(trigger).not.toHaveBeenCalled()
   })
 })
+
+it("retains BY routing in the durable payload regardless of a shared RU app env",async()=>{vi.stubEnv("NEXT_PUBLIC_APP_URL","https://app.kaligeo.ru");await POST(new Request("https://app.kaligeo.by/api/research-2026/subscribe",{method:"POST",body:JSON.stringify({email:"by@example.com"})}) as never);expect(trigger).toHaveBeenLastCalledWith(expect.any(String),expect.objectContaining({market:"by"}),expect.objectContaining({idempotencyKey:expect.stringContaining("research-by-")}))})

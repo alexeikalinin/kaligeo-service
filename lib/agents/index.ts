@@ -67,7 +67,7 @@ export async function dispatchTool(
 
     // ── Новые агенты ─────────────────────────────────────────────────────────
     case "invoke_outreach_agent": {
-      const result = await runOutreachAgent({
+      const result = await runOutreachAgent({market:input.market as "by"|"ru",
         leadId: input.leadId as string,
         sequenceStep: (input.sequenceStep as number) ?? 0,
         campaignBrief: input.campaignBrief as string | undefined,

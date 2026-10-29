@@ -1,3 +1,4 @@
+import type {Market} from "@/lib/market"
 import { NextRequest, NextResponse } from "next/server"
 import { attachmentHeader } from "@/lib/report/download-utils"
 import { getTierConfig, type Tier } from "@/lib/gates"
@@ -41,7 +42,7 @@ export async function GET(
     "90d"?: AI[]
   }
 
-  const buffer = await generatePptx({
+  const buffer = await generatePptx({market:job.market as Market,
     companyName: job.companyName,
     websiteUrl: job.websiteUrl,
     completedAt: job.completedAt,

@@ -1,3 +1,4 @@
+import {getMarketConfig,marketFromHost,type Market} from "@/lib/market"
 import { streamText, stepCountIs, convertToModelMessages, tool } from "ai"
 import { z } from "zod"
 import { runWebsiteAnalysisAgent } from "@/lib/agents/website-analysis-agent"
@@ -37,11 +38,12 @@ const submitAuditSchema = z.object({
 
 type SubmitAuditInput = z.infer<typeof submitAuditSchema>
 
-async function executeSubmitAudit(params: SubmitAuditInput) {
+async function executeSubmitAudit(params: SubmitAuditInput, market: Market) {
   const { companyName, websiteUrl, niche, competitors, clientEmail, tier } = params
-  const res = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/audit/submit`, {
+  const config=getMarketConfig(market)
+  const res = await fetch(`${config.appUrl}/api/audit/submit`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Origin:config.landingUrl },
     body: JSON.stringify({ companyName, websiteUrl, niche, competitors, clientEmail, tier }),
   })
 
@@ -75,7 +77,7 @@ export async function POST(req: Request) {
       submit_audit: tool({
         description: "Запустить AI-аудит после сбора всех необходимых данных",
         inputSchema: submitAuditSchema,
-        execute: executeSubmitAudit,
+        execute: (params:SubmitAuditInput)=>executeSubmitAudit(params,marketFromHost(new URL(req.url).host)),
       }),
     },
     stopWhen: stepCountIs(15),

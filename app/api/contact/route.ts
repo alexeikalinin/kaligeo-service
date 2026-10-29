@@ -21,7 +21,6 @@ import { tg } from "@/lib/telegram"
 import type { contactScan } from "@/trigger/contact-scan"
 import { marketFromDomain, getMarketConfig, emailSenderHeader } from "@/lib/market"
 
-const FROM    = process.env.FROM_EMAIL ?? "hello@kaligeo.ru"
 const ADMIN   = process.env.ADMIN_EMAIL ?? "1alexeikalinin1@gmail.com"
 const ADMIN_TG = process.env.ADMIN_TELEGRAM_CHAT_ID ?? ""
 
@@ -77,7 +76,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Заполните имя или сайт" }, { status: 400, headers })
   }
 
-  const domain = origin.includes("kaligeo.by") ? "kaligeo.by" : "kaligeo.ru"
+  const requestOrigin=req.headers.get("origin") || origin || new URL(req.url).origin
+  const domain = requestOrigin.includes("kaligeo.by") ? "kaligeo.by" : "kaligeo.ru"
   const market = marketFromDomain(domain)
   const marketConfig = getMarketConfig(market)
   const planLabel = plan || "не выбран"
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
 
     // 1. Email уведомление администратору
     const { error: adminErr } = await resend.emails.send({
-      from: FROM,
+      from: marketConfig.fromEmail,
       to: ADMIN,
       subject: `Новая заявка: ${planLabel} — ${name || website}`,
       html: `

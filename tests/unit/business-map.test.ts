@@ -32,3 +32,12 @@ it("keeps approval hash stable through JSONB property reordering",()=>{
  const reorder=(value:unknown):unknown=>Array.isArray(value)?value.map(reorder):value&&typeof value==="object"?Object.fromEntries(Object.entries(value).reverse().map(([k,v])=>[k,reorder(v)])):value
  expect(mapHash(reorder(original) as typeof original)).toBe(mapHash(original))
 })
+
+it("limits question context to selected audiences and their offers",async()=>{
+ const {questionBusinessMap}=await import("@/lib/questions/business-map")
+ const m=validateBusinessMap({...map,entities:[...map.entities,{...map.entities[0],id:"service",kind:"service",name:"Repair"}],audiences:[{...map.audiences[0],entityIds:["c"]},{...map.audiences[0],id:"repair",entityIds:["service"]}],relationships:[{from:"c",to:"service",role:"provides",sources:[],confidence:"supported"}]})
+ const context=questionBusinessMap(m)
+ expect(context.audiences.map(a=>a.id)).toEqual(["a"])
+ expect(context.entities.map(e=>e.id)).not.toContain("service")
+ expect(context.relationships).toHaveLength(0)
+})

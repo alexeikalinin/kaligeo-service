@@ -1,3 +1,4 @@
+import {marketFromHost} from "@/lib/market"
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { prisma } from "@/lib/prisma"
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     for (const lead of leads) {
       await tasks.trigger<typeof coldSequence>("send-cold-sequence", {
         leadId: lead.id,
+        market:marketFromHost(new URL(req.url).host),
         campaignId,
       })
     }

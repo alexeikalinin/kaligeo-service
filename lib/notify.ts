@@ -20,12 +20,12 @@ async function sendTelegram(text: string): Promise<void> {
   }
 }
 
-async function sendAdminEmail(subject: string, html: string): Promise<void> {
+async function sendAdminEmail(subject: string, html: string, market:Market): Promise<void> {
   const adminEmail = process.env.ADMIN_EMAIL
   if (!adminEmail || !process.env.RESEND_API_KEY) return
   try {
     await getResend().emails.send({
-      from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+      from: getMarketConfig(market).fromEmail,
       to: adminEmail,
       subject,
       html,
@@ -60,6 +60,7 @@ export async function notifyNewAuditRequest(opts: {
 
   const tg = [
     `📥 <b>Новая заявка</b>`,
+    `Контур: ${new URL(getMarketConfig(opts.market).landingUrl).hostname}`,
     `Клиент: ${clientTag} · ${companyName}`,
     `Тариф: ${tier}`,
     `Email: ${clientEmail}`,
@@ -83,7 +84,7 @@ export async function notifyNewAuditRequest(opts: {
       </a>
     </div>
   `)
-  await sendAdminEmail(`📥 Новая заявка: ${companyName} [${tier}]`, html)
+  await sendAdminEmail(`📥 Новая заявка: ${companyName} [${tier}]`, html, opts.market)
 }
 
 // ── Audit started (payment confirmed) ────────────────────────────────────────
@@ -111,6 +112,7 @@ export async function notifyAuditCompleted(opts: {
   reportUrl: string
   jobId: string
   isFollowUp?: boolean
+  market: Market
 }) {
   const { companyName, clientEmail, tier, overallScore, reportUrl, isFollowUp } = opts
   const emoji = overallScore >= 60 ? "🟢" : overallScore >= 30 ? "🟡" : "🔴"
@@ -139,7 +141,7 @@ export async function notifyAuditCompleted(opts: {
       </a>
     </div>
   `)
-  await sendAdminEmail(`${emoji} ${label}: ${companyName} — ${overallScore}/100`, html)
+  await sendAdminEmail(`${emoji} ${label}: ${companyName} — ${overallScore}/100`, html, opts.market)
 }
 
 // ── Magic link ───────────────────────────────────────────────────────────────
@@ -147,11 +149,11 @@ export async function notifyAuditCompleted(opts: {
 export async function sendMagicLinkEmail(opts: {
   to: string
   magicLinkUrl: string
-  fromEmail?: string
+  fromEmail: string
 }): Promise<void> {
   const { to, magicLinkUrl, fromEmail } = opts
   await getResend().emails.send({
-    from: fromEmail ?? process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    from: fromEmail,
     to,
     subject: "Ссылка для входа в KaliGEO",
     html: `
@@ -208,7 +210,7 @@ export async function notifyAuditFailed(opts: {
       </a>
     </div>
   `)
-  await sendAdminEmail(`🔴 Аудит упал: ${companyName}`, html)
+  await sendAdminEmail(`🔴 Аудит упал: ${companyName}`, html, opts.market)
 }
 
 // ── Subscription billing (MONITOR_*) ─────────────────────────────────────────
@@ -229,6 +231,7 @@ export async function notifySubscriptionPastDue(opts: {
   email: string
   tier: string
   error: string
+  market: Market
 }) {
   const { companyName, email, tier, error } = opts
   const tg = [
@@ -247,7 +250,7 @@ export async function notifySubscriptionPastDue(opts: {
       ${row("Ошибка", `<span style="color:#f87171">${error.slice(0, 400)}</span>`)}
     </table>
   `)
-  await sendAdminEmail(`⚠️ Подписка просрочена: ${companyName}`, html)
+  await sendAdminEmail(`⚠️ Подписка просрочена: ${companyName}`, html, opts.market)
 }
 
 export async function notifySubscriptionCanceled(opts: {

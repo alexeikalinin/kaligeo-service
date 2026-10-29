@@ -199,13 +199,13 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     if(!businessMap){
       businessMap=await buildBusinessMap((mappedSnapshot.sourceDocuments ?? []) as import("../lib/questions/business-map").SourceDocument[],job.companyName)
       await prisma.auditJob.update({where:{id:jobId},data:{status:"GENERATING_QUERIES",analysisSnapshot:JSON.parse(JSON.stringify({...mappedSnapshot,businessMap,businessMapReview:{state:"pending",hash:mapHash(businessMap)}}))}})
-      await notifyReviewReady(jobId,"businessMap",mapHash(businessMap),job.companyName,getMarketConfig((job.market as Market)??"ru").appUrl)
+      await notifyReviewReady(jobId,"businessMap",mapHash(businessMap),job.companyName,job.market as Market)
       return {jobId,awaitingBusinessMapApproval:true}
     }
     const mapReview=mappedSnapshot.businessMapReview as {state:string;hash:string}|undefined
     if(mapReview?.state!=="approved"||mapReview.hash!==mapHash(businessMap))return {jobId,awaitingBusinessMapApproval:true}
     await prisma.$executeRaw`UPDATE "AuditJob" SET "analysisSnapshot"=jsonb_set(COALESCE("analysisSnapshot",'{}'::jsonb),'{questionPreparation}',${JSON.stringify({state:"generating",queuedAt:(mappedSnapshot.questionPreparation as {queuedAt?:string}|undefined)?.queuedAt??new Date().toISOString(),startedAt:new Date().toISOString()})}::jsonb) WHERE id=${jobId}`
-    siteContext={...(siteContext ?? {description:job.niche,services:[],targetAudience:""}),businessMap}
+    siteContext={...(siteContext ?? {description:job.niche,services:[],targetAudience:""}),businessMap,reviewNotes:(mapReview as {notes?:string}).notes??""}
 
     // ── Step 1: Generate queries ──────────────────────────────────────────
     await prisma.auditJob.update({ where: { id: jobId }, data: { status: "GENERATING_QUERIES" } })
@@ -255,11 +255,11 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
     if (!isQuestionSetApproved(queries, reviewSnapshot.questionReview as QuestionReview | undefined)) {
       await prisma.auditJob.update({ where: { id: jobId }, data: {
         generatedQueries: queries, status: "GENERATING_QUERIES",
-        analysisSnapshot: JSON.parse(JSON.stringify({ ...reviewSnapshot, questionPreparation:{...((reviewSnapshot.questionPreparation??{}) as object),state:"ready",completedAt:new Date().toISOString()}, questionReview: {
+        analysisSnapshot: JSON.parse(JSON.stringify({ ...reviewSnapshot,questionSetVersion:METHODOLOGY_VERSION, questionPreparation:{...((reviewSnapshot.questionPreparation??{}) as object),state:"ready",completedAt:new Date().toISOString()}, questionReview: {
           hash: questionHash(queries), state: "pending", notes: (reviewSnapshot.questionReview as QuestionReview | undefined)?.notes ?? "",
         } })),
       } })
-      await notifyReviewReady(jobId,"questions",questionHash(queries),job.companyName,getMarketConfig((job.market as Market)??"ru").appUrl)
+      await notifyReviewReady(jobId,"questions",questionHash(queries),job.companyName,job.market as Market)
       return { jobId, awaitingQuestionApproval: true }
     }
 
@@ -470,7 +470,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
 
     if (job.baselineJobId) {
       const baselineReport = await prisma.report.findUnique({ where: { jobId: job.baselineJobId } })
-      await sendFollowUpEmail({
+      await sendFollowUpEmail({market:job.market as Market,
         to: job.clientEmail,
         companyName: job.companyName,
         overallScore,
@@ -483,7 +483,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       const ap = actionPlan as { quickWins?: { action: string }[] }
       const quickWinsForEmail = ap.quickWins?.slice(0, 3).map((w) => w.action) ?? []
 
-      await sendReportEmail({
+      await sendReportEmail({market:job.market as Market,
         to: job.clientEmail,
         companyName: job.companyName,
         overallScore,
@@ -510,7 +510,7 @@ async function runPipeline(job: Awaited<ReturnType<typeof prisma.auditJob.findUn
       data: { status: "COMPLETED", completedAt: new Date(), errorMessage: null },
     })
 
-    notifyAuditCompleted({
+    notifyAuditCompleted({market:job.market as Market,
       companyName: job.companyName,
       clientEmail: job.clientEmail,
       tier: job.tier,

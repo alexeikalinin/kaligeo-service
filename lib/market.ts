@@ -25,6 +25,7 @@ interface MarketConfig {
 }
 
 export function getMarketConfig(market: Market): MarketConfig {
+  if(market!=="by"&&market!=="ru")throw new Error("Market must be explicitly by or ru")
   if (market === "by") {
     return {
       market,

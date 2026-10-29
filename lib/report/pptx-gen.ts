@@ -1,3 +1,4 @@
+import {getMarketConfig,type Market} from "../market"
 import pptxgen from "pptxgenjs"
 
 // KaliGEO brandbook colours
@@ -41,6 +42,7 @@ type CompetitorEntry = {
 }
 
 export interface PptxReportData {
+  market: Market
   companyName: string
   websiteUrl: string
   completedAt: Date | null
@@ -73,6 +75,7 @@ const SERIF = "Georgia"
 const SANS = "Calibri"
 
 export async function generatePptx(data: PptxReportData): Promise<Buffer> {
+  const serviceDomain=new URL(getMarketConfig(data.market).landingUrl).hostname
   const prs = new pptxgen()
 
   prs.layout = "LAYOUT_WIDE" // 13.33" x 7.5"
@@ -120,7 +123,7 @@ export async function generatePptx(data: PptxReportData): Promise<Buffer> {
   }
 
   function footer(slide: pptxgen.Slide) {
-    slide.addText(`KaliGEO · kaligeo.ru · ${dateStr}`, {
+    slide.addText(`KaliGEO · ${serviceDomain} · ${dateStr}`, {
       x: 0.5, y: 7.1, w: 12.33, h: 0.25,
       fontFace: MONO, fontSize: 7, color: C.ink3, align: "center",
     })
@@ -420,7 +423,7 @@ export async function generatePptx(data: PptxReportData): Promise<Buffer> {
     })
   })
 
-  s6.addText("kaligeo.ru", {
+  s6.addText(serviceDomain, {
     x: 0.5, y: 5.5, w: 12.33, h: 0.5,
     fontFace: MONO, fontSize: 22, bold: true, color: C.ink, align: "center",
   })

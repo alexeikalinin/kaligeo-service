@@ -1,3 +1,4 @@
+import {marketFromHost} from "@/lib/market"
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { runOrchestrator } from "@/lib/agents/orchestrator"
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       try {
-        const result = await runOrchestrator(task, context ?? {})
+        const result = await runOrchestrator(task, {...(context??{}),market:marketFromHost(new URL(req.url).host)})
         controller.enqueue(new TextEncoder().encode(result))
       } catch (err) {
         controller.enqueue(

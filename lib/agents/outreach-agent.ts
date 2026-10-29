@@ -1,3 +1,4 @@
+import {getMarketConfig,type Market} from "../market"
 /**
  * outreach-agent — генерирует персонализированный контент письма для холодных рассылок.
  *
@@ -27,12 +28,15 @@ export interface OutreachEmailContent {
 }
 
 export interface OutreachAgentInput {
+  market: Market
   leadId: string
   sequenceStep: number   // 0 = первое касание, 1 = follow-up, 2+ = финальное
   campaignBrief?: string // опциональный контекст кампании (ниша, УТП, оффер)
 }
 
 export async function runOutreachAgent(input: OutreachAgentInput): Promise<OutreachEmailContent> {
+  if(!input.market)throw Error("Outreach market is required")
+  const serviceUrl=getMarketConfig(input.market).appUrl
   const lead = await prisma.lead.findUniqueOrThrow({
     where: { id: input.leadId },
     include: { outreachEmails: { orderBy: { sentAt: "desc" }, take: 3 } },
@@ -86,7 +90,7 @@ ${stepContext}
 - 3–5 коротких абзацев, без воды
 - Персонализация должна быть реальной — используй детали ниши, города, скана
 - Не звучи как шаблон ("Здравствуйте! Меня зовут..." — табу)
-- CTA — попробовать скан на app.kaligeo.ru/chat (или посмотреть результаты если есть score)
+- CTA — попробовать скан на ${serviceUrl}/chat (или посмотреть результаты если есть score)
 - Письмо на русском языке
 
 Верни строго JSON без markdown-обёртки:

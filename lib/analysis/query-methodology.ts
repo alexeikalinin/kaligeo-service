@@ -1,4 +1,4 @@
-export const METHODOLOGY_VERSION = "2026-10-entity-v4"
+export const METHODOLOGY_VERSION = "2026-10-entity-v5"
 export function brandQuestions(company: string): string[] {
   return [`Что известно о компании «${company}»? Укажи источники.`, `Какие продукты предлагает компания «${company}»? Укажи источники.`]
 }

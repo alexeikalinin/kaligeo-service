@@ -1,4 +1,4 @@
-import type { BusinessMap } from "../questions/business-map"
+import {mapHash,type BusinessMap} from "../questions/business-map"
 import type { QuestionCard } from "../questions/question-cards"
 import { createHash } from "node:crypto"
 export interface EntityAnswer {id:string;query:string;platform:string;response:string}
@@ -25,7 +25,7 @@ export function measureEntities(rows:EntityAnswer[],cards:QuestionCard[],map:Bus
   return{entityId:entity.id,audienceId:scope.audienceId,audienceName:map.audiences.find(a=>a.id===scope.audienceId)?.name??scope.audienceId,name:entity.name,metric:scope.metric,answers:samples.length,mentions:evidence.length,rate:samples.length?Math.round(100*evidence.length/samples.length):null,platforms,evidence}
  })
 }
-export function measurementVersion(map:BusinessMap,cards:QuestionCard[]){return createHash("sha256").update(JSON.stringify({version:"entity-visibility-v1",map,cards:cards.map(c=>({query:c.query,entityId:c.entityId,audienceId:c.audienceId,rule:c.mentionRule}))})).digest("hex")}
+export function measurementVersion(map:BusinessMap,cards:QuestionCard[]){return createHash("sha256").update(JSON.stringify({version:"entity-visibility-v1",map:mapHash(map),cards:cards.map(c=>({query:c.query,entityId:c.entityId,audienceId:c.audienceId,rule:c.mentionRule}))})).digest("hex")}
 
 /** Summary denominator: one spontaneous answer, one relevant approved target. */
 export function projectEntityAnswers<T extends EntityAnswer&{brandMentioned:boolean;positionScore:number;sentiment:string}>(rows:T[],cards:QuestionCard[]):T[]{

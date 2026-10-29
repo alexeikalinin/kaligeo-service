@@ -5,5 +5,6 @@ export function reviewFeedback(snapshot:Record<string,unknown>){
   return[{notes:String(event.notes??"").slice(0,2000),questions:event.after.filter((q:unknown)=>typeof q==="string").slice(0,50)}]
  }).slice(-3)
  const review=snapshot.questionReview as {notes?:unknown}|undefined
- return {reviewerNotes:typeof review?.notes==="string"?review.notes.slice(0,5000):"",approvedExamples:approved}
+ const mapReview=snapshot.businessMapReview as {notes?:unknown}|undefined
+ return {...(typeof mapReview?.notes==="string"?{businessMapReviewerNotes:mapReview.notes.slice(0,5000)}:{}),reviewerNotes:typeof review?.notes==="string"?review.notes.slice(0,5000):"",approvedExamples:approved}
 }

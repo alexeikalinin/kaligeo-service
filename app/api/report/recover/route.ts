@@ -1,3 +1,4 @@
+import {getMarketConfig,marketFromHost} from "@/lib/market"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Resend } from "resend"
@@ -17,9 +18,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Email required" }, { status: 400 })
   }
 
+  const market=marketFromHost(new URL(req.url).host)
+  const config=getMarketConfig(market)
   const jobs = await prisma.auditJob.findMany({
     where: {
       clientEmail: email.toLowerCase().trim(),
+      market,
       status: "COMPLETED",
     },
     orderBy: { completedAt: "desc" },
@@ -38,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? ""
+  const appUrl = config.appUrl
   const reportLinks = jobs
     .map((j) => {
       const date = j.completedAt
@@ -51,7 +55,7 @@ export async function POST(req: NextRequest) {
     .join("")
 
   await getResend().emails.send({
-    from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    from: config.fromEmail,
     to: email,
     subject: "Ваши отчёты KaliGEO",
     html: `

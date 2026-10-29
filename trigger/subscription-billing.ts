@@ -151,7 +151,7 @@ export const subscriptionBilling = schedules.task({
             where: { id: sub.id },
             data: { status: "PAST_DUE", failedChargeCount, lastChargeError: result.error },
           })
-          notifySubscriptionPastDue({
+          notifySubscriptionPastDue({market:sub.market as "by"|"ru",
             companyName: sub.client.companyName,
             email: sub.client.email,
             tier: sub.tier,

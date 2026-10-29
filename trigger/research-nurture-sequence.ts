@@ -1,3 +1,4 @@
+import {getMarketConfig,type Market} from "../lib/market"
 import { task, wait } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
@@ -6,12 +7,11 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
 
-const FROM = () => process.env.FROM_EMAIL ?? "KaliGEO <hello@kaligeo.ru>"
-const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://kaligeo.ru"
 const PDF_URL = () => process.env.RESEARCH_PDF_URL ?? ""
 
 export interface ResearchNurturePayload {
   leadId: string
+  market: Market
   email: string
   companyName: string
 }
@@ -21,14 +21,16 @@ export const researchNurtureSequence = task({
   maxDuration: 900_000, // ~10 дней
   retry: { maxAttempts: 1 },
 
-  run: async ({ leadId, email, companyName }: ResearchNurturePayload) => {
-    const scanUrl = `${APP_URL()}?utm_source=research-nurture&utm_medium=email`
-    const auditUrl = `${APP_URL()}/pricing?utm_source=research-nurture&utm_medium=email`
-    const unsub = `${APP_URL()}/api/leads/unsubscribe?leadId=${leadId}`
+  run: async ({ leadId, email, companyName, market }: ResearchNurturePayload) => {
+    if(!market)throw Error("Market is required for nurture sequence")
+    const config=getMarketConfig(market)
+    const scanUrl = `${config.appUrl}?utm_source=research-nurture&utm_medium=email`
+    const auditUrl = `${config.appUrl}/pricing?utm_source=research-nurture&utm_medium=email`
+    const unsub = `${config.appUrl}/api/leads/unsubscribe?leadId=${leadId}`
 
     // Письмо 1 — немедленно: PDF + мягкий CTA
     await getResend().emails.send({
-      from: FROM(),
+      from: config.fromEmail,
       to: email,
       subject: "Состояние GEO в России 2026 — ваш PDF",
       html: letter1({ companyName, pdfUrl: PDF_URL(), scanUrl, unsub }),
@@ -39,7 +41,7 @@ export const researchNurtureSequence = task({
     const lead2 = await prisma.lead.findUnique({ where: { id: leadId } })
     if (!lead2 || lead2.status === "UNSUBSCRIBED") return
     await getResend().emails.send({
-      from: FROM(),
+      from: config.fromEmail,
       to: email,
       subject: "78% компаний невидимы в AI-поиске. Что делают оставшиеся 22%",
       html: letter2({ companyName, scanUrl, unsub }),
@@ -50,7 +52,7 @@ export const researchNurtureSequence = task({
     const lead3 = await prisma.lead.findUnique({ where: { id: leadId } })
     if (!lead3 || lead3.status === "UNSUBSCRIBED") return
     await getResend().emails.send({
-      from: FROM(),
+      from: config.fromEmail,
       to: email,
       subject: `2 минуты — и вы знаете свой AI Score`,
       html: letter3({ companyName, scanUrl, unsub }),
@@ -61,7 +63,7 @@ export const researchNurtureSequence = task({
     const lead4 = await prisma.lead.findUnique({ where: { id: leadId } })
     if (!lead4 || lead4.status === "UNSUBSCRIBED") return
     await getResend().emails.send({
-      from: FROM(),
+      from: config.fromEmail,
       to: email,
       subject: `Пока ${companyName} читает — конкуренты действуют`,
       html: letter4({ companyName, auditUrl, unsub }),
@@ -84,7 +86,7 @@ function emailWrapper(content: string, unsub: string) {
   </div>
   <div style="padding:16px 32px;border-top:1px solid #e8e8e3;">
     <p style="font-size:11px;color:#9ca3af;margin:0;line-height:1.6;">
-      KaliGEO · AI Search Visibility · kaligeo.ru<br>
+      KaliGEO · AI Search Visibility · ${new URL(unsub).hostname.replace(/^app\./, "")}<br>
       Вы получили это письмо потому что скачали исследование на сайте.<br>
       <a href="${unsub}" style="color:#9ca3af;">Отписаться от рассылки</a>
     </p>
@@ -253,7 +255,7 @@ function letter4({ companyName, auditUrl, unsub }: { companyName: string; auditU
       </a>
     </div>
     <p style="font-size:12px;color:#9ca3af;text-align:center;margin:0;">
-      Это последнее письмо в этой серии. Если понадобится — kaligeo.ru всегда доступен.
+      Это последнее письмо в этой серии. Если понадобится — ${new URL(unsub).hostname.replace(/^app\./, "")} всегда доступен.
     </p>
   `, unsub)
 }

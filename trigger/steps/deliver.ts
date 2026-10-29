@@ -1,3 +1,4 @@
+import {getMarketConfig,type Market} from "../../lib/market"
 import { Resend } from "resend"
 
 // Lazy init — env vars are loaded at runtime, not at import time
@@ -7,6 +8,7 @@ function getResend() {
 
 export interface DeliveryOptions {
   to: string
+  market: Market
   companyName: string
   overallScore: number
   reportUrl: string
@@ -17,6 +19,7 @@ export interface DeliveryOptions {
 
 export interface FollowUpDeliveryOptions {
   to: string
+  market: Market
   companyName: string
   overallScore: number
   baselineScore: number
@@ -32,7 +35,7 @@ export async function sendFollowUpEmail(opts: FollowUpDeliveryOptions): Promise<
   const scoreEmoji = overallScore >= 60 ? "🟢" : overallScore >= 30 ? "🟡" : "🔴"
 
   await getResend().emails.send({
-    from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    from: getMarketConfig(opts.market).fromEmail,
     to,
     subject: `Ежемесячный AI-аудит готов — ${companyName} | Score: ${overallScore}/100 (${deltaStr})`,
     html: `
@@ -100,7 +103,7 @@ export async function sendReportEmail(opts: DeliveryOptions): Promise<void> {
     : ""
 
   await getResend().emails.send({
-    from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    from: getMarketConfig(opts.market).fromEmail,
     to,
     subject,
     html: `

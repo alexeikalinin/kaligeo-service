@@ -1,7 +1,7 @@
 import { isBrandQuestion } from "../analysis/query-methodology"
 import { z } from "zod"
 import { createHash } from "node:crypto"
-import type { BusinessMap } from "./business-map"
+import {mapHash,type BusinessMap} from "./business-map"
 export const questionCardSchema=z.object({
  query:z.string(),entityId:z.string(),audienceId:z.string(),need:z.string(),intent:z.string(),rationale:z.string(),
  expectedAnswer:z.enum(["companies","products","sellers","brand-facts"]),
@@ -9,7 +9,7 @@ export const questionCardSchema=z.object({
  evidence:z.array(z.object({url:z.string().url(),quote:z.string().min(1)})),
 })
 export type QuestionCard=z.infer<typeof questionCardSchema>&{decision:"accept"|"revise"|"reject";critique:string;suggestedQuery?:string|null}
-export function cardsVersion(queries:string[],map:BusinessMap){return createHash("sha256").update(JSON.stringify({queries,map,version:"question-cards-v1"})).digest("hex")}
+export function cardsVersion(queries:string[],map:BusinessMap){return createHash("sha256").update(JSON.stringify({queries,map:mapHash(map),version:"question-cards-v1"})).digest("hex")}
 export function validateCards(cards:QuestionCard[],queries:string[],map:BusinessMap):QuestionCard[]{
  if(cards.length!==queries.length||new Set(cards.map(c=>c.query)).size!==queries.length||queries.some(q=>!cards.some(c=>c.query===q)))throw Error("Проверка должна охватывать каждый вопрос ровно один раз")
  return queries.map(query=>{

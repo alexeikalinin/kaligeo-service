@@ -41,3 +41,12 @@ export function assertReviewableMap(m:BusinessMap){
 }
 
 export function activeBusinessMap(map:BusinessMap):BusinessMap{return {...map,relationships:map.relationships.filter(r=>r.enabled!==false)}}
+
+export function questionBusinessMap(map:BusinessMap):BusinessMap{
+ const active=activeBusinessMap(map)
+ const audiences=active.audiences.filter(a=>active.scope.some(s=>s.audienceId===a.id))
+ const ids=new Set(active.scope.map(s=>s.entityId))
+ for(const audience of audiences)if(active.scope.some(s=>s.audienceId===audience.id&&s.metric!=="owned-product"))for(const id of audience.entityIds)ids.add(id)
+ for(const relation of active.relationships)if(ids.has(relation.to)&&["owns","develops","publishes"].includes(relation.role))ids.add(relation.from)
+ return {...active,entities:active.entities.filter(e=>ids.has(e.id)),audiences:audiences.map(a=>({...a,entityIds:a.entityIds.filter(id=>ids.has(id))})),relationships:active.relationships.filter(r=>ids.has(r.from)&&ids.has(r.to))}
+}

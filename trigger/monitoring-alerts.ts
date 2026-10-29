@@ -74,7 +74,7 @@ export const monitoringAlerts = schedules.task({
         const reportUrl = `${appUrl}/report/${latestJob.id}?token=${latestJob.reportToken}`
         const unsub = `${appUrl}/api/audit/unsubscribe?jobId=${latestJob.id}`
 
-        await sendAlertEmail({
+        await sendAlertEmail({market:latestJob.market as Market,
           to: email,
           companyName: latestJob.companyName,
           currentScore,
@@ -104,6 +104,7 @@ export const monitoringAlerts = schedules.task({
 
 async function sendAlertEmail(opts: {
   to: string
+  market: Market
   companyName: string
   currentScore: number
   prevScore: number
@@ -114,7 +115,7 @@ async function sendAlertEmail(opts: {
   const { to, companyName, currentScore, prevScore, delta, reportUrl, unsub } = opts
 
   await getResend().emails.send({
-    from: process.env.FROM_EMAIL ?? "noreply@kaligeo.com",
+    from: getMarketConfig(opts.market).fromEmail,
     to,
     subject: `⚠ AI-видимость упала — ${companyName} | ${prevScore} → ${currentScore} (${delta})`,
     html: `

@@ -1,3 +1,4 @@
+import {getMarketConfig,type Market} from "../lib/market"
 import { task, wait } from "@trigger.dev/sdk/v3"
 import { Resend } from "resend"
 import { prisma } from "../lib/prisma"
@@ -6,11 +7,10 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY ?? "re_placeholder")
 }
 
-const FROM = () => process.env.FROM_EMAIL ?? "noreply@kaligeo.com"
-const APP_URL = () => process.env.NEXT_PUBLIC_APP_URL ?? "https://kaligeo.ru"
 
 export interface ColdSequencePayload {
   leadId: string
+  market: Market
   campaignId: string
 }
 
@@ -25,7 +25,9 @@ export const coldSequence = task({
   maxDuration: 700_000,
   retry: { maxAttempts: 1 },
 
-  run: async ({ leadId, campaignId }: ColdSequencePayload) => {
+  run: async ({ leadId, campaignId, market }: ColdSequencePayload) => {
+    if(!market)throw Error("Market is required for outreach")
+    const config=getMarketConfig(market)
     const lead = await prisma.lead.findUnique({ where: { id: leadId } })
     const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } })
 
@@ -39,7 +41,7 @@ export const coldSequence = task({
     }
 
     const steps = campaign.sequences as unknown as SequenceStep[]
-    const auditUrl = `${APP_URL()}/chat?url=${lead.websiteUrl ? encodeURIComponent(lead.websiteUrl) : ""}`
+    const auditUrl = `${config.appUrl}/chat?url=${lead.websiteUrl ? encodeURIComponent(lead.websiteUrl) : ""}`
 
     for (let i = 0; i < steps.length; i++) {
       const step = steps[i]
@@ -65,14 +67,14 @@ export const coldSequence = task({
         auditUrl,
       })
 
-      const unsub = `${APP_URL()}/api/leads/unsubscribe?leadId=${leadId}`
+      const unsub = `${config.appUrl}/api/leads/unsubscribe?leadId=${leadId}`
 
       try {
         const result = await getResend().emails.send({
-          from: FROM(),
+          from: config.fromEmail,
           to: toEmail,
           subject,
-          html: coldEmailWrapper(body, unsub),
+          html: coldEmailWrapper(body, unsub,config.landingUrl),
         })
 
         await prisma.outreachEmail.create({
@@ -108,12 +110,12 @@ function personalizeTemplate(
     .replace(/\{auditUrl\}/g, vars.auditUrl)
 }
 
-function coldEmailWrapper(body: string, unsub: string) {
+function coldEmailWrapper(body: string, unsub: string, landingUrl:string) {
   return `<!DOCTYPE html><html><body style="font-family:-apple-system,sans-serif;max-width:560px;margin:0 auto;padding:20px;color:#1a1a1a;font-size:15px;line-height:1.6;">
 ${body}
 <hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0;">
 <p style="color:#9ca3af;font-size:11px;">
-  KaliGEO · AI Search Visibility · <a href="https://kaligeo.ru" style="color:#9ca3af;">kaligeo.ru</a><br>
+  KaliGEO · AI Search Visibility · <a href="${landingUrl}" style="color:#9ca3af;">${new URL(landingUrl).hostname}</a><br>
   <a href="${unsub}" style="color:#9ca3af;">Отписаться от рассылки</a>
 </p>
 </body></html>`

@@ -145,7 +145,7 @@ export async function runOrchestrator(
   const tools = Object.fromEntries(TOOLS.map(definition => [definition.name, tool({
     description: definition.description,
     inputSchema: jsonSchema<Record<string, unknown>>(definition.input_schema),
-    execute: async (input) => dispatchTool(definition.name, input),
+    execute: async (input) => dispatchTool(definition.name, {...input,...(context.market?{market:context.market}:{})}),
   })]))
   const result = await generateText({
     model: getOrchestratorModel(), maxRetries: 0, maxOutputTokens: 4096,

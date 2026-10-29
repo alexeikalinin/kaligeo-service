@@ -1,3 +1,4 @@
+import {marketFromHost} from "@/lib/market"
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { tasks } from "@trigger.dev/sdk/v3"
@@ -27,9 +28,10 @@ export async function POST(req: NextRequest) {
     // A queue failure can be retried without sending a duplicate sequence.
     await tasks.trigger<typeof researchNurtureSequence>("send-research-nurture-sequence", {
       leadId: lead.id,
+      market:marketFromHost(new URL(req.url).host),
       email,
       companyName: lead.companyName ?? companyName,
-    }, { idempotencyKey: `research-${lead.id}` })
+    }, { idempotencyKey: `research-${marketFromHost(new URL(req.url).host)}-${lead.id}` })
   } catch {
     return NextResponse.json({ error: "Не удалось принять заявку. Попробуйте ещё раз." }, { status: 503 })
   }
